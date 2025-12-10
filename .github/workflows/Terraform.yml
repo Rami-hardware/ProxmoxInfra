@@ -1,4 +1,4 @@
-name: homelab infra
+name: Terraform
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  terraform:
+  Terraform:
     runs-on: self-hosted
     steps:
       - name: Checkout code
@@ -32,8 +32,11 @@ jobs:
       - name: Ignore existing VMs
         working-directory: Terraform
         run: |
-          terraform state rm -lock=false 'module.proxmox_vms["github"].proxmox_vm_qemu.vm' || true
-          terraform state rm -lock=false 'module.proxmox_vms["another_vm"].proxmox_vm_qemu.vm' || true
+          for vm in github another_vm; do
+            if terraform state list | grep -q "module.proxmox_vms\[\"$vm\"\].proxmox_vm_qemu.vm"; then
+              terraform state rm -lock=false "module.proxmox_vms[\"$vm\"].proxmox_vm_qemu.vm"
+            fi
+          done
 
         
       - name: Terraform Plan
