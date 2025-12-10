@@ -32,3 +32,30 @@ variable "pm_password" {
   description = "Proxmox password"
   sensitive   = true
 }
+
+variable "ip_gateway" {
+  type        = string
+  description = "Ip_gateway"
+  sensitive   = true
+}
+
+variable "ip_gateway" {
+  type        = string
+  description = "Gateway VM IP address"
+}
+
+variable "ip_media" {
+  type        = string
+  description = "Media VM IP address"
+}
+
+variable "ip_game" {
+  type        = string
+  description = "Game VM IP address"
+}
+
+variable "ip_monitor" {
+  type        = string
+  description = "Monitor VM IP address"
+}
+

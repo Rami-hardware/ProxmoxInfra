@@ -12,7 +12,7 @@ module "proxmox_vms" {
   ip           = each.value.ip
   cores        = each.value.cores
   memory       = each.value.memory
-hostpcis       = lookup(each.value, "hostpcis", [])
+  hostpcis       = lookup(each.value, "hostpcis", [])
   disks        = lookup(each.value, "disks", [])
   ssh_key_path = "~/.ssh/id_rsa.pub"
 }
