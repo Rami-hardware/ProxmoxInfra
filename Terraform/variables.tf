@@ -32,7 +32,6 @@ variable "pm_password" {
   description = "Proxmox password"
   sensitive   = true
 }
-
 variable "ssh_public_key" {
   description = "Public SSH key for VMs"
   type        = string

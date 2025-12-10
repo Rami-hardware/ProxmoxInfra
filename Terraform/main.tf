@@ -14,5 +14,5 @@ module "proxmox_vms" {
   memory       = each.value.memory
   hostpcis       = lookup(each.value, "hostpcis", [])
   disks        = lookup(each.value, "disks", [])
-  ssh_public_key = var.ssh_public_key
+  ssh_public_key  = var.ssh_public_key
 }

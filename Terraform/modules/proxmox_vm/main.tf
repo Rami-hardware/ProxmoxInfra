@@ -12,15 +12,17 @@ resource "proxmox_vm_qemu" "vm" {
   cipassword = var.cipassword
 
 
-  ipconfig0 = "ip=${var.ip},gw=192.168.1.1"
-  
+  ipconfig0 = "ip=${var.ip},gw=192.168.1.1,nameserver=192.168.1.1"
   sshkeys = var.ssh_public_key
+
+
 
   network {
     id     = 0
     model  = "virtio"   
     bridge = "vmbr0"
   }
+
 
   scsihw = "virtio-scsi-pci"
 
@@ -42,4 +44,9 @@ resource "proxmox_vm_qemu" "vm" {
       type    = disk.value.type 
     }
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
 }
