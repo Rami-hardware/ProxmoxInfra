@@ -63,7 +63,7 @@ variable "cloudinit_size" {
 
 variable "ssh_key_path" {
   type        = string
-  default     = "~/.ssh/id_rsa.pub"
+  default = "/home/github-server/.ssh/id_rsa.pub" 
   description = "Path to the SSH public key for cloud-init access"
 }
 
