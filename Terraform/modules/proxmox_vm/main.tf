@@ -22,9 +22,8 @@ resource "proxmox_vm_qemu" "vm" {
     model  = "virtio"   
     bridge = "vmbr0"
   }
-  
-  scsihw = "virtio-scsi-pci"
 
+  scsihw = "virtio-scsi-pci"
  # PCI passthrough as a block
   dynamic "hostpci" {
     for_each = var.hostpcis
