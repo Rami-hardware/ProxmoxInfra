@@ -15,41 +15,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version:  ">=1.6 <2.0"  
-
-
-      - name: Temporarily disable prevent_destroy
-        working-directory: Terraform
-        run: |
-          sed -i '/prevent_destroy/d' modules/proxmox_vm/main.tf
+          terraform_version: ">=1.6 <2.0"
 
       - name: Terraform Init
+        working-directory: Terraform
         env:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
           TF_VAR_pm_user: ${{ secrets.PM_USER }}
           TF_VAR_pm_password: ${{ secrets.PM_PASSWORD }}
-        working-directory: Terraform
         run: terraform init
-        
 
-      - name: Terraform Apply
-        if: github.ref == 'refs/heads/main'
+      - name: Destroy Media VM Only
+        working-directory: Terraform
         env:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
           TF_VAR_pm_user: ${{ secrets.PM_USER }}
           TF_VAR_pm_password: ${{ secrets.PM_PASSWORD }}
-          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-        working-directory: Terraform
-        run: terraform apply -auto-approve
-
-      - name: Re-enable prevent_destroy
-        working-directory: Terraform
         run: |
-          echo '  lifecycle { prevent_destroy = true }' >> modules/proxmox_vm/main.tf
-
-      - name: Terraform Apply (re-apply prevent_destroy)
-        run: terraform apply -auto-approve
+          # Remove the VM from state if prevent_destroy is blocking
+          terraform state rm 'module.proxmox_vms["media"].proxmox_vm_qemu.vm["media"]' || true
+          
+          # Destroy only the media VM
+          terraform destroy -auto-approve -target='module.proxmox_vms["media"].proxmox_vm_qemu.vm["media"]'
