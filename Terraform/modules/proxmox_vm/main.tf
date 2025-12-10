@@ -13,7 +13,8 @@ resource "proxmox_vm_qemu" "vm" {
 
 
   ipconfig0 = "ip=${var.ip},gw=192.168.1.1"
-  sshkeys   = file(var.ssh_key_path)
+  
+  sshkeys = var.ssh_public_key
 
   network {
     id     = 0
