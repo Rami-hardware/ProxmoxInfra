@@ -35,6 +35,12 @@ jobs:
         working-directory: Terraform
         run: terraform init
 
+      # **Remove the self-hosted runner VM from state so it won't be destroyed**
+      - name: Ignore self-hosted runner VM
+        run: terraform state rm -lock=false 'module.proxmox_vms["github"].proxmox_vm_qemu.vm'
+        working-directory: Terraform
+
+
       - name: Terraform Plan
         env:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
