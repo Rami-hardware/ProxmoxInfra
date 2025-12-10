@@ -35,8 +35,5 @@ jobs:
           TF_VAR_pm_user: ${{ secrets.PM_USER }}
           TF_VAR_pm_password: ${{ secrets.PM_PASSWORD }}
         run: |
-          # Remove the VM from state if prevent_destroy is blocking
           terraform state rm 'module.proxmox_vms["media"].proxmox_vm_qemu.vm["media"]' || true
-          
-          # Destroy only the media VM
           terraform destroy -auto-approve -target='module.proxmox_vms["media"].proxmox_vm_qemu.vm["media"]'
