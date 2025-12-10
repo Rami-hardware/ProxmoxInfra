@@ -29,7 +29,6 @@ vms = {
       { slot = "scsi0", storage = "media", size = "9650G", type = "disk" }
     ]
   }
-
   game = {
     name       = "game-server"
     vmid       = 619
