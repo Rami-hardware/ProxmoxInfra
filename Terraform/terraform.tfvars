@@ -25,7 +25,7 @@ vms = {
     hostpcis = ["0000:01:00.0", "0000:01:00.1"]  # <-- list of strings
     disks = [
       { slot = "ide2", storage = "local-lvm", size = "5G", type = "cloudinit" },
-      { slot = "ide0", storage = "local-lvm", size = "200G", type = "disk" , boot: true },
+      { slot = "ide0", storage = "local-lvm", size = "200G", type = "disk" , boot:on},
       { slot = "scsi0", storage = "media", size = "9650G", type = "disk" }
     ]
   }
@@ -60,5 +60,18 @@ vms = {
     ]
   }
 
-
+  github = {
+    name       = "github-server"
+    vmid       = 115
+    ip         = "192.168.1.204/24"
+    cores      = 4
+    memory     = 2048
+    ciuser     = "github"
+    cipassword = "github@123"
+    hostpci    = null
+    disks = [
+      { slot = "ide2", storage = "local-lvm", size = "5G", type = "cloudinit" },
+      { slot = "scsi0", storage = "local-lvm", size = "20G", type = "disk" },
+    ]
+  }
 }
