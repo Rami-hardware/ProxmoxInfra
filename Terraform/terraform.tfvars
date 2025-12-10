@@ -47,7 +47,7 @@ vms = {
 
   monitor = {
     name       = "monitor-server"
-    vmid       = 115
+    vmid       = 511
     ip         = "192.168.1.203/24"
     cores      = 4
     memory     = 1024
