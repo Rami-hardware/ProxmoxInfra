@@ -15,7 +15,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-        
+      - name: Install Node.js
+        run: |
+          sudo apt update
+          sudo apt install -y unzip curl git
+          curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+          sudo apt install -y nodejs
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
