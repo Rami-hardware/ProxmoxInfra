@@ -21,6 +21,11 @@ jobs:
         with:
           terraform_version:  ">=1.6 <2.0"  
 
+
+      - name: Temporarily disable prevent_destroy
+        run: |
+          sed -i '/prevent_destroy/d' modules/proxmox_vm/main.tf
+
       - name: Terraform Init
         env:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
@@ -38,4 +43,11 @@ jobs:
           TF_VAR_pm_password: ${{ secrets.PM_PASSWORD }}
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         working-directory: Terraform
+        run: terraform apply -auto-approve
+
+      - name: Re-enable prevent_destroy
+        run: |
+          echo '  lifecycle { prevent_destroy = true }' >> modules/proxmox_vm/main.tf
+
+      - name: Terraform Apply (re-apply prevent_destroy)
         run: terraform apply -auto-approve
