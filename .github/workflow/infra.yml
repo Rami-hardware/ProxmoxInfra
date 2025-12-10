@@ -1,0 +1,83 @@
+name: Deploying Nextcloud
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:                         # <-- define env here once for the whole job
+    ALICLOUD_ACCESS_KEY: ${{ secrets.ALICLOUD_ACCESS_KEY }}
+    ALICLOUD_SECRET_KEY: ${{ secrets.ALICLOUD_SECRET_KEY }}
+
+jobs:
+  infra:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version:  ">=1.6 <2.0"  
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init
+
+      - name: Terraform Validate
+        working-directory: terraform
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: terraform
+        run: terraform plan -out=tfplan
+
+      - name: Upload Terraform Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: tfplan
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.ALI_PEM_KEY }}" > ~/.ssh/RamiKey.pem
+          chmod 600 ~/.ssh/RamiKey.pem
+
+
+      - name: Apply only if there are changes
+        working-directory: terraform
+        if: steps.plan.outputs.stdout != ''
+        run: terraform apply -auto-approve tfplan
+
+
+      - name: Disable SSH host key checking
+        run: |
+          echo -e "Host *\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
+          chmod 600 ~/.ssh/config
+
+      - name: Setup Ansible Vault password
+        working-directory: ansible
+        run: |
+          # Create folder if needed (optional)
+          mkdir -p .
+          # Write vault password inside current folder
+          echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > vault_pass.txt
+          chmod 600 vault_pass.txt
+
+      - name: Test SSH connection
+        run: ssh -i ~/.ssh/RamiKey.pem root@8.213.49.218 "echo connected"
+
+              
+      - name: Run Ansible
+        working-directory: ansible
+        run: |
+          ansible-playbook -i inventory.ini deploy.yml --vault-password-file vault_pass.txt \
+          -e "ad_admin_password=${{ secrets.AD_ADMIN_PASSWORD }}" \
+          -e "ad_domain=fac.local ad_realm=FAC.LOCAL ad_server=10.50.6.206 ad_admin_user=administrator"
+
