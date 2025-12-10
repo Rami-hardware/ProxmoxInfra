@@ -41,5 +41,8 @@ resource "proxmox_vm_qemu" "vm" {
     }
   }
 
+  lifecycle {
+    prevent_destroy = true
+  }
 
 }

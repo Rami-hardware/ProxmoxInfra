@@ -1,4 +1,4 @@
-name: Terraform
+name: homelab infra
 
 on:
   push:
@@ -9,32 +9,43 @@ on:
       - main
 
 jobs:
-  Terraform:
+  terraform:
     runs-on: self-hosted
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: ">=1.6 <2.0"
+          terraform_version:  ">=1.6 <2.0"  
 
       - name: Terraform Init
-        working-directory: Terraform
         env:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
           TF_VAR_pm_user: ${{ secrets.PM_USER }}
           TF_VAR_pm_password: ${{ secrets.PM_PASSWORD }}
+        working-directory: Terraform
         run: terraform init
 
-      - name: Destroy Media VM Only
-        working-directory: Terraform
+
+      - name: Terraform Plan
         env:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
           TF_VAR_pm_user: ${{ secrets.PM_USER }}
           TF_VAR_pm_password: ${{ secrets.PM_PASSWORD }}
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-        run: |
-          terraform state rm 'module.proxmox_vms["media"].proxmox_vm_qemu.vm["media"]' || true
-          terraform destroy -auto-approve -target='module.proxmox_vms["media"].proxmox_vm_qemu.vm["media"]'
+        working-directory: Terraform
+        run: terraform plan
+
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main'
+        env:
+          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
+          TF_VAR_pm_user: ${{ secrets.PM_USER }}
+          TF_VAR_pm_password: ${{ secrets.PM_PASSWORD }}
+          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+        working-directory: Terraform
+        run: terraform apply -auto-approve
