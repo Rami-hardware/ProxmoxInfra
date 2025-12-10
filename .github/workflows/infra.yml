@@ -26,6 +26,7 @@ jobs:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
           TF_VAR_pm_user: ${{ secrets.PM_USER }}
           TF_VAR_pm_password: ${{ secrets.PM_PASSWORD }}
+        working-directory: terraform
         run: terraform init
 
       - name: Terraform Plan
@@ -33,6 +34,7 @@ jobs:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
           TF_VAR_pm_user: ${{ secrets.PM_USER }}
           TF_VAR_pm_password: ${{ secrets.PM_PASSWORD }}
+        working-directory: terraform
         run: terraform plan
 
       - name: Terraform Apply
@@ -41,4 +43,5 @@ jobs:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
           TF_VAR_pm_user: ${{ secrets.PM_USER }}
           TF_VAR_pm_password: ${{ secrets.PM_PASSWORD }}
+        working-directory: terraform
         run: terraform apply -auto-approve
