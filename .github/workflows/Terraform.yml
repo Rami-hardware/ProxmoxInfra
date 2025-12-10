@@ -28,7 +28,6 @@ jobs:
           TF_VAR_pm_password: ${{ secrets.PM_PASSWORD }}
         working-directory: Terraform
         run: terraform init
-
         
       - name: Terraform Plan
         env:
@@ -39,10 +38,8 @@ jobs:
         working-directory: Terraform
         run: terraform plan
 
-
       - name: Terraform Destroy Target VM
         run: terraform destroy -auto-approve -target='module.proxmox_vms["media"].proxmox_vm_qemu.vm["media"]'
-
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
