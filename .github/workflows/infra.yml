@@ -15,6 +15,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
@@ -28,12 +29,13 @@ jobs:
         working-directory: Terraform
         run: terraform init
 
-      # **Remove the self-hosted runner VM from state so it won't be destroyed**
-      - name: Ignore self-hosted runner VM
-        run: terraform state rm -lock=false 'module.proxmox_vms["github"].proxmox_vm_qemu.vm'
+      - name: Ignore existing VMs
         working-directory: Terraform
+        run: |
+          terraform state rm -lock=false 'module.proxmox_vms["github"].proxmox_vm_qemu.vm' || true
+          terraform state rm -lock=false 'module.proxmox_vms["another_vm"].proxmox_vm_qemu.vm' || true
 
-
+        
       - name: Terraform Plan
         env:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
@@ -42,6 +44,7 @@ jobs:
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         working-directory: Terraform
         run: terraform plan
+
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
