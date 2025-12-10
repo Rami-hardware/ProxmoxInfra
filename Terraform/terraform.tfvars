@@ -25,7 +25,7 @@ vms = {
     hostpcis = ["0000:01:00.0", "0000:01:00.1"]  # <-- list of strings
     disks = [
       { slot = "ide2", storage = "local-lvm", size = "5G", type = "cloudinit" },
-      { slot = "ide0", storage = "local-lvm", size = "200G", type = "disk" },
+      { slot = "ide0", storage = "local-lvm", size = "200G", type = "disk" , boot: true },
       { slot = "scsi0", storage = "media", size = "9650G", type = "disk" }
     ]
   }
