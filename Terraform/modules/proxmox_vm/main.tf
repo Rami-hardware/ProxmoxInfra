@@ -15,13 +15,11 @@ resource "proxmox_vm_qemu" "vm" {
   ipconfig0 = "ip=${var.ip},gw=192.168.1.1"
   sshkeys   = file(var.ssh_key_path)
 
-
   network {
     id     = 0
     model  = "virtio"   
     bridge = "vmbr0"
   }
-
 
   scsihw = "virtio-scsi-pci"
 
