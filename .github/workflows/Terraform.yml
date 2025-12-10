@@ -57,4 +57,5 @@ jobs:
           TF_VAR_pm_password: ${{ secrets.PM_PASSWORD }}
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         working-directory: Terraform
-        run: terraform apply -auto-approve
+        run: terraform apply -refresh=false -auto-approve
+
