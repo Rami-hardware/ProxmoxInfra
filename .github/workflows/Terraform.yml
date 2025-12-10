@@ -23,6 +23,7 @@ jobs:
 
 
       - name: Temporarily disable prevent_destroy
+        working-directory: Terraform
         run: |
           sed -i '/prevent_destroy/d' modules/proxmox_vm/main.tf
 
@@ -46,6 +47,7 @@ jobs:
         run: terraform apply -auto-approve
 
       - name: Re-enable prevent_destroy
+        working-directory: Terraform
         run: |
           echo '  lifecycle { prevent_destroy = true }' >> modules/proxmox_vm/main.tf
 
