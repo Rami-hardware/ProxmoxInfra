@@ -29,15 +29,6 @@ jobs:
         working-directory: Terraform
         run: terraform init
 
-      - name: Ignore existing VMs
-        working-directory: Terraform
-        run: |
-          for vm in github another_vm; do
-            if terraform state list | grep -q "module.proxmox_vms\[\"$vm\"\].proxmox_vm_qemu.vm"; then
-              terraform state rm -lock=false "module.proxmox_vms[\"$vm\"].proxmox_vm_qemu.vm"
-            fi
-          done
-
         
       - name: Terraform Plan
         env:
@@ -48,7 +39,7 @@ jobs:
         working-directory: Terraform
         run: terraform plan
 
-        
+
       - name: Terraform Destroy Target VM
         run: terraform destroy -auto-approve -target='module.proxmox_vms["media"].proxmox_vm_qemu.vm["media"]'
 
