@@ -47,6 +47,4 @@ jobs:
           TF_VAR_pm_password: ${{ secrets.PM_PASSWORD }}
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         working-directory: Terraform
-        run: |
-            terraform destroy -auto-approve -target="module.proxmox_vms[\"game\"]" \
-         
+        run: terraform apply -auto-approve -target="module.proxmox_vms[\"game\"]" 
