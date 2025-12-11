@@ -49,4 +49,4 @@ jobs:
         working-directory: Terraform
         run: |
             terraform destroy -auto-approve -target="module.proxmox_vms[\"game\"]" \
-            terraform apply -auto-approve -target="module.proxmox_vms[\"game\"]"
+         
