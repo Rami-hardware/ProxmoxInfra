@@ -39,17 +39,14 @@ jobs:
         working-directory: Terraform
         run: terraform plan
 
-      #- name: Terraform Apply
-      #  if: github.ref == 'refs/heads/main'
-      #  env:
-      #    TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-      #    TF_VAR_pm_user: ${{ secrets.PM_USER }}
-      #    TF_VAR_pm_password: ${{ secrets.PM_PASSWORD }}
-      #    TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-      #  working-directory: Terraform
-      #  run: 
-      #     terraform apply -auto-approve \
-      #       -target="module.proxmox_vms[\"media\"]" \
-      #        -target="module.proxmox_vms[\"game\"]" \
-      #         -target="module.proxmox_vms[\"gateway\"]" \
-      #          -target="module.proxmox_vms[\"monitor\"]"
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main'
+        env:
+          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
+          TF_VAR_pm_user: ${{ secrets.PM_USER }}
+          TF_VAR_pm_password: ${{ secrets.PM_PASSWORD }}
+          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+        working-directory: Terraform
+        run: 
+           terraform apply -auto-approve \
+           -target="module.proxmox_vms[\"game\"]" \
