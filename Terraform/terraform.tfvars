@@ -40,7 +40,7 @@ vms = {
     hostpci    = null
     disks = [
       { slot = "ide2", storage = "local-lvm", size = "5G", type = "cloudinit" },
-      { slot = "ide0", storage = "local-lvm", size = "50G", type = "disk" },
+      { slot = "ide0", storage = "local-lvm", size = "100G", type = "disk" },
     ]
   }
 
