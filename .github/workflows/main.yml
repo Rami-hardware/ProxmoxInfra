@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  test:
+  testing:
     runs-on: self-hosted
 
     steps:
@@ -19,7 +19,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      - name: Terraform init (no backend)
+      - name: Terraform init
         run: terraform init -backend=false
 
       - name: Terraform validate
@@ -29,29 +29,13 @@ jobs:
         run: sudo apt update && sudo apt install -y ansible
 
       - name: Ansible syntax check
-        run: ansible-playbook ansible/playbook.yml --syntax-check
-        
+        run: ansible-playbook ansible/media-server.yml --syntax-check
+
   terraform:
     runs-on: self-hosted
-    needs: test   # Waits for the "test" job to succeed
+    needs: test   
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: ">=1.6 <2.0"
-
-      - name: Terraform Init
-        working-directory: Terraform
-        env:
-          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-          TF_VAR_pm_user: ${{ secrets.PM_USER }}
-          TF_VAR_pm_password: ${{ secrets.PM_PASSWORD }}
-        run: terraform init
-
       - name: Terraform Plan
         working-directory: Terraform
         env:
