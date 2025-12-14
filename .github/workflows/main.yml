@@ -9,26 +9,28 @@ on:
       - main
 
 jobs:
-  # 🔹 Job 1: Testing
   test:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Node.js (example for Node project)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
 
-      - name: Install dependencies
-        run: npm install
+      - name: Terraform init (no backend)
+        run: terraform init -backend=false
 
-      - name: Run tests
-        run: npm test
+      - name: Terraform validate
+        run: terraform validate
 
-  # 🔹 Job 2: Terraform
+      - name: Install Ansible
+        run: sudo apt update && sudo apt install -y ansible
+
+      - name: Ansible syntax check
+        run: ansible-playbook ansible/playbook.yml --syntax-check
+        
   terraform:
     runs-on: self-hosted
     needs: test   # Waits for the "test" job to succeed
