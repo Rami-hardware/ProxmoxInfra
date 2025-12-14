@@ -40,11 +40,25 @@ jobs:
         run: sudo apt update && sudo apt install -y ansible
 
 
+
+      - name: Install Ansible and ansible-lint in virtualenv
+        run: |
+          sudo apt update
+          sudo apt install -y ansible python3-venv python3-pip
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install ansible-lint
+
       - name: Ansible syntax check
-        run: ansible-playbook Ansbile/media-server.yml --syntax-check
+        run: |
+          source venv/bin/activate
+          ansible-playbook Ansbile/media-server.yml --syntax-check
 
       - name: Ansible lint
-        run: ansible-lint ansible/
+        run: |
+          source venv/bin/activate
+          ansible-lint Ansbile/
 
   Deploy:
     name: Deploy Infrastructure Code
