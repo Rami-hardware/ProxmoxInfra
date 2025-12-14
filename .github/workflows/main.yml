@@ -33,7 +33,7 @@ jobs:
 
   terraform:
     runs-on: self-hosted
-    needs: test   
+    needs: testing   
 
     steps:
       - name: Terraform Plan
