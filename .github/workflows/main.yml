@@ -32,24 +32,17 @@ jobs:
 
       - name: Install tflint
         uses: terraform-linters/setup-tflint@v1
-        
+
       - name: Terraform lint
         run: tflint
 
-      - name: Install pipx
-        run: sudo apt install -y pipx
-      - name: Install ansible-lint
-        run: pipx install ansible-lint
-
-      # Ansible setup
       - name: Install Ansible
-        run: sudo apt update && sudo apt install -y ansible python3-pip && pip3 install ansible-lint
+        run: sudo apt update && sudo apt install -y ansible
 
-      # Ansible syntax check
+
       - name: Ansible syntax check
         run: ansible-playbook ansible/media-server.yml --syntax-check
 
-      # Ansible lint
       - name: Ansible lint
         run: ansible-lint ansible/
 
