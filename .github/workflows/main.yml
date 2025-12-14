@@ -36,6 +36,14 @@ jobs:
     needs: testing   
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0   # specify your version
+
       - name: Terraform Plan
         working-directory: Terraform
         env:
