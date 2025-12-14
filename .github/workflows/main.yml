@@ -10,28 +10,43 @@ on:
 
 jobs:
   testing:
+    name: Test Infrastructure Code
     runs-on: self-hosted
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Terraform setup
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
 
-      - name: Terraform init
+      # Terraform validation (safe)
+      - name: Terraform init (no backend)
         run: terraform init -backend=false
 
       - name: Terraform validate
         run: terraform validate
 
+      # Optional: Terraform lint
+      # - name: Terraform lint
+      #   run: tflint
+
+      # Ansible setup
       - name: Install Ansible
-        run: sudo apt update && sudo apt install -y ansible
+        run: sudo apt update && sudo apt install -y ansible python3-pip && pip3 install ansible-lint
 
+      # Ansible syntax check
       - name: Ansible syntax check
-        run: ansible-playbook Ansbile/media-server.yml --syntax-check
+        run: ansible-playbook ansible/media-server.yml --syntax-check
 
-  terraform:
+      # Ansible lint
+      - name: Ansible lint
+        run: ansible-lint ansible/
+
+  Deploy:
     runs-on: self-hosted
     needs: testing   
 
