@@ -41,7 +41,7 @@ jobs:
 
 
       - name: Ansible syntax check
-        run: ansible-playbook ansible/media-server.yml --syntax-check
+        run: ansible-playbook Ansbile/media-server.yml --syntax-check
 
       - name: Ansible lint
         run: ansible-lint ansible/
