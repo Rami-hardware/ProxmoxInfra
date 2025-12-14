@@ -1,0 +1,15 @@
+name: Main Workflow
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  call-terraform:
+    uses: ./.github/workflows/Terraform.yml
+    with:
+      apply: ${{ github.ref == 'refs/heads/main' }}
