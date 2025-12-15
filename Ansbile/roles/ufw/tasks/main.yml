@@ -1,0 +1,38 @@
+- name: Ensure UFW is installed
+  apt:
+    name: ufw
+    state: present
+    update_cache: yes
+
+- name: Allow SSH
+  ufw:
+    rule: allow
+    name: OpenSSH
+  failed_when: false
+
+- name: Allow TCP ports for services
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop: "{{ service_tcp_ports | default([]) }}"
+
+- name: Allow UDP ports for services
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: udp
+  loop: "{{ service_udp_ports | default([]) }}"
+
+- name: Enable UFW (if not already)
+  ufw:
+    state: enabled
+    policy: deny
+
+- name: Show running containers
+  shell: docker ps --format '{{"{{.Names}}"}} - {{"{{.Status}}"}}'
+  register: running_containers
+
+- name: Output container status
+  debug:
+    var: running_containers.stdout_lines
