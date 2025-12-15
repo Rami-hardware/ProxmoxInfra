@@ -1,29 +1,30 @@
 - name: Ensure DNS is set via systemd-resolved
   become: true
   block:
-  - name: Configure systemd-resolved DNS
-    lineinfile:
-      path: /etc/systemd/resolved.conf
-      regexp: '^#?DNS='
-      line: 'DNS=1.1.1.1 8.8.8.8'
-      backup: true
+    - name: Configure systemd-resolved DNS
+      ansible.builtin.lineinfile:
+        path: /etc/systemd/resolved.conf
+        regexp: '^#?DNS='
+        line: 'DNS=1.1.1.1 8.8.8.8'
+        backup: true
 
-  - name: Ensure DNSStubListener is enabled
-    lineinfile:
-      path: /etc/systemd/resolved.conf
-      regexp: '^#?DNSStubListener='
-      line: 'DNSStubListener=yes'
-      backup: true
+    - name: Ensure DNSStubListener is enabled
+      ansible.builtin.lineinfile:
+        path: /etc/systemd/resolved.conf
+        regexp: '^#?DNSStubListener='
+        line: 'DNSStubListener=yes'
+        backup: true
 
-  - name: Restart systemd-resolved
-    systemd:
-      name: systemd-resolved
-      state: restarted
-      enabled: true
+    - name: Restart systemd-resolved
+      ansible.builtin.systemd:
+        name: systemd-resolved
+        state: restarted
+        enabled: true
 
-  - name: Recreate /etc/resolv.conf symlink
-    file:
-      src: /run/systemd/resolve/stub-resolv.conf
-      dest: /etc/resolv.conf
-      state: link
-      force: true
+    - name: Recreate /etc/resolv.conf symlink
+      ansible.builtin.file:
+        src: /run/systemd/resolve/stub-resolv.conf
+        dest: /etc/resolv.conf
+        state: link
+        force: true
+        mode: '0644' 
