@@ -1,8 +1,7 @@
 - name: Remove wrongly created default.conf directory if it exists
   ansible.builtin.file:
-      path: /opt/services/default.conf
-      state: absent
-      mode: '0644'
+    path: /opt/services/default.conf
+    state: absent
 
 - name: Deploy Nginx reverse proxy config
   ansible.builtin.copy:
