@@ -38,3 +38,4 @@
 - name: Output container status
   ansible.builtin.debug:
     var: ufw_running_containers.stdout_lines
+
