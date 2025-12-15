@@ -74,13 +74,11 @@ jobs:
 
       # Ansible syntax check
       - name: Ansible syntax check
-        working-directory: Ansbile
         run: |
           source venv/bin/activate
-          ansible-playbook media-server.yml --syntax-check
+          ansible-playbook  Ansbile/dev-server.yml --syntax-check
       # Ansible lint
       - name: Ansible lint
-        working-directory: Ansbile
         run: |
           source venv/bin/activate
           ansible-lint Ansbile/
@@ -110,28 +108,25 @@ jobs:
         run: terraform plan
 
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/main'
         working-directory: Terraform
         env:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
           TF_VAR_pm_user: ${{ secrets.PM_USER }}
           TF_VAR_pm_password: ${{ secrets.PM_PASSWORD }}
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-        run: terraform apply -auto-approve -target="module.proxmox_vms[\"media\"]"
+        run: terraform apply -auto-approve -target="module.proxmox_vms[\"dev\"]"
 
       - name: Install Ansible
         run: sudo apt update && sudo apt install -y ansible
       
       - name: Install Ansible collections
-        working-directory: Ansbile
         run: |
           source venv/bin/activate
-          ansible-galaxy collection install -r requirements.yml
+          ansible-galaxy collection install -r Ansbile/requirements.yml
 
       - name: Run Ansible Playbook
-        working-directory: Ansible
         run: |
           source venv/bin/activate
-          ansible-playbook -i inventory.ini dev-server.yml
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/dev-server.yml
         env:
           ANSIBLE_HOST_KEY_CHECKING: 'False'
