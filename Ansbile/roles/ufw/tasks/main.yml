@@ -1,40 +1,38 @@
 - name: Ensure UFW is installed
-  ansible.builtin.apt:
+  apt:
     name: ufw
     state: present
     update_cache: yes
 
 - name: Allow SSH
-  community.general.ufw:
+  ufw:
     rule: allow
     name: OpenSSH
   failed_when: false
 
 - name: Allow TCP ports for services
-  community.general.ufw:
+  ufw:
     rule: allow
     port: "{{ item }}"
     proto: tcp
   loop: "{{ service_tcp_ports | default([]) }}"
 
 - name: Allow UDP ports for services
-  community.general.ufw:
+  ufw:
     rule: allow
     port: "{{ item }}"
     proto: udp
   loop: "{{ service_udp_ports | default([]) }}"
 
 - name: Enable UFW (if not already)
-  community.general.ufw:
+  ufw:
     state: enabled
     policy: deny
 
 - name: Show running containers
-  ansible.builtin.shell: >
-    docker ps --format '{{"{{.Names}}"}} - {{"{{.Status}}"}}'
+  shell: docker ps --format '{{"{{.Names}}"}} - {{"{{.Status}}"}}'
   register: running_containers
-  changed_when: false
 
 - name: Output container status
-  ansible.builtin.debug:
+  debug:
     var: running_containers.stdout_lines
