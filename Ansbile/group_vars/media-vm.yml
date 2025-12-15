@@ -1,127 +1,129 @@
 docker_apps_enabled:
-- plex
-- radarr
-- sonarr
-- bazarr
-- qbittorrent
-- prowlarr
-- portainer_agent
-- overseer
-- flaresolverr
-- jellyfin
-- promtail
-- node-exporter
-- watchtower
-- nextpvr
+  - plex
+  - radarr
+  - sonarr
+  - bazarr
+  - qbittorrent
+  - prowlarr
+  - portainer_agent
+  - overseer
+  - flaresolverr
+  - jellyfin
+  - promtail
+  - node-exporter
+  - watchtower
+  - nextpvr
 
 service_tcp_ports:
-- 8096 # Jellyfin HTTP
-- 8920 # Jellyfin HTTPS
-- 5055 # Overseer
-- 7878 # Radarr
-- 8989 # Sonarr
-- 6767 # Bazarr
-- 8080 # qBittorrent Web UI
-- 9696 # Prowlarr
-- 9001 # Portainer Agent
-- 8191 # FlareSolverr
-- 32400 # Plex web & DLNA
+  - 8096 # Jellyfin HTTP
+  - 8920 # Jellyfin HTTPS
+  - 5055 # Overseer
+  - 7878 # Radarr
+  - 8989 # Sonarr
+  - 6767 # Bazarr
+  - 8080 # qBittorrent Web UI
+  - 9696 # Prowlarr
+  - 9001 # Portainer Agent
+  - 8191 # FlareSolverr
+  - 32400 # Plex web & DLNA
 
 service_udp_ports:
-- 6881 # qBittorrent UDP
+  - 6881 # qBittorrent UDP
 
 # Set your timezone
-TimeZone: "Asia/Riyadh"
+time_zone: "Asia/Riyadh"
 
-docker_daemon_json: /etc/docker/daemon.json
+docker_daemon_json: "/etc/docker/daemon.json"
 
 # Configuration for Watchtower
-watchtower_run: /var/run/docker.sock:/var/run/docker.sock
+watchtower_run: "/var/run/docker.sock:/var/run/docker.sock"
 
 # Settings for Plex Media Server
 plex_ports:
-- "32400:32400/tcp"
-- "1900:1900/udp"
-- "32410:32410/udp"
-- "32412:32412/udp"
-- "32413:32413/udp"
-- "32414:32414/udp"
-- "5353:5353/udp"
+  - "32400:32400/tcp"
+  - "1900:1900/udp"
+  - "32410:32410/udp"
+  - "32412:32412/udp"
+  - "32413:32413/udp"
+  - "32414:32414/udp"
+  - "5353:5353/udp"
 
 plex_volume_config_dir: "/opt/plex:/config"
 plex_volume_media_dir: "/mnt/media:/data"
 
-#jellyfin settings
+# Jellyfin settings
 jellyfin_ports:
-- "8096:8096"
-- "8920:8920"
+  - "8096:8096"
+  - "8920:8920"
 
 jellyfin_volume_config_dir: "/opt/jellyfin"
 jellyfin_volume_media_dir: "/mnt/media"
 jellyfin_volume_cache_dir: "/opt/jellyfin/cache"
 
-# Settings for overseer
+# Settings for Overseer
 overseer_ports:
-- "5055:5055"
+  - "5055:5055"
 overseer_volume_config_dir: "/opt/overseer:/app/config"
 
 # Settings for Radarr
 radarr_ports:
-- "7878:7878"
-radarr_config: /opt/radarr:/config
-radarr_movies: /mnt/media/movies:/movies
-radarr_download: /mnt/media/download:/downloads
+  - "7878:7878"
+radarr_config: "/opt/radarr:/config"
+radarr_movies: "/mnt/media/movies:/movies"
+radarr_download: "/mnt/media/download:/downloads"
 
 # Settings for Sonarr
 sonarr_ports:
-- "8989:8989"
-sonarr_config: /opt/sonarr:/config
-sonarr_tv: /mnt/media/tv:/tv
-sonarr_download: /mnt/media/download:/downloads
+  - "8989:8989"
+sonarr_config: "/opt/sonarr:/config"
+sonarr_tv: "/mnt/media/tv:/tv"
+sonarr_download: "/mnt/media/download:/downloads"
 
 # Settings for Bazarr
 bazarr_ports:
-- "6767:6767"
-bazarr_config: /opt/bazarr:/config
-bazarr_tv: /mnt/media/tv:/tv
-bazarr_movies: /mnt/media/movies:/movies
+  - "6767:6767"
+bazarr_config: "/opt/bazarr:/config"
+bazarr_tv: "/mnt/media/tv:/tv"
+bazarr_movies: "/mnt/media/movies:/movies"
 
 # Settings for qBittorrent
 qbittorrent_ports:
-- "8080:8080"
-- "6881:6881"
-- "6881:6881/udp"
-qbittorrent_config: /opt/qbittorrent:/config
-qbittorrent_download: /mnt/media/download:/downloads
+  - "8080:8080"
+  - "6881:6881"
+  - "6881:6881/udp"
+qbittorrent_config: "/opt/qbittorrent:/config"
+qbittorrent_download: "/mnt/media/download:/downloads"
 
 # Settings for Prowlarr
 prowlarr_ports:
-- "9696:9696"
-prowlarr_config: /opt/prowlarr:/config
+  - "9696:9696"
+prowlarr_config: "/opt/prowlarr:/config"
 
 # Settings for Portainer Agent
 portainer_agent_ports:
-- "9001:9001"
-portainer_agent_run: /var/run/docker.sock:/var/run/docker.sock
-portainer_agent_volumes: /var/lib/docker/volumes:/var/lib/docker/volumes
-portainer_agent_host: /:/host
+  - "9001:9001"
+portainer_agent_run: "/var/run/docker.sock:/var/run/docker.sock"
+portainer_agent_volumes: "/var/lib/docker/volumes:/var/lib/docker/volumes"
+portainer_agent_host: "/:/host"
 
 # Settings for FlareSolverr
 flaresolverr_ports:
-- "8191:8191"
-flaresolverr_config: /opt/flaresolverr:/config
+  - "8191:8191"
+flaresolverr_config: "/opt/flaresolverr:/config"
 
 # Configuration for Promtail
 promtail_var_path: "/var/log:/var/log"
 promtail_config_path: "{{ docker_compose_dir }}/promtail-config.yml:/etc/promtail/config.yml"
 
+# Samba settings
 samba_group: smbgroup
 samba_share_name: media
 samba_share_path: /mnt/media
 samba_users:
-- { name: "admin", password: "admin" }
+  - name: "admin"
+    password: "admin"
 
-
+# Disk configuration
 disk_device: "/dev/sdb"
 partition: "/dev/sdb1"
-mount_point: /mnt/media
+mount_point: "/mnt/media"
