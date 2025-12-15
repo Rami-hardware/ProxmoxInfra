@@ -64,6 +64,7 @@ jobs:
       
       - name: Install Ansible collections
         run: |
+          source venv/bin/activate
           ansible-galaxy collection install -r Ansbile/requirements.yml
 
       - name: Verify collections installed
