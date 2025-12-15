@@ -1,11 +1,11 @@
 name: Homelab CI/CD
 
+
 on:
   push:
     branches:
-      - main
-  pull_request:
-    branches:
+      - development
+      - staging
       - main
 
 jobs:
