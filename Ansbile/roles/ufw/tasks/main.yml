@@ -3,39 +3,32 @@
     name: ufw
     state: present
     update_cache: true
-
 - name: Allow SSH
   community.general.ufw:
     rule: allow
     name: OpenSSH
   failed_when: false
-
 - name: Allow TCP ports for services
   community.general.ufw:
     rule: allow
     port: "{{ item }}"
     proto: tcp
   loop: "{{ service_tcp_ports | default([]) }}"
-
 - name: Allow UDP ports for services
   community.general.ufw:
     rule: allow
     port: "{{ item }}"
     proto: udp
   loop: "{{ service_udp_ports | default([]) }}"
-
 - name: Enable UFW (if not already)
   community.general.ufw:
     state: enabled
     policy: deny
-
 - name: Show running containers
   ansible.builtin.shell: >
     docker ps --format '{{ "{{.Names}}" }} - {{ "{{.Status}}" }}'
   register: ufw_running_containers
   changed_when: false
-
 - name: Output container status
   ansible.builtin.debug:
     var: ufw_running_containers.stdout_lines
-
