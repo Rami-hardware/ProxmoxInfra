@@ -61,6 +61,15 @@ jobs:
           source venv/bin/activate
           pip install --upgrade pip
           pip install ansible-lint
+      
+      - name: Install Ansible collections
+        run: |
+          ansible-galaxy collection install -r requirements.yml
+
+      - name: Verify collections installed
+        run: |
+          ansible-galaxy collection list
+
       # Ansible syntax check
       - name: Ansible syntax check
         run: |
@@ -78,7 +87,7 @@ jobs:
     needs: testing   
 
     steps:
-      
+
       - name: Checkout code
         uses: actions/checkout@v4
       
