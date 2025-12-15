@@ -1,0 +1,11 @@
+- name: Deploy all Media server services
+  hosts: dev-server
+  become: true
+
+  roles:
+    # - DNS
+    # - docker_setup
+    # - docker_apps
+    # - Promtail
+      -   ufw
+    # - smb
