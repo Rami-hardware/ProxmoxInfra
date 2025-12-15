@@ -16,31 +16,43 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      # runner setup
+      - name: Install Node.js
+        run: |
+          sudo apt update
+          sudo apt install -y unzip curl git
+          curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+          sudo apt install -y nodejs
+          
+      - name: Verify installations
+        run: |
+          node -v
+          npm -v
+          unzip -v
+          git --version
+          curl --version
 
       # Terraform setup
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.0
-
       # Terraform validation (safe)
       - name: Terraform init (no backend)
         run: terraform init -backend=false
-
+      # Terraform validate
       - name: Terraform validate
         run: terraform validate
-
+      # Terraform tflint
       - name: Install tflint
         uses: terraform-linters/setup-tflint@v1
-
+      # Terraform lint
       - name: Terraform lint
         run: tflint
-
+      # Install Ansible
       - name: Install Ansible
         run: sudo apt update && sudo apt install -y ansible
-
-
-
+      # Install Ansible and ansible-lint in virtualenv
       - name: Install Ansible and ansible-lint in virtualenv
         run: |
           sudo apt update
@@ -49,12 +61,12 @@ jobs:
           source venv/bin/activate
           pip install --upgrade pip
           pip install ansible-lint
-
+      # Ansible syntax check
       - name: Ansible syntax check
         run: |
           source venv/bin/activate
           ansible-playbook Ansbile/media-server.yml --syntax-check
-
+      # Ansible lint
       - name: Ansible lint
         run: |
           source venv/bin/activate
@@ -66,13 +78,14 @@ jobs:
     needs: testing   
 
     steps:
+      
       - name: Checkout code
         uses: actions/checkout@v4
       
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.6.0   # specify your version
+          terraform_version: 1.6.0   
 
       - name: Terraform Plan
         working-directory: Terraform
