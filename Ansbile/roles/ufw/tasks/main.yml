@@ -2,7 +2,7 @@
   ansible.builtin.apt:
     name: ufw
     state: present
-    update_cache: yes
+    update_cache: true
 
 - name: Allow SSH
   community.general.ufw:
@@ -31,11 +31,10 @@
 
 - name: Show running containers
   ansible.builtin.shell: >
-    docker ps --format '{{"{{.Names}}"}} - {{"{{.Status}}"}}'
-  register: running_containers
+    docker ps --format '{{ "{{.Names}}" }} - {{ "{{.Status}}" }}'
+  register: ufw_running_containers
   changed_when: false
 
 - name: Output container status
   ansible.builtin.debug:
-    var: running_containers.stdout_lines
-
+    var: ufw_running_containers.stdout_lines
