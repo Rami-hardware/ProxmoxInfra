@@ -74,7 +74,7 @@ vms = {
   }
     dev = {
     name       = "dev-server"
-    vmid       = 115
+    vmid       = 223
     ip         = "192.168.1.205/24"
     cores      = 4
     memory     = 2048
