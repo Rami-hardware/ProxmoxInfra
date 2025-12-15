@@ -117,28 +117,23 @@ jobs:
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         run: terraform apply -auto-approve -target="module.proxmox_vms[\"dev\"]"
 
-      - name: Install Ansible
-        run: sudo apt update && sudo apt install -y ansible
-      
-      - name: Install Ansible and ansible-lint in virtualenv
+      - name: Install system dependencies
+        run: sudo apt update && sudo apt install -y ansible python3-venv python3-pip
+
+      - name: Set up Python virtualenv
         run: |
-          sudo apt update
-          sudo apt install -y ansible python3-venv python3-pip
           python3 -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
-          pip install ansible-lint
-      
+          pip install ansible ansible-lint
 
       - name: Install Ansible collections
-        working-directory: Ansbile
         run: |
           source venv/bin/activate
           ansible-galaxy collection install community.docker
           ansible-galaxy collection install -r Ansbile/requirements.yml
 
       - name: Run Ansible Playbook
-        working-directory: Ansbile
         run: |
           source venv/bin/activate
           ansible-playbook -i Ansbile/inventory.ini Ansbile/dev-server.yml
