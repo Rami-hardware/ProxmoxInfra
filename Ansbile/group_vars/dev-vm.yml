@@ -42,4 +42,4 @@ nginx_default_val: "/opt/services/default.conf:/etc/nginx/conf.d/default.conf:ro
 
 # Configuration for fail2ban
 fail2ban_var_path: "/var/log:/var/log:ro"
-fail2ban_data_path: "docker_apps_compose_dir/fail2ban:/data"
+fail2ban_data_path: "{{ docker_apps_compose_dir }}/fail2ban:/data"
