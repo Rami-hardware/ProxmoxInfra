@@ -16,7 +16,7 @@ service_tcp_ports:
   - 443
 
 crowdsec_ports:
-  - "127.0.0.1:8080:8080"
+  - "8080:8080"
 
 crowdsec_acquis: ./crowdsec/acquis.yaml:/etc/crowdsec/acquis.yaml
 crowdsec_logs: logs:/var/log/nginx
