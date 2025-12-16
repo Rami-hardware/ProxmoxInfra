@@ -78,16 +78,6 @@ crowdsec:
     restart: unless-stopped
 {% endif %}
 
-{% if 'fail2ban' in docker_apps_enabled %}
-  fail2ban:
-    image: crazymax/fail2ban
-    container_name: fail2ban
-    network_mode: host
-    volumes:
-      - "{{ fail2ban_var_path }}"
-      - "{{ fail2ban_data_path }}"
-    restart: unless-stopped
-{% endif %}
 
 {% if 'portainer' in docker_apps_enabled %}
   portainer:
@@ -112,27 +102,7 @@ crowdsec:
     restart: unless-stopped
 {% endif %}
 
-{% if 'uptime-kuma' in docker_apps_enabled %}
-  uptime-kuma:
-    image: louislam/uptime-kuma:latest
-    container_name: uptime-kuma
-    logging:
-      driver: loki
-      options:
-        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
-        loki-retries: "2"
-        loki-max-backoff: "800ms"
-        loki-timeout: "1s"
-        keep-file: "true"
-        mode: "non-blocking"
-    ports:
-{% for port in uptime_kuma_ports %}
-      - "{{ port }}"
-{% endfor %}
-    volumes:
-      - "{{ uptime_kuma_data }}"
-    restart: unless-stopped
-{% endif %}
+
 
 {% if 'plex' in docker_apps_enabled %}
   plex:
@@ -352,29 +322,6 @@ crowdsec:
     restart: unless-stopped
 {% endif %}
 
-{% if 'portainer_agent' in docker_apps_enabled %}
-  portainer_agent:
-    image: portainer/agent:2.27.9
-    container_name: portainer_agent
-    logging:
-      driver: loki
-      options:
-        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
-        loki-retries: "2"
-        loki-max-backoff: "800ms"
-        loki-timeout: "1s"
-        keep-file: "true"
-        mode: "non-blocking"
-    ports:
-{% for port in portainer_agent_ports %}
-      - "{{ port }}"
-{% endfor %}
-    volumes:
-      - "{{ portainer_agent_run }}"
-      - "{{ portainer_agent_volumes }}"
-      - "{{ portainer_agent_host }}"
-    restart: always
-{% endif %}
 
 {% if 'flaresolverr' in docker_apps_enabled %}
   flaresolverr:
