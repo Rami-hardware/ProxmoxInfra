@@ -19,12 +19,15 @@
     'already exists' not in docker_apps_loki_install.stderr
 
 - name: Wait for Loki plugin to appear
-  ansible.builtin.command: docker plugin ls --format '{{.Name}}'
+  ansible.builtin.command: >
+    {% raw %}docker plugin ls --format '{{.Name}}'{% endraw %}
   register: docker_apps_loki_plugin_list
   retries: 6
   delay: 5
   until: "'loki' in docker_apps_loki_plugin_list.stdout"
   changed_when: false
+  failed_when: false
+
 
 - name: Enable Loki plugin
   community.docker.docker_plugin:
