@@ -55,7 +55,7 @@
     src: docker-compose.yml.j2
     dest: "{{ docker_apps_compose_file }}"
     mode: "0644"
-    force: yes
+    force: true
 
 - name: Bring down existing Docker Compose stack
   community.docker.docker_compose_v2:
