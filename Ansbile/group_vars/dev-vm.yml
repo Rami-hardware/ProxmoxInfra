@@ -20,7 +20,7 @@ service_udp_ports:
 # Configuration for AdGuard Home
 adguardhome_ports:
   - "3000:3000"
-  - "53:53/udp"
+  - "5353:53/udp"
   - "8081:80"
 
 adguardhome_volume_config_dir: "adguard_config:/opt/adguardhome/conf"
