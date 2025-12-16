@@ -9,13 +9,9 @@
     state: directory
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
-    mode: '0644'
-
+    mode: '0755'
 
 - name: Deploy Nginx reverse proxy config
-  owner: "{{ ansible_user }}"
-  group: "{{ ansible_user }}"
-  mode: '0644'
   ansible.builtin.copy:
     dest: /opt/services/default.conf
     content: |
@@ -142,5 +138,8 @@
               proxy_set_header X-Forwarded-Proto $scheme;
           }
       }
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
   notify:
     - Reload nginx container
