@@ -1,10 +1,10 @@
 ---
-- name: Remove existing Loki plugin if any
+- name: Remove existing Loki plugin if present
   community.docker.docker_plugin:
     plugin_name: loki
     state: absent
     force_remove: true
-  ignore_errors: true
+  failed_when: false
 
 - name: Install Loki plugin disabled (amd64)
   ansible.builtin.command: >
@@ -12,49 +12,26 @@
     --alias loki
     --grant-all-permissions
     --disable
+  register: docker_apps_loki_install
+  changed_when: "'Installed plugin' in docker_apps_loki_install.stdout"
+  failed_when: >
+    docker_apps_loki_install.rc != 0 and
+    'already exists' not in docker_apps_loki_install.stderr
 
-- name: Wait for Loki plugin to appear in plugin list
-  ansible.builtin.shell: docker plugin ls | grep loki
-  register: loki_plugin
+- name: Wait for Loki plugin to appear
+  ansible.builtin.command: docker plugin ls --format '{{.Name}}'
+  register: docker_apps_loki_plugin_list
   retries: 6
   delay: 5
-  until: loki_plugin.rc == 0
-  ignore_errors: true
+  until: "'loki' in docker_apps_loki_plugin_list.stdout"
+  changed_when: false
 
 - name: Enable Loki plugin
   community.docker.docker_plugin:
     plugin_name: loki
     state: enable
 
-- name: Verify Loki plugin is enabled
+- name: Verify Loki plugin
   ansible.builtin.command: docker plugin ls
-  register: plugin_list
-
-- name: Show Docker plugin list
-  ansible.builtin.debug:
-    var: plugin_list.stdout
-
-- name: Create Docker Compose directory
-  ansible.builtin.file:
-    path: "{{ docker_compose_dir }}"
-    state: directory
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
-    mode: "0755"
-
-- name: Template Docker Compose file
-  ansible.builtin.template:
-    src: docker-compose.yml.j2
-    dest: "{{ docker_compose_file }}"
-    force: true
-
-- name: Bring down any existing Docker Compose stack
-  community.docker.docker_compose_v2:
-    project_src: "{{ docker_compose_dir }}"
-    state: absent
-  ignore_errors: true
-
-- name: Start Docker Compose stack
-  community.docker.docker_compose_v2:
-    project_src: "{{ docker_compose_dir }}"
-    state: present
+  register: docker_apps_plugin_list
+  changed_when: false

@@ -1,2 +1,2 @@
-docker_compose_dir: /opt/services
-docker_compose_file: "{{ docker_compose_dir }}/docker-compose.yml"
+docker_apps_compose_dir: /opt/docker
+docker_apps_compose_file: /opt/docker/docker-compose.yml
