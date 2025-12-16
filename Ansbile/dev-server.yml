@@ -6,7 +6,7 @@
   roles:
     - DNS
     - docker_setup
+    - nginx_config
     - docker_apps
-  #  - nginx_config
-  #  - Promtail
-  # - ufw
+    - Promtail
+    - ufw
