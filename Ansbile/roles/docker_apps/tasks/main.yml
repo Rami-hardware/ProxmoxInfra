@@ -1,4 +1,20 @@
 ---
+- name: Ensure /opt/services directory exists
+  ansible.builtin.file:
+    path: /opt/services
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+
+- name: Ensure default Nginx config file exists
+  ansible.builtin.file:
+    path: /opt/services/default.conf
+    state: touch
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+
 - name: Remove existing Loki plugin if present
   community.docker.docker_plugin:
     plugin_name: loki
