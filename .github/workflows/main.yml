@@ -134,11 +134,13 @@ jobs:
           ansible-galaxy collection install -r Ansbile/requirements.yml
 
       - name: Setup SSH for Ansible
+        shell: bash
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H 192.168.1.205 >> ~/.ssh/known_hosts
+          ssh-keyscan -H 192.168.1.205 >> ~/.ssh/known_hosts || true
+
 
       - name: Run Ansible Playbook
         run: |
