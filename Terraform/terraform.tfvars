@@ -77,13 +77,13 @@ vms = {
     vmid       = 223
     ip         = "192.168.1.205/24"
     cores      = 4
-    memory     = 2048
+    memory     = 1024
     ciuser     = "dev"
     cipassword = "dev@123"
     hostpci    = null
     disks = [
       { slot = "ide2", storage = "local-lvm", size = "5G", type = "cloudinit" },
-      { slot = "scsi0", storage = "local-lvm", size = "20G", type = "disk" },
+      { slot = "scsi0", storage = "local-lvm", size = "5G", type = "disk" },
     ]
   }
 }

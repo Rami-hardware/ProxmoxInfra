@@ -2,11 +2,9 @@ docker_apps_enabled:
   - adguardhome
   - promtail
   - fail2ban
-  - watchtower
   - nginx
-  - portainer
-  - uptime-kuma
   - node-exporter
+  - crowdsec
 
 service_tcp_ports:
   - 80
@@ -16,6 +14,15 @@ service_tcp_ports:
   - 3001
   - 9000
   - 443
+
+crowdsec_ports:
+  - "127.0.0.1:8080:8080"
+
+crowdsec_acquis: ./crowdsec/acquis.yaml:/etc/crowdsec/acquis.yaml
+crowdsec_logs: logs:/var/log/nginx
+crowdsec_db: crowdsec-db:/var/lib/crowdsec/data/
+crowdsec_config: crowdsec-config:/etc/crowdsec/
+crowdsec_collections: "crowdsecurity/nginx"
 
 service_udp_ports:
   - 53 # AdGuard DNS
@@ -33,28 +40,9 @@ adguardhome_volume_work_dir: "adguard_work:/opt/adguardhome/work"
 promtail_var_path: "/var/log:/var/log"
 promtail_config_path: "{{ docker_compose_dir }}/promtail-config.yml:/etc/promtail/config.yml"
 
-# Configuration for Watchtower
-watchtower_run: /var/run/docker.sock:/var/run/docker.sock
-
 # Configuration for Nginx
 nginx_ports:
   - "80:80"
   - "443:443"
 
 nginx_default_val: "/opt/services/default.conf:/etc/nginx/conf.d/default.conf:ro"
-
-# Configuration for fail2ban
-fail2ban_var_path: "/var/log:/var/log:ro"
-fail2ban_data_path: "{{ docker_compose_dir }}/fail2ban:/data"
-
-# Configuration for portainer
-portainer_ports:
-  - "9000:9000"
-
-portainer_run: "/var/run/docker.sock:/var/run/docker.sock"
-portainer_data: "portainer_data:/data"
-
-# Configuration for uptime-kuma
-uptime_kuma_ports:
-  - "3001:3001"
-uptime_kuma_data: "/opt/services/uptime-kuma:/app/data"

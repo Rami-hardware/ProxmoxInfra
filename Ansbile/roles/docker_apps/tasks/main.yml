@@ -1,0 +1,60 @@
+---
+- name: Remove existing Loki plugin if any
+  community.docker.docker_plugin:
+    plugin_name: loki
+    state: absent
+    force_remove: true
+  ignore_errors: true
+
+- name: Install Loki plugin disabled (amd64)
+  ansible.builtin.command: >
+    docker plugin install grafana/loki-docker-driver:3.3.2-amd64
+    --alias loki
+    --grant-all-permissions
+    --disable
+
+- name: Wait for Loki plugin to appear in plugin list
+  ansible.builtin.shell: docker plugin ls | grep loki
+  register: loki_plugin
+  retries: 6
+  delay: 5
+  until: loki_plugin.rc == 0
+  ignore_errors: true
+
+- name: Enable Loki plugin
+  community.docker.docker_plugin:
+    plugin_name: loki
+    state: enable
+
+- name: Verify Loki plugin is enabled
+  ansible.builtin.command: docker plugin ls
+  register: plugin_list
+
+- name: Show Docker plugin list
+  ansible.builtin.debug:
+    var: plugin_list.stdout
+
+- name: Create Docker Compose directory
+  ansible.builtin.file:
+    path: "{{ docker_compose_dir }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+
+- name: Template Docker Compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ docker_compose_file }}"
+    force: true
+
+- name: Bring down any existing Docker Compose stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ docker_compose_dir }}"
+    state: absent
+  ignore_errors: true
+
+- name: Start Docker Compose stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ docker_compose_dir }}"
+    state: present
