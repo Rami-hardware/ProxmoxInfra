@@ -57,36 +57,9 @@
           }
       }
 
-        server {
-            server_name jellyfin.respawnxd.cp;
-
-            location / {
-                auth_request /authelia;
-                include /etc/nginx/snippets/authelia.conf;
-
-                proxy_pass http://jellyfin:8096;
-                proxy_set_header Host $host;
-                proxy_set_header X-Real-IP $remote_addr;
-            }
-        }
-
-      server {
-          listen 80;
-          server_name uptime.respawnxd.co;
-
-          location / {
-              proxy_pass http://192.168.1.200:3001;
-              proxy_set_header Host $host;
-              proxy_set_header X-Real-IP $remote_addr;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_set_header X-Forwarded-Proto $scheme;
-          }
-      }
-
       server {
           listen 80;
           server_name portainer.respawnxd.co;
-
           location / {
               proxy_pass http://192.168.1.200:9000;
               proxy_set_header Host $host;
@@ -114,6 +87,8 @@
           server_name jellyfin.respawnxd.co;
 
           location / {
+              auth_request /authelia;
+              include /etc/nginx/snippets/authelia.conf;
               proxy_pass http://192.168.1.201:8096;
               proxy_set_header Host $host;
               proxy_set_header X-Real-IP $remote_addr;
