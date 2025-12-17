@@ -1,0 +1,33 @@
+server:
+  address: tcp://0.0.0.0:9091
+
+log:
+  level: info
+
+jwt_secret: /secrets/jwt_secret
+
+authentication_backend:
+  file:
+    path: /config/users_database.yml
+    password:
+      algorithm: argon2id
+
+access_control:
+  default_policy: deny
+  rules:
+    - domain: "*.respawnxd.cp"
+      policy: one_factor
+
+session:
+  name: authelia_session
+  secret: /secrets/session_secret
+  domain: respawnxd.co
+
+storage:
+  encryption_key: /secrets/storage_secret
+  local:
+    path: /config/db.sqlite3
+
+notifier:
+  filesystem:
+    filename: /config/notification.txt

@@ -23,25 +23,20 @@ services:
     restart: unless-stopped
 {% endif %}
 
-{% if 'crowdsec' in docker_apps_enabled %}
-crowdsec:
-  image: crowdsecurity/crowdsec
-  restart: always
-{% for port in crowdsec_ports %}
-      - "{{ port }}"
-{% endfor %}
-  environment:
-    COLLECTIONS:  {{ crowdsec_collections }}
-    GID: "${GID-1000}"
-  depends_on:
-    - "reverse-proxy"
-  volumes:
-    - {{ crowdsec_acquis }}
-    - {{ crowdsec_logs }}
-    - {{ crowdsec_db }}
-    - {{ crowdsec_config }}
-{% endif %}
 
+{% if 'authelia' in docker_apps_enabled %}
+  authelia:
+    image: authelia/authelia:latest
+    container_name: authelia
+    restart: unless-stopped
+    expose:
+      - "9091"
+    volumes:
+      - "{{ authelia_config_dir }}:/config"
+      - "{{ authelia_secrets_dir }}:/secrets"
+    environment:
+      - TZ={{ TimeZone }}
+{% endif %}
 
 {% if 'promtail' in docker_apps_enabled %}
   promtail:
