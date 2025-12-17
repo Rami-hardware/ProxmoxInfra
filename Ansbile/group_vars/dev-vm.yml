@@ -46,3 +46,4 @@ fail2ban_data_path: "{{ docker_apps_compose_dir }}/fail2ban:/data"
 
 authelia_config_dir: /opt/docker/authelia
 authelia_secrets_dir: /opt/docker/authelia/secrets
+timezone: UTC

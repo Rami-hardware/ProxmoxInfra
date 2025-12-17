@@ -127,3 +127,5 @@ samba_users:
 disk_device: "/dev/sdb"
 partition: "/dev/sdb1"
 mount_point: "/mnt/media"
+
+timezone: UTC
