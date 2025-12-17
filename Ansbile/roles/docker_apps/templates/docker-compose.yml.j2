@@ -35,7 +35,7 @@ services:
       - "{{ authelia_config_dir }}:/config"
       - "{{ authelia_secrets_dir }}:/secrets"
     environment:
-      - TZ={{ TimeZone }}
+      - TZ={{ timezone }}
 {% endif %}
 
 {% if 'promtail' in docker_apps_enabled %}
@@ -100,7 +100,7 @@ services:
         mode: "non-blocking"
     network_mode: host
     environment:
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ timezone }}"
     ports:
 {% for port in plex_ports %}
       - "{{ port }}"
@@ -130,7 +130,7 @@ services:
       - "{{ port }}"
 {% endfor %}
     environment:
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ timezone }}"
       - NVIDIA_VISIBLE_DEVICES=all
     volumes:
       - "{{ jellyfin_volume_config_dir }}:/config"
@@ -159,7 +159,7 @@ services:
       - "{{ port }}"
 {% endfor %}
     environment:
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ timezone }}"
     volumes:
       - "{{ overseer_volume_config_dir }}"
     restart: unless-stopped
@@ -185,7 +185,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ timezone }}"
     volumes:
       - "{{ radarr_config }}"
       - "{{ radarr_movies }}"
@@ -213,7 +213,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ timezone }}"
     volumes:
       - "{{ sonarr_config }}"
       - "{{ sonarr_tv }}"
@@ -241,7 +241,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ timezone }}"
     volumes:
       - "{{ bazarr_config }}"
       - "{{ bazarr_tv }}"
@@ -269,7 +269,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ timezone }}"
       - WEBUI_PORT=8080
     volumes:
       - "{{ qbittorrent_config }}"
@@ -297,7 +297,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ timezone }}"
     volumes:
       - "{{ prowlarr_config }}"
     restart: unless-stopped
@@ -345,7 +345,7 @@ services:
       - "{{ port }}"
 {% endfor %}
     environment:
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ timezone }}"
       - LOG_LEVEL=info
       - CAPTCHA_SOLVER=none
     restart: unless-stopped

@@ -15,7 +15,7 @@ authentication_backend:
 access_control:
   default_policy: deny
   rules:
-    - domain: "*.respawnxd.cp"
+    - domain: "*.respawnxd.co"
       policy: one_factor
 
 session:
