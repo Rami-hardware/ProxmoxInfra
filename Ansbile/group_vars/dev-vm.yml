@@ -4,6 +4,7 @@ docker_apps_enabled:
   - fail2ban
   - nginx
   - node-exporter
+  - crowdsec
 
 service_tcp_ports:
   - 80
@@ -54,3 +55,14 @@ authelia_timezone: UTC
 
 authelia_container_name: authelia
 authelia_image: authelia/authelia:latest
+
+crowdsec_val:
+  - /opt/docker/crowdsec/config:/etc/crowdsec
+  - /opt/docker/crowdsec/data:/var/lib/crowdsec/data
+  - /var/log/nginx:/var/log/nginx:ro # For Nginx logs
+
+crowdsec_nginx_val: /opt/docker/crowdsec/bouncer:/etc/crowdsec
+
+crowdsec_nginx_env:
+  - API_URL=http://crowdsec:8080
+  - API_KEY_FILE=/etc/crowdsec/bouncer_api_key
