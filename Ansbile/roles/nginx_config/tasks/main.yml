@@ -1,36 +1,7 @@
-- name: Remove wrongly created default.conf if it exists
+- name: Remove wrongly created default.conf directory if it exists
   ansible.builtin.file:
     path: /opt/services/default.conf
     state: absent
-
-- name: Ensure /opt/services exists
-  ansible.builtin.file:
-    path: /opt/services
-    state: directory
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
-    mode: "0755"
-
-- name: Deploy Authelia nginx auth snippet
-  ansible.builtin.copy:
-    dest: /opt/services/authelia.conf
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
-    mode: '0644'
-    content: |
-      # Authelia auth request endpoint
-      location = /authelia {
-          internal;
-          proxy_pass http://authelia:9091/api/verify;
-          proxy_set_header Content-Length "";
-          proxy_set_header X-Original-URL $scheme://$http_host$request_uri;
-          proxy_set_header X-Forwarded-Proto $scheme;
-          proxy_set_header X-Forwarded-Host $http_host;
-          proxy_set_header X-Forwarded-URI $request_uri;
-          proxy_set_header X-Forwarded-For $remote_addr;
-      }
-
-      error_page 401 =302 https://auth.respawnxd.co/?rd=$scheme://$http_host$request_uri;
 
 - name: Deploy Nginx reverse proxy config
   ansible.builtin.copy:
@@ -58,7 +29,21 @@
 
       server {
           listen 80;
+          server_name uptime.respawnxd.co;
+
+          location / {
+              proxy_pass http://192.168.1.200:3001;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+          }
+      }
+
+      server {
+          listen 80;
           server_name portainer.respawnxd.co;
+
           location / {
               proxy_pass http://192.168.1.200:9000;
               proxy_set_header Host $host;
@@ -86,8 +71,6 @@
           server_name jellyfin.respawnxd.co;
 
           location / {
-              auth_request /authelia;
-              include /etc/nginx/snippets/authelia.conf;
               proxy_pass http://192.168.1.201:8096;
               proxy_set_header Host $host;
               proxy_set_header X-Real-IP $remote_addr;
@@ -147,34 +130,8 @@
               proxy_set_header X-Forwarded-Proto $scheme;
           }
       }
-      server {
-            server_name auth.respawnxd.co;
-            location / {
-                proxy_pass http://192.168.1.205:9091;
-            }
-        }
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+    owner: root
+    group: root
     mode: '0644'
   notify:
     - Reload nginx container
-
-- name: Deploy Authelia nginx auth snippet
-  ansible.builtin.copy:
-    dest: /opt/services/authelia.conf
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
-    mode: "0644"
-    content: |
-      location = /authelia {
-          internal;
-          proxy_pass http://authelia:9091/api/verify;
-          proxy_set_header Content-Length "";
-          proxy_set_header X-Original-URL $scheme://$http_host$request_uri;
-          proxy_set_header X-Forwarded-Proto $scheme;
-          proxy_set_header X-Forwarded-Host $http_host;
-          proxy_set_header X-Forwarded-URI $request_uri;
-          proxy_set_header X-Forwarded-For $remote_addr;
-      }
-
-      error_page 401 =302 https://auth.respawnxd.co/?rd=$scheme://$http_host$request_uri;
