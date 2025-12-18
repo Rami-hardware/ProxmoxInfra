@@ -8,18 +8,25 @@
   failed_when: false
   changed_when: "'API key' in crowdsec_nginx_bouncer_key_cmd.stdout"
 
-- name: Fetch CrowdSec NGINX bouncer API key
+- name: Fetch CrowdSec NGINX bouncer list
   ansible.builtin.command: docker exec crowdsec cscli bouncers list
   register: crowdsec_nginx_bouncer_list
   changed_when: false
 
-- name: Extract CrowdSec NGINX bouncer API key
+- name: Extract CrowdSec NGINX bouncer API key safely
   ansible.builtin.set_fact:
     crowdsec_nginx_bouncer_key: >-
-      {{ crowdsec_nginx_bouncer_list.stdout_lines
-         | select("search", "^nginx-bouncer")
-         | map("regex_search", "api-key: (.+)$")
-         | select("string") | first }}
+      {{ (crowdsec_nginx_bouncer_list.stdout_lines
+          | select("search", "^nginx-bouncer")
+          | map("regex_search", "api-key: (.+)$")
+          | select("string")
+          | list)
+         | first | default('') }}
+
+- name: Fail if CrowdSec NGINX bouncer key is not found
+  ansible.builtin.fail:
+    msg: "CrowdSec NGINX bouncer API key not found! Make sure the bouncer is registered."
+  when: crowdsec_nginx_bouncer_key == ""
 
 - name: Install CrowdSec NGINX bouncer package
   ansible.builtin.apt:

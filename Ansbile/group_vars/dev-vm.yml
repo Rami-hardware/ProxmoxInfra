@@ -4,7 +4,7 @@ docker_apps_enabled:
   - nginx
   - node-exporter
   - crowdsec
-  - authelia
+
 service_tcp_ports:
   - 80
   - 3000
