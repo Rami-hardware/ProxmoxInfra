@@ -17,7 +17,7 @@
 
 - name: Deploy Authelia nginx auth snippet
   ansible.builtin.copy:
-    dest: /opt/services/uthelia.conf
+    dest: /opt/services/authelia.conf
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
     mode: '0644'
