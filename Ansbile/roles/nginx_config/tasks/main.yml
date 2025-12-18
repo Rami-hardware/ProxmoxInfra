@@ -1,11 +1,7 @@
-- name: Remove wrongly created nginx config files
+- name: Remove wrongly created default.conf if it exists
   ansible.builtin.file:
-    path: "{{ item }}"
+    path: /opt/services/default.conf
     state: absent
-  loop:
-    - /opt/services/default.conf
-    - /opt/services/authelia.conf
-
 
 - name: Ensure /opt/services exists
   ansible.builtin.file:
