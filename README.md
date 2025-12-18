@@ -1,2 +1,1 @@
-# HomelabProxmox
 # ProxmoxInfra

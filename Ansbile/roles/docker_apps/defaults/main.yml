@@ -1,0 +1,3 @@
+docker_apps_compose_dir: /opt/docker
+docker_apps_compose_file: /opt/docker/docker-compose.yml
+docker_apps_timezone: UTC

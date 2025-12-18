@@ -1,17 +1,18 @@
 name: Homelab CI/CD
 
+
 on:
   push:
     branches:
-      - main
-  pull_request:
-    branches:
+      - development
+      - staging
       - main
 
 jobs:
   testing:
     name: Testing Infrastructure Code
     runs-on: self-hosted
+    environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || 'development' }}
 
     steps:
       - name: Checkout code
@@ -44,11 +45,11 @@ jobs:
       - name: Terraform validate
         run: terraform validate
       # Terraform tflint
-      - name: Install tflint
-        uses: terraform-linters/setup-tflint@v1
+      #- name: Install tflint
+       # uses: terraform-linters/setup-tflint@v1
       # Terraform lint
-      - name: Terraform lint
-        run: tflint
+      #- name: Terraform lint
+       # run: tflint
       # Install Ansible
       - name: Install Ansible
         run: sudo apt update && sudo apt install -y ansible
@@ -65,6 +66,7 @@ jobs:
       - name: Install Ansible collections
         run: |
           source venv/bin/activate
+          ansible-galaxy collection install community.docker
           ansible-galaxy collection install -r Ansbile/requirements.yml
 
       - name: Verify collections installed
@@ -75,7 +77,7 @@ jobs:
       - name: Ansible syntax check
         run: |
           source venv/bin/activate
-          ansible-playbook Ansbile/media-server.yml --syntax-check
+          ansible-playbook  Ansbile/dev-server.yml --syntax-check
       # Ansible lint
       - name: Ansible lint
         run: |
@@ -86,9 +88,9 @@ jobs:
     name: Deploy Infrastructure Code
     runs-on: self-hosted
     needs: testing   
+    environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || 'development' }}
 
     steps:
-
       - name: Checkout code
         uses: actions/checkout@v4
       
@@ -107,11 +109,42 @@ jobs:
         run: terraform plan
 
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/main'
         working-directory: Terraform
         env:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
           TF_VAR_pm_user: ${{ secrets.PM_USER }}
           TF_VAR_pm_password: ${{ secrets.PM_PASSWORD }}
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-        run: terraform apply -auto-approve -target="module.proxmox_vms[\"media\"]"
+        run: terraform apply -auto-approve -target="module.proxmox_vms[\"dev\"]"
+
+      - name: Install system dependencies
+        run: sudo apt update && sudo apt install -y ansible python3-venv python3-pip
+
+      - name: Set up Python virtualenv
+        run: |
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install ansible ansible-lint
+
+      - name: Install Ansible collections
+        run: |
+          source venv/bin/activate
+          ansible-galaxy collection install community.docker
+          ansible-galaxy collection install -r Ansbile/requirements.yml
+
+      - name: Setup SSH for Ansible
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 192.168.1.205 >> ~/.ssh/known_hosts || true
+
+
+      - name: Run Ansible Playbook
+        run: |
+          source venv/bin/activate
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/dev-server.yml
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: 'False'

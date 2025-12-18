@@ -1,0 +1,51 @@
+---
+- name: Install CrowdSec repository
+  ansible.builtin.import_tasks: repository.yml
+
+- name: Ensure CrowdSec NGINX bouncer exists
+  ansible.builtin.command: docker exec crowdsec cscli bouncers add nginx-bouncer
+  register: crowdsec_nginx_bouncer_key_cmd
+  failed_when: false
+  changed_when: "'API key' in crowdsec_nginx_bouncer_key_cmd.stdout"
+
+- name: Fetch CrowdSec NGINX bouncer API key
+  ansible.builtin.command: docker exec crowdsec cscli bouncers list
+  register: crowdsec_nginx_bouncer_list
+  changed_when: false
+
+- name: Extract CrowdSec NGINX bouncer API key
+  ansible.builtin.set_fact:
+    crowdsec_nginx_bouncer_key: >-
+      {{ crowdsec_nginx_bouncer_list.stdout_lines
+         | select("search", "^nginx-bouncer")
+         | map("regex_search", "api-key: (.+)$")
+         | select("string") | first }}
+
+- name: Install CrowdSec NGINX bouncer package
+  ansible.builtin.apt:
+    name: crowdsec-nginx-bouncer
+    state: present
+    update_cache: true
+
+- name: Configure CrowdSec NGINX bouncer
+  ansible.builtin.template:
+    src: crowdsec-nginx-bouncer.conf.j2
+    dest: /etc/crowdsec/bouncers/crowdsec-nginx-bouncer.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart nginx bouncer
+
+- name: Enable CrowdSec in nginx
+  ansible.builtin.copy:
+    dest: /etc/nginx/conf.d/crowdsec.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      load_module modules/ngx_http_crowdsec_module.so;
+
+      http {
+          crowdsec;
+      }
+  notify: Reload nginx

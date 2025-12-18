@@ -1,0 +1,86 @@
+---
+- name: Ensure /opt/services directory exists
+  ansible.builtin.file:
+    path: /opt/services
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+
+- name: Ensure default Nginx config file exists
+  ansible.builtin.file:
+    path: /opt/services/default.conf
+    state: touch
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+
+- name: Remove existing Loki plugin if present
+  community.docker.docker_plugin:
+    plugin_name: loki
+    state: absent
+    force_remove: true
+  failed_when: false
+  changed_when: false
+
+- name: Install Loki plugin disabled (amd64)
+  ansible.builtin.command: >
+    docker plugin install grafana/loki-docker-driver:3.3.2-amd64
+    --alias loki
+    --grant-all-permissions
+    --disable
+  register: docker_apps_loki_install
+  changed_when: "'Installed plugin' in docker_apps_loki_install.stdout"
+  failed_when: docker_apps_loki_install.rc != 0 and
+               "'already exists' not in docker_apps_loki_install.stderr"
+
+- name: Wait for Loki plugin to appear
+  ansible.builtin.command: docker plugin ls
+  register: docker_apps_loki_plugin_list
+  retries: 6
+  delay: 5
+  until: "'loki' in docker_apps_loki_plugin_list.stdout"
+  changed_when: false
+  failed_when: false
+
+- name: Enable Loki plugin
+  community.docker.docker_plugin:
+    plugin_name: loki
+    state: enable
+
+- name: Verify Loki plugin is enabled
+  ansible.builtin.command: docker plugin ls
+  register: docker_apps_plugin_list
+  changed_when: false
+  failed_when: false
+
+- name: Display Loki plugin list
+  ansible.builtin.debug:
+    msg: "{{ docker_apps_plugin_list.stdout }}"
+
+- name: Ensure Docker Compose directory exists
+  ansible.builtin.file:
+    path: "{{ docker_apps_compose_dir }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+
+- name: Template Docker Compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ docker_apps_compose_file }}"
+    mode: "0644"
+    force: true
+
+- name: Bring down existing Docker Compose stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ docker_apps_compose_dir }}"
+    state: absent
+  changed_when: false
+  failed_when: false
+
+- name: Start Docker Compose stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ docker_apps_compose_dir }}"
+    state: present

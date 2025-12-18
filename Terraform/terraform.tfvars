@@ -72,6 +72,7 @@ vms = {
       { slot = "scsi0", storage = "local-lvm", size = "20G", type = "disk" },
     ]
   }
+<<<<<<< HEAD
 
   dev = {
     name       = "dev-server"
@@ -79,12 +80,24 @@ vms = {
     ip         = "192.168.1.205/24"
     cores      = 4
     memory     = 2048
+=======
+    dev = {
+    name       = "dev-server"
+    vmid       = 223
+    ip         = "192.168.1.205/24"
+    cores      = 4
+    memory     = 1024
+>>>>>>> development
     ciuser     = "dev"
     cipassword = "dev@123"
     hostpci    = null
     disks = [
       { slot = "ide2", storage = "local-lvm", size = "5G", type = "cloudinit" },
+<<<<<<< HEAD
       { slot = "scsi0", storage = "local-lvm", size = "10G", type = "disk" },
+=======
+      { slot = "scsi0", storage = "local-lvm", size = "15G", type = "disk" },
+>>>>>>> development
     ]
   }
 }

@@ -1,0 +1,13 @@
+- name: Deploy to Dev Server
+  hosts: dev-server
+  become: true
+
+  roles:
+    - DNS
+    - docker_setup
+    - docker_apps
+    - nginx_config
+    - authelia
+    - crowdsec
+    - Promtail
+    - ufw

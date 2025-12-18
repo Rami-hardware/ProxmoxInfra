@@ -1,0 +1,46 @@
+- name: Ensure Promtail config directory exists
+  ansible.builtin.file:
+    path: /opt/services/promtail
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+
+- name: Create Promtail config file
+  ansible.builtin.copy:
+    dest: /opt/services/promtail/config.yml
+    content: |
+      server:
+        http_listen_port: 9080
+        grpc_listen_port: 0
+
+      positions:
+        filename: /tmp/positions.yaml
+
+      clients:
+        - url: http://192.168.1.203:3100/loki/api/v1/push
+
+      scrape_configs:
+        - job_name: samba-logs
+          static_configs:
+            - targets: ['localhost']
+              labels:
+                job: samba
+                __path__: /var/log/samba/*
+
+        - job_name: docker-logs
+          static_configs:
+            - targets: ['localhost']
+              labels:
+                job: docker
+                __path__: /var/log/containers/*.log
+
+        - job_name: system
+          static_configs:
+            - targets: ['localhost']
+              labels:
+                job: varlogs
+                __path__: /var/log/{syslog,*.log}
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
