@@ -30,7 +30,7 @@ services:
       - "{{ authelia_config_dir }}:/config"
       - "{{ authelia_cert_dir }}:/certs"
     environment:
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ timezone }}"
     restart: unless-stopped
 {% endif %}
 
