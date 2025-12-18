@@ -21,10 +21,11 @@
   notify: Restart authelia container
 
 - name: Generate Authelia secrets
-  ansible.builtin.shell: |
-    test -f {{ authelia_secrets_dir }}/{{ item }} || openssl rand -hex 32 > {{ authelia_secrets_dir }}/{{ item }}
-  args:
-    creates: "{{ authelia_secrets_dir }}/{{ item }}"
+  community.crypto.openssl_random:
+    path: "{{ authelia_secrets_dir }}/{{ item }}"
+    length: 32
+    hex: true
+    mode: "0600"
   loop:
     - session_secret
     - storage_secret

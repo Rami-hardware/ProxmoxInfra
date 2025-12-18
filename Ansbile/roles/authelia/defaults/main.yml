@@ -4,4 +4,7 @@ authelia_secrets_dir: /opt/docker/authelia/secrets
 authelia_domain: respawnxd.co
 authelia_auth_subdomain: auth.respawnxd.co
 
-timezone: UTC
+authelia_timezone: UTC
+
+authelia_container_name: authelia
+authelia_image: authelia/authelia:latest

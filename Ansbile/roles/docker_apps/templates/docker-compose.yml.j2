@@ -30,7 +30,7 @@ services:
     container_name: {{ authelia_container_name }}
     restart: unless-stopped
     environment:
-      TZ: "{{ timezone }}"
+      TZ: "{{ authelia_timezone }}"
     volumes:
       - "{{ authelia_base_dir }}:/config"
       - "{{ authelia_secrets_dir }}:/secrets"
