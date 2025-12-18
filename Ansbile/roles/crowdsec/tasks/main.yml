@@ -1,4 +1,7 @@
 ---
+- name: Install CrowdSec repository
+  ansible.builtin.import_tasks: repository.yml
+  
 - name: Create nginx bouncer API key (if not exists)
   ansible.builtin.command: docker exec crowdsec cscli bouncers add nginx-bouncer
   register: crowdsec_nginx_bouncer_key_cmd
