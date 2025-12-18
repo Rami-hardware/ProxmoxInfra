@@ -5,8 +5,8 @@
   roles:
     - DNS
     - docker_setup
-    - nginx_config
-    - authelia
     - docker_apps
+    - authelia
+    - nginx_config
     - Promtail
     - ufw
