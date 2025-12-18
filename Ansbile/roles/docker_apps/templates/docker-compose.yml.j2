@@ -1,6 +1,6 @@
 version: "3.9"
 services:
-  {% if 'crowdsec' in docker_apps_enabled %}
+{% if 'crowdsec' in docker_apps_enabled %}
   crowdsec:
     image: crowdsecurity/crowdsec:latest
     container_name: crowdsec
@@ -9,11 +9,8 @@ services:
       - /opt/docker/crowdsec/config:/etc/crowdsec
       - /var/log/nginx:/var/log/nginx:ro
     restart: unless-stopped
-    # Optional: expose API for bouncer or metrics
-    ports:
-      - "8080:8080"   # CrowdSec API
-      - "6060:6060"   # Prometheus metrics
-  {% endif %}
+
+{% endif %}
 
 {% if 'adguardhome' in docker_apps_enabled %}
   adguardhome:
