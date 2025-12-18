@@ -1,7 +1,6 @@
 docker_apps_enabled:
   - adguardhome
   - promtail
-  - fail2ban
   - nginx
   - node-exporter
   - crowdsec
@@ -45,13 +44,8 @@ nginx_default_val: "/opt/services/default.conf:/etc/nginx/conf.d/default.conf:ro
 fail2ban_var_path: "/var/log:/var/log:ro"
 fail2ban_data_path: "{{ docker_apps_compose_dir }}/fail2ban:/data"
 
-authelia_base_dir: /opt/docker/authelia
-authelia_secrets_dir: /opt/docker/authelia/secrets
-
-authelia_domain: respawnxd.co
-authelia_auth_subdomain: auth.respawnxd.co
-
-authelia_timezone: UTC
+authelia_config_dir: /opt/docker/authelia/config
+authelia_cert_dir: /opt/docker/authelia/certs
 
 authelia_container_name: authelia
 authelia_image: authelia/authelia:latest
