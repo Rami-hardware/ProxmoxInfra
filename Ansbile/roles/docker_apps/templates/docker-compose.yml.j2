@@ -19,20 +19,13 @@ services:
       driver: loki
       options:
         loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
-        loki-retries: "2"
-        loki-max-backoff: "800ms"
-        loki-timeout: "1s"
-        keep-file: "true"
-        mode: "non-blocking"
     ports:
       - "9091:9091"
     volumes:
-      - "/opt/docker/authelia/config/configuration.yml:/config/configuration.yml:ro"
-      - "/opt/docker/authelia/config/users_database.yml:/config/users_database.yml:ro"
-      - "/opt/docker/authelia/config/notification.txt:/config/notification.txt"
-      - "{{ authelia_cert_dir }}:/certs"
+      - /opt/docker/authelia:/config
+      - /opt/docker/authelia/certs:/certs
     environment:
-      - TZ="{{ timezone }}"
+      - TZ=Europe/London
     restart: unless-stopped
 {% endif %}
 

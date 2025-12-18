@@ -1,4 +1,12 @@
-# Authelia configuration
+server:
+  host: 0.0.0.0
+  port: 9091
+  tls:
+    key: /certs/authelia.key
+    cert: /certs/authelia.crt
+
+log:
+  level: info
 
 authentication_backend:
   file:
@@ -10,20 +18,21 @@ access_control:
 
 session:
   name: authelia_session
-  secret: "{{ authelia_session_secret }}"
+  secret: your_super_secret_session_key_here
   expiration: 3600
   inactivity: 300
-  domain: "{{ authelia_domain }}"
-  cookies:
-    secure: true
-    http_only: true
-    same_site: strict
+  domain: example.com  # must be your actual domain
+  # remove session.cookies section; no longer valid
 
 storage:
   local:
     path: /config/db.sqlite3
-  encryption_key: "{{ authelia_encryption_key }}"
+  encryption_key: your_long_random_encryption_key_here
 
 notifier:
   filesystem:
     filename: /config/notification.txt
+
+identity_validation:
+  reset_password:
+    disable: true
