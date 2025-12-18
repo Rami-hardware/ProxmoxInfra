@@ -1,7 +1,8 @@
 ---
+# handlers/main.yml
 - name: Restart nginx bouncer
   ansible.builtin.service:
-    name: crowdsec-nginx-bouncer
+    name: cs-nginx-bouncer
     state: restarted
 
 - name: Reload nginx

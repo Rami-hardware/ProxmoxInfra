@@ -1,6 +1,6 @@
 version: "3.9"
 services:
-{% if 'crowdsec' in docker_apps_enabled %}
+  {% if 'crowdsec' in docker_apps_enabled %}
   crowdsec:
     image: crowdsecurity/crowdsec:latest
     container_name: crowdsec
@@ -9,8 +9,11 @@ services:
       - /opt/docker/crowdsec/config:/etc/crowdsec
       - /var/log/nginx:/var/log/nginx:ro
     restart: unless-stopped
-
-{% endif %}
+    # Optional: expose API for bouncer or metrics
+    ports:
+      - "8080:8080"   # CrowdSec API
+      - "6060:6060"   # Prometheus metrics
+  {% endif %}
 
 {% if 'adguardhome' in docker_apps_enabled %}
   adguardhome:
@@ -65,7 +68,7 @@ services:
     restart: unless-stopped
 {% endif %}
 
-{% if 'nginx' in docker_apps_enabled %}
+  {% if 'nginx' in docker_apps_enabled %}
   nginx:
     image: nginx:latest
     container_name: nginx
@@ -83,10 +86,10 @@ services:
       - "{{ port }}"
 {% endfor %}
     volumes:
-      - "{{ nginx_default_val }}"
+      - /var/log/nginx:/var/log/nginx:ro
+      - {{ nginx_default_val }}
     restart: unless-stopped
-{% endif %}
-
+  {% endif %}
 {% if 'fail2ban' in docker_apps_enabled %}
   fail2ban:
     image: crazymax/fail2ban
