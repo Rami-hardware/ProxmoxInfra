@@ -1,27 +1,34 @@
 ---
+# tasks/main.yml for crowdsec role
+
 - name: Install CrowdSec repository
   ansible.builtin.import_tasks: repository.yml
 
-- name: Ensure CrowdSec NGINX bouncer exists
-  ansible.builtin.command: docker exec crowdsec cscli bouncers add nginx-bouncer
-  register: crowdsec_nginx_bouncer_key_cmd
-  failed_when: false
-  changed_when: "'API key' in crowdsec_nginx_bouncer_key_cmd.stdout"
-
-- name: Fetch CrowdSec NGINX bouncer list
-  ansible.builtin.command: docker exec crowdsec cscli bouncers list
-  register: crowdsec_nginx_bouncer_list
+- name: Check if nginx-bouncer exists
+  ansible.builtin.command: docker exec crowdsec cscli bouncers list -o json
+  register: crowdsec_bouncer_list_json
   changed_when: false
 
-- name: Extract CrowdSec NGINX bouncer API key safely
+- name: Create nginx-bouncer if missing
+  ansible.builtin.command: docker exec crowdsec cscli bouncers add nginx-bouncer
+  register: crowdsec_add_bouncer
+  failed_when: false
+  changed_when: "'API key' in crowdsec_add_bouncer.stdout"
+  when: >
+    crowdsec_bouncer_list_json.stdout | from_json
+    | selectattr('name', 'equalto', 'nginx-bouncer') | list | length == 0
+
+- name: Extract CrowdSec NGINX bouncer API key
   ansible.builtin.set_fact:
     crowdsec_nginx_bouncer_key: >-
-      {{ (crowdsec_nginx_bouncer_list.stdout_lines
-          | select("search", "^nginx-bouncer")
-          | map("regex_search", "api-key: (.+)$")
-          | select("string")
-          | list)
-         | first | default('') }}
+      {% if crowdsec_add_bouncer.stdout is defined and 'API key' in crowdsec_add_bouncer.stdout %}
+        {{ crowdsec_add_bouncer.stdout | regex_search('API key:\\s*(.+)', '\\1') }}
+      {% else %}
+        {{ (crowdsec_bouncer_list_json.stdout | from_json
+           | selectattr('name','equalto','nginx-bouncer')
+           | map(attribute='api_key')
+           | first | default('')) }}
+      {% endif %}
 
 - name: Fail if CrowdSec NGINX bouncer key is not found
   ansible.builtin.fail:
