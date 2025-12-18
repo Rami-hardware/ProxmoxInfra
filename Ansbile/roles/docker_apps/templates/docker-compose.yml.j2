@@ -5,9 +5,9 @@ services:
     image: crowdsecurity/crowdsec:latest
     container_name: crowdsec
     volumes:
-{% for val in crowdsec_val %}
-      -"{{ val }}"
-{% endfor %}
+    {% for val in crowdsec_val %}
+      - "{{ val }}"
+    {% endfor %}
     restart: unless-stopped
     networks:
       - nginx_network
@@ -22,7 +22,7 @@ services:
       - "{{ env }}"
 {% endfor %}
     volumes:
-      - {{ crowdsec_nginx_val }}
+      - "{{ crowdsec_nginx_val }}"
     restart: unless-stopped
     networks:
       - nginx_network
