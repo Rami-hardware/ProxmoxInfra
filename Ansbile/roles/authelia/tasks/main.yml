@@ -1,0 +1,26 @@
+---
+- name: Ensure Authelia config directory exists
+  file:
+    path: "{{ authelia_config_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Ensure Authelia cert directory exists
+  file:
+    path: "{{ authelia_cert_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Deploy Authelia configuration
+  template:
+    src: configuration.yml.j2
+    dest: "{{ authelia_config_dir }}/configuration.yml"
+    mode: "0644"
+
+- name: Deploy Authelia users database
+  template:
+    src: users_database.yml.j2
+    dest: "{{ authelia_config_dir }}/users_database.yml"
+    mode: "0644"
+
+- import_tasks: docker.yml

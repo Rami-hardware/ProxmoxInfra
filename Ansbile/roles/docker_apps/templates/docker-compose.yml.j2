@@ -25,9 +25,11 @@ services:
         keep-file: "true"
         mode: "non-blocking"
     ports:
-      - "9091:9091"  # Web interface/API port
+      - "9091:9091"
     volumes:
-      - "{{ authelia_config_dir }}:/config"
+      - "/opt/docker/authelia/config/configuration.yml:/config/configuration.yml:ro"
+      - "/opt/docker/authelia/config/users_database.yml:/config/users_database.yml:ro"
+      - "/opt/docker/authelia/config/notification.txt:/config/notification.txt"
       - "{{ authelia_cert_dir }}:/certs"
     environment:
       - TZ="{{ timezone }}"

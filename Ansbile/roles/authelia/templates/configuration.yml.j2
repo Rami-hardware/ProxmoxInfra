@@ -1,0 +1,29 @@
+# Authelia configuration
+
+authentication_backend:
+  file:
+    path: /config/users_database.yml
+
+access_control:
+  default_policy: two_factor
+  rules: []
+
+session:
+  name: authelia_session
+  secret: "{{ authelia_session_secret }}"
+  expiration: 3600
+  inactivity: 300
+  domain: "{{ authelia_domain }}"
+  cookies:
+    secure: true
+    http_only: true
+    same_site: strict
+
+storage:
+  local:
+    path: /config/db.sqlite3
+  encryption_key: "{{ authelia_encryption_key }}"
+
+notifier:
+  filesystem:
+    filename: /config/notification.txt
