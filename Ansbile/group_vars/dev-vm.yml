@@ -66,3 +66,6 @@ crowdsec_nginx_val: /opt/docker/crowdsec/bouncer:/etc/crowdsec
 crowdsec_nginx_env:
   - API_URL=http://crowdsec:8080
   - API_KEY_FILE=/etc/crowdsec/bouncer_api_key
+
+crowdsec_online_api_key: a7c65c19d023489a88b70036e3a10397nmDvrI0bzgfqoUau
+crowdsec_online_api_secret: K6yiJt6KCOfj0AeXbeWQ4BptCGhEYfdCwrNwrr3NoStJ3BOGyoov7JCgbW467u3v
