@@ -83,7 +83,7 @@ vms = {
     hostpci    = null
     disks = [
       { slot = "ide2", storage = "local-lvm", size = "5G", type = "cloudinit" },
-      { slot = "scsi0", storage = "local-lvm", size = "5G", type = "disk" },
+      { slot = "scsi0", storage = "local-lvm", size = "15G", type = "disk" },
     ]
   }
 }
