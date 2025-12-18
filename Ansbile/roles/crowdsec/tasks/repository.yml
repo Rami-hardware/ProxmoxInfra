@@ -22,9 +22,9 @@
 
 - name: Add CrowdSec apt repository
   ansible.builtin.apt_repository:
-    repo: >
+    repo: >-
       deb [signed-by=/etc/apt/keyrings/crowdsec.asc]
-      https://packagecloud.io/crowdsec/crowdsec/{{ ansible_distribution | lower }}/
+      https://packagecloud.io/crowdsec/crowdsec/{{ 'ubuntu' if ansible_distribution == 'Ubuntu' else 'debian' }}/
       {{ ansible_distribution_release }} main
     filename: crowdsec
     state: present
