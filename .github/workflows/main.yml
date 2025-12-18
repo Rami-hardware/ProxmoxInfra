@@ -45,8 +45,8 @@ jobs:
       - name: Terraform validate
         run: terraform validate
       # Terraform tflint
-      - name: Install tflint
-        uses: terraform-linters/setup-tflint@v1
+      #- name: Install tflint
+       # uses: terraform-linters/setup-tflint@v1
       # Terraform lint
       - name: Terraform lint
         run: tflint
