@@ -4,12 +4,15 @@ services:
   crowdsec:
     image: crowdsecurity/crowdsec:latest
     container_name: crowdsec
+    restart: unless-stopped
+
     volumes:
       - /opt/docker/crowdsec/data:/var/lib/crowdsec/data
       - /opt/docker/crowdsec/config:/etc/crowdsec
-      - /var/log/nginx:/var/log/nginx:ro
-    restart: unless-stopped
+      - /opt/docker/nginx/logs:/var/log/nginx:ro
 
+    ports:
+      - "8080:8080"
 {% endif %}
 
 {% if 'adguardhome' in docker_apps_enabled %}
@@ -69,22 +72,16 @@ services:
   nginx:
     image: nginx:latest
     container_name: nginx
-    logging:
-      driver: loki
-      options:
-        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
-        loki-retries: "2"
-        loki-max-backoff: "800ms"
-        loki-timeout: "1s"
-        keep-file: "true"
-        mode: "non-blocking"
+    restart: unless-stopped
+
     ports:
 {% for port in nginx_ports %}
       - "{{ port }}"
 {% endfor %}
+
     volumes:
-      - "{{ nginx_default_val }}"
-    restart: unless-stopped
+      - /opt/docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - /opt/docker/nginx/logs:/var/log/nginx
 {% endif %}
 
 {% if 'fail2ban' in docker_apps_enabled %}
