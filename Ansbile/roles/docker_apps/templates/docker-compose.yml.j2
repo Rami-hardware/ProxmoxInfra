@@ -1,0 +1,550 @@
+version: "3.9"
+services:
+{% if 'crowdsec' in docker_apps_enabled %}
+  crowdsec:
+    image: crowdsecurity/crowdsec:latest
+    container_name: crowdsec
+    volumes:
+      - /opt/docker/crowdsec/data:/var/lib/crowdsec/data
+      - /opt/docker/crowdsec/config:/etc/crowdsec
+      - /var/log/nginx:/var/log/nginx:ro
+    restart: unless-stopped
+
+{% endif %}
+
+{% if 'adguardhome' in docker_apps_enabled %}
+  adguardhome:
+    image: adguard/adguardhome
+    container_name: adguardhome
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    ports:
+{% for port in adguardhome_ports %}
+      - "{{ port }}"
+{% endfor %}
+    volumes:
+      - "{{ adguardhome_volume_config_dir }}"
+      - "{{ adguardhome_volume_work_dir }}"
+    restart: unless-stopped
+{% endif %}
+
+{% if 'promtail' in docker_apps_enabled %}
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    volumes:
+        - "/var/log:/var/log"
+        - "/opt/services/promtail:/etc/promtail"
+    command: -config.file=/etc/promtail/config.yml
+    restart: unless-stopped
+{% endif %}
+
+{% if 'watchtower' in docker_apps_enabled %}
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    volumes:
+      - "{{ watchtower_run }}"
+    command: --cleanup --interval 3600
+    restart: unless-stopped
+{% endif %}
+
+{% if 'nginx' in docker_apps_enabled %}
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    ports:
+{% for port in nginx_ports %}
+      - "{{ port }}"
+{% endfor %}
+    volumes:
+      - "{{ nginx_default_val }}"
+    restart: unless-stopped
+{% endif %}
+
+{% if 'fail2ban' in docker_apps_enabled %}
+  fail2ban:
+    image: crazymax/fail2ban
+    container_name: fail2ban
+    network_mode: host
+    volumes:
+      - "{{ fail2ban_var_path }}"
+      - "{{ fail2ban_data_path }}"
+    restart: unless-stopped
+{% endif %}
+
+{% if 'portainer' in docker_apps_enabled %}
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    ports:
+{% for port in portainer_ports %}
+      - "{{ port }}"
+{% endfor %}
+    volumes:
+      - "{{ portainer_run }}"
+      - "{{ portainer_data }}"
+    restart: unless-stopped
+{% endif %}
+
+{% if 'uptime-kuma' in docker_apps_enabled %}
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: uptime-kuma
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    ports:
+{% for port in uptime_kuma_ports %}
+      - "{{ port }}"
+{% endfor %}
+    volumes:
+      - "{{ uptime_kuma_data }}"
+    restart: unless-stopped
+{% endif %}
+
+{% if 'plex' in docker_apps_enabled %}
+  plex:
+    image: plexinc/pms-docker:latest
+    container_name: plex
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    network_mode: host
+    environment:
+      - TZ="{{ TimeZone }}"
+    ports:
+{% for port in plex_ports %}
+      - "{{ port }}"
+{% endfor %}
+    volumes:
+      - "{{ plex_volume_config_dir }}"
+      - "{{ plex_volume_media_dir }}"
+    restart: unless-stopped
+{% endif %}
+
+
+{% if 'jellyfin' in docker_apps_enabled %}
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    ports:
+{% for port in jellyfin_ports %}
+      - "{{ port }}"
+{% endfor %}
+    environment:
+      - TZ="{{ TimeZone }}"
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - "{{ jellyfin_volume_config_dir }}:/config"
+      - "{{ jellyfin_volume_media_dir }}:/media"
+      - "{{ jellyfin_volume_cache_dir }}:/cache"
+    restart: unless-stopped
+{% endif %}
+
+
+
+{% if 'overseer' in docker_apps_enabled %}
+  overseerr:
+    image: sctx/overseerr:latest
+    container_name: overseerr
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    ports:
+{% for port in overseer_ports %}
+      - "{{ port }}"
+{% endfor %}
+    environment:
+      - TZ="{{ TimeZone }}"
+    volumes:
+      - "{{ overseer_volume_config_dir }}"
+    restart: unless-stopped
+{% endif %}
+
+{% if 'radarr' in docker_apps_enabled %}
+  radarr:
+    image: linuxserver/radarr
+    container_name: radarr
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    ports:
+{% for port in radarr_ports %}
+      - "{{ port }}"
+{% endfor %}
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ="{{ TimeZone }}"
+    volumes:
+      - "{{ radarr_config }}"
+      - "{{ radarr_movies }}"
+      - "{{ radarr_download }}"
+    restart: unless-stopped
+{% endif %}
+
+{% if 'sonarr' in docker_apps_enabled %}
+  sonarr:
+    image: linuxserver/sonarr
+    container_name: sonarr
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    ports:
+{% for port in sonarr_ports %}
+      - "{{ port }}"
+{% endfor %}
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ="{{ TimeZone }}"
+    volumes:
+      - "{{ sonarr_config }}"
+      - "{{ sonarr_tv }}"
+      - "{{ sonarr_download }}"
+    restart: unless-stopped
+{% endif %}
+
+{% if 'bazarr' in docker_apps_enabled %}
+  bazarr:
+    image: linuxserver/bazarr
+    container_name: bazarr
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    ports:
+{% for port in bazarr_ports %}
+      - "{{ port }}"
+{% endfor %}
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ="{{ TimeZone }}"
+    volumes:
+      - "{{ bazarr_config }}"
+      - "{{ bazarr_tv }}"
+      - "{{ bazarr_movies }}"
+    restart: unless-stopped
+{% endif %}
+
+{% if 'qbittorrent' in docker_apps_enabled %}
+  qbittorrent:
+    image: linuxserver/qbittorrent
+    container_name: qbittorrent
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    ports:
+{% for port in qbittorrent_ports %}
+      - "{{ port }}"
+{% endfor %}
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ="{{ TimeZone }}"
+      - WEBUI_PORT=8080
+    volumes:
+      - "{{ qbittorrent_config }}"
+      - "{{ qbittorrent_download }}"
+    restart: unless-stopped
+{% endif %}
+
+{% if 'prowlarr' in docker_apps_enabled %}
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    ports:
+{% for port in prowlarr_ports %}
+      - "{{ port }}"
+{% endfor %}
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ="{{ TimeZone }}"
+    volumes:
+      - "{{ prowlarr_config }}"
+    restart: unless-stopped
+{% endif %}
+
+{% if 'portainer_agent' in docker_apps_enabled %}
+  portainer_agent:
+    image: portainer/agent:2.27.9
+    container_name: portainer_agent
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    ports:
+{% for port in portainer_agent_ports %}
+      - "{{ port }}"
+{% endfor %}
+    volumes:
+      - "{{ portainer_agent_run }}"
+      - "{{ portainer_agent_volumes }}"
+      - "{{ portainer_agent_host }}"
+    restart: always
+{% endif %}
+
+{% if 'flaresolverr' in docker_apps_enabled %}
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    ports:
+{% for port in flaresolverr_ports %}
+      - "{{ port }}"
+{% endfor %}
+    environment:
+      - TZ="{{ TimeZone }}"
+      - LOG_LEVEL=info
+      - CAPTCHA_SOLVER=none
+    restart: unless-stopped
+{% endif %}
+
+
+{% if 'loki' in docker_apps_enabled %}
+  loki:
+    image: grafana/loki:latest
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    container_name: loki
+    command: -config.file=/etc/loki/config.yml
+    volumes:
+      - /opt/docker/loki/config.yml:/etc/loki/config.yml:ro
+    ports:
+      - "3100:3100"
+    restart: unless-stopped
+{% endif %}
+
+{% if 'grafana' in docker_apps_enabled %}
+  grafana:
+    image: grafana/grafana:latest
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - /opt/docker/grafana:/opt/docker/grafana
+    environment:
+      - GF_PATHS_DATA=/opt/docker/grafana
+    restart: unless-stopped
+{% endif %}
+
+{% if 'alertmanager' in docker_apps_enabled %}
+  alertmanager:
+    image: prom/alertmanager:latest
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    container_name: alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+    volumes:
+      - /opt/docker/alertmanager:/etc/alertmanager 
+    ports:
+      - "9093:9093"
+    restart: unless-stopped
+{% endif %}
+
+{% if 'prometheus' in docker_apps_enabled %}
+  prometheus:
+    image: prom/prometheus:latest
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    volumes:
+      - "/opt/docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro"
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+{% endif %}
+
+{% if 'node-exporter' in docker_apps_enabled %}
+  node-exporter:
+    image: prom/node-exporter:latest
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    container_name: node-exporter
+    command:
+      - '--path.rootfs=/host'
+    volumes:
+      - "/:/host:ro,rslave"
+    ports:
+      - "9100:9100"
+    pid: "host"
+    restart: unless-stopped
+{% endif %}
+
+
+{% if 'nextpvr' in docker_apps_enabled %}
+  nextpvr:
+    image: nextpvr/nextpvr_amd64:stable # Use nextpvr/nextpvr_arm32v7:stable for ARM devices like Raspberry Pi
+    container_name: nextpvr
+    restart: unless-stopped
+    ports:
+      - "8866:8866" # NextPVR web interface
+    volumes:
+      - /opt/nextpvr/config:/config # Persistent storage for NextPVR configuration
+      - /opt/nextpvr/recordings:/recordings # Storage for recorded TV shows
+      - /opt/nextpvr/buffer:/buffer # Storage for live TV buffer
+    environment:
+      - PUID=1000 # User ID for permissions (adjust to your user's PUID)
+      - PGID=1000 # Group ID for permissions (adjust to your user's PGID)
+      - TZ=Europe/London # Set your timezone
+
+{% endif %}
+networks:
+  prometheus_network:
+    driver: bridge
+
+volumes:
+  adguard_config:
+  adguard_work:
+  portainer_data:
+  uptime_kuma_data:
+  pufferpanel-config:
