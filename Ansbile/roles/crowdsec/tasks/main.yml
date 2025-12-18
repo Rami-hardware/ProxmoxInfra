@@ -8,6 +8,8 @@
   ansible.builtin.command: docker exec crowdsec cscli bouncers list -o json
   register: crowdsec_bouncer_list_json
   changed_when: false
+  ignore_errors: true
+
 
 - name: Create nginx-bouncer if missing
   ansible.builtin.command: docker exec crowdsec cscli bouncers add nginx-bouncer
