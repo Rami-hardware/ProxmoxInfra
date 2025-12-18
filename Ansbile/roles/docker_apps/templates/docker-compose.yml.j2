@@ -69,27 +69,25 @@ services:
 {% endif %}
 
 {% if 'nginx' in docker_apps_enabled %}
-nginx:
-  image: nginx:latest
-  container_name: nginx
-  logging:
-    driver: loki
-    options:
-      loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
-      loki-retries: "2"
-      loki-max-backoff: "800ms"
-      loki-timeout: "1s"
-      keep-file: "true"
-      mode: "non-blocking"
-{% if nginx_ports %}
-  ports:
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    ports:
 {% for port in nginx_ports %}
-    - "{{ port }}"
+      - "{{ port }}"
 {% endfor %}
-{% endif %}
-  volumes:
-    - "{{ nginx_default_val }}"
-  restart: unless-stopped
+    volumes:
+      - "{{ nginx_default_val }}"
+    restart: unless-stopped
 {% endif %}
 
 {% if 'fail2ban' in docker_apps_enabled %}
