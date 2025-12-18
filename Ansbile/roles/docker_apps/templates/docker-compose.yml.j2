@@ -12,7 +12,7 @@ services:
       - nginx_network
 
   crowdsec-nginx-bouncer:
-    image: crowdsecurity/crowdsec-nginx-bouncer:latest
+    image: ghcr.io/crowdsecurity/cs-nginx-bouncer:latest
     container_name: crowdsec-nginx-bouncer
     depends_on:
       - crowdsec
