@@ -148,6 +148,12 @@
               proxy_set_header X-Forwarded-Proto $scheme;
           }
       }
+      server {
+            server_name auth.respawnxd.co;
+            location / {
+                proxy_pass http://192.168.1.205:9091;
+            }
+        }
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
     mode: '0644'

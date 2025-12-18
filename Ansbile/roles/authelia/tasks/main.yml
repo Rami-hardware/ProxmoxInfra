@@ -1,8 +1,30 @@
-- name: Create Authelia directories
+- name: Ensure Authelia directories exist
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
     mode: "0755"
   loop:
-    - /opt/docker/authelia
-    - /opt/docker/authelia/secrets
+    - "{{ authelia_base_dir }}"
+    - "{{ authelia_secrets_dir }}"
+
+- name: Deploy Authelia users database
+  ansible.builtin.copy:
+    src: users_database.yml
+    dest: "{{ authelia_base_dir }}/users_database.yml"
+    mode: "0644"
+
+- name: Deploy Authelia configuration
+  ansible.builtin.template:
+    src: configuration.yml.j2
+    dest: "{{ authelia_base_dir }}/configuration.yml"
+    mode: "0644"
+  notify: Restart authelia container
+
+- name: Generate Authelia secrets
+  ansible.builtin.shell: |
+    test -f {{ authelia_secrets_dir }}/{{ item }} || openssl rand -hex 32 > {{ authelia_secrets_dir }}/{{ item }}
+  args:
+    creates: "{{ authelia_secrets_dir }}/{{ item }}"
+  loop:
+    - session_secret
+    - storage_secret

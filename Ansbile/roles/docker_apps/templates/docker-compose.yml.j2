@@ -26,16 +26,16 @@ services:
 
 {% if 'authelia' in docker_apps_enabled %}
   authelia:
-    image: authelia/authelia:latest
-    container_name: authelia
+    image: {{ authelia_image }}
+    container_name: {{ authelia_container_name }}
     restart: unless-stopped
+    environment:
+      TZ: "{{ timezone }}"
+    volumes:
+      - "{{ authelia_base_dir }}:/config"
+      - "{{ authelia_secrets_dir }}:/secrets"
     expose:
       - "9091"
-    volumes:
-      - "{{ authelia_config_dir }}:/config"
-      - "{{ authelia_secrets_dir }}:/secrets"
-    environment:
-      - TZ={{ timezone }}
 {% endif %}
 
 {% if 'promtail' in docker_apps_enabled %}

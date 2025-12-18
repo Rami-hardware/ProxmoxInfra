@@ -1,0 +1,2 @@
+- name: Restart authelia container
+  ansible.builtin.shell: docker restart {{ authelia_container_name }}
