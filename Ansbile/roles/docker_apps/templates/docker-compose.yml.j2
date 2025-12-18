@@ -1,33 +1,34 @@
 version: "3.9"
+
 services:
 
-{% if 'crowdsec' in docker_apps_enabled %}
-  crowdsec:
-    image: crowdsecurity/crowdsec:latest
-    container_name: crowdsec
-    volumes:
-      {% for val in crowdsec_val | default([]) %}
-      - "{{ val }}"
-      {% endfor %}
-    restart: unless-stopped
-    networks:
-      - nginx_network
+  {% if 'crowdsec' in docker_apps_enabled %}
+    crowdsec:
+      image: crowdsecurity/crowdsec:latest
+      container_name: crowdsec
+      volumes:
+        {% for val in crowdsec_val | default([]) %}
+        - "{{ val }}"
+        {% endfor %}
+      restart: unless-stopped
+      networks:
+        - nginx_network
 
-  crowdsec-nginx-bouncer:
-    image: crowdsecurity/crowdsec-nginx-bouncer:latest
-    container_name: crowdsec-nginx-bouncer
-    depends_on:
-      - crowdsec
-    environment: 
-      {% for env in crowdsec_nginx_env | default([]) %}
-      - "{{ env }}"
-      {% endfor %}
-    volumes:
-      - "{{ crowdsec_nginx_val }}"
-    restart: unless-stopped
-    networks:
-      - nginx_network
-{% endif %}
+    crowdsec-nginx-bouncer:
+      image: crowdsecurity/crowdsec-nginx-bouncer:latest
+      container_name: crowdsec-nginx-bouncer
+      depends_on:
+        - crowdsec
+      environment: 
+        {% for env in crowdsec_nginx_env | default([]) %}
+        - "{{ env }}"
+        {% endfor %}
+      volumes:
+        - "{{ crowdsec_nginx_val }}"
+      restart: unless-stopped
+      networks:
+        - nginx_network
+  {% endif %}
 
 
 {% if 'adguardhome' in docker_apps_enabled %}
