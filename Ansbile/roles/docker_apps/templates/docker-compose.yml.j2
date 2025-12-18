@@ -5,9 +5,9 @@ services:
     image: crowdsecurity/crowdsec:latest
     container_name: crowdsec
     volumes:
-    {% for val in crowdsec_val %}
+      {% for val in crowdsec_val %}
       - "{{ val }}"
-    {% endfor %}
+      {% endfor %}
     restart: unless-stopped
     networks:
       - nginx_network
@@ -18,15 +18,16 @@ services:
     depends_on:
       - crowdsec
     environment: 
-{% for env in crowdsec_nginx_env %}
+      {% for env in crowdsec_nginx_env %}
       - "{{ env }}"
-{% endfor %}
+      {% endfor %}
     volumes:
       - "{{ crowdsec_nginx_val }}"
     restart: unless-stopped
     networks:
       - nginx_network
 {% endif %}
+
 
 {% if 'adguardhome' in docker_apps_enabled %}
   adguardhome:
