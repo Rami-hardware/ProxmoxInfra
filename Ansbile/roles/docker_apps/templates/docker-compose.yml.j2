@@ -8,8 +8,7 @@ services:
       - /opt/docker/crowdsec/data:/var/lib/crowdsec/data
       - /opt/docker/crowdsec/config:/etc/crowdsec
     restart: unless-stopped
-    networks:
-      - nginx_network
+
 {% endif %}
 
 {% if 'adguardhome' in docker_apps_enabled %}
