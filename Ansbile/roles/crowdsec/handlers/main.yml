@@ -1,0 +1,10 @@
+---
+- name: Restart nginx bouncer
+  ansible.builtin.service:
+    name: crowdsec-nginx-bouncer
+    state: restarted
+
+- name: Reload nginx
+  ansible.builtin.service:
+    name: nginx
+    state: reloaded

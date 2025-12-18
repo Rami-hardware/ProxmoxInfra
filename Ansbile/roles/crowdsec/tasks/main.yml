@@ -1,0 +1,40 @@
+---
+- name: Create nginx bouncer API key (if not exists)
+  ansible.builtin.command: docker exec crowdsec cscli bouncers add nginx-bouncer
+  register: nginx_bouncer_key
+  failed_when: false
+  changed_when: "'API key' in nginx_bouncer_key.stdout"
+
+- name: Extract nginx bouncer API key
+  ansible.builtin.set_fact:
+    crowdsec_nginx_bouncer_key: "{{ nginx_bouncer_key.stdout_lines[-1] }}"
+  when: "'API key' in nginx_bouncer_key.stdout"
+
+- name: Install crowdsec nginx bouncer
+  ansible.builtin.apt:
+    name: crowdsec-nginx-bouncer
+    state: present
+    update_cache: yes
+
+- name: Configure nginx bouncer
+  ansible.builtin.template:
+    src: crowdsec-nginx-bouncer.conf.j2
+    dest: /etc/crowdsec/bouncers/crowdsec-nginx-bouncer.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart nginx bouncer
+
+- name: Enable CrowdSec in nginx
+  ansible.builtin.copy:
+    dest: /etc/nginx/conf.d/crowdsec.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      load_module modules/ngx_http_crowdsec_module.so;
+
+      http {
+          crowdsec;
+      }
+  notify: Reload nginx

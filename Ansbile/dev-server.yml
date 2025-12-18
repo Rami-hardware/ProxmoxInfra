@@ -7,5 +7,6 @@
     - docker_setup
     - docker_apps
     - nginx_config
+    - crowdsec
     - Promtail
     - ufw
