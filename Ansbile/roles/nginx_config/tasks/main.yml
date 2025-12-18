@@ -1,16 +1,19 @@
-- name: Remove wrongly created default.conf if it exists
+- name: Remove wrongly created nginx config files
   ansible.builtin.file:
-    path: /opt/services/default.conf
+    path: "{{ item }}"
     state: absent
+  loop:
+    - /opt/services/default.conf
+    - /opt/services/authelia.conf
 
-- name: Ensure /opt/services directory exists
+
+- name: Ensure /opt/services exists
   ansible.builtin.file:
     path: /opt/services
     state: directory
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
-    mode: '0755'
-
+    mode: "0755"
 
 - name: Deploy Authelia nginx auth snippet
   ansible.builtin.copy:
@@ -159,3 +162,23 @@
     mode: '0644'
   notify:
     - Reload nginx container
+
+- name: Deploy Authelia nginx auth snippet
+  ansible.builtin.copy:
+    dest: /opt/services/authelia.conf
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"
+    content: |
+      location = /authelia {
+          internal;
+          proxy_pass http://authelia:9091/api/verify;
+          proxy_set_header Content-Length "";
+          proxy_set_header X-Original-URL $scheme://$http_host$request_uri;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          proxy_set_header X-Forwarded-Host $http_host;
+          proxy_set_header X-Forwarded-URI $request_uri;
+          proxy_set_header X-Forwarded-For $remote_addr;
+      }
+
+      error_page 401 =302 https://auth.respawnxd.co/?rd=$scheme://$http_host$request_uri;
