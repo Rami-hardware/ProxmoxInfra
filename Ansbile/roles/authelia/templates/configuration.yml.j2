@@ -18,20 +18,16 @@ access_control:
     - domain: "*.{{ authelia_domain }}"
       policy: one_factor
 
-identity_validation:
-  reset_password:
-    enabled: false
-
 session:
   name: authelia_session
   secret: /secrets/session_secret
   expiration: 1h
   inactivity: 5m
-  remember_me_duration: 1M
   cookies:
-    - domain: "{{ authelia_domain }}"
+    - name: authelia_session
       authelia_url: "https://{{ authelia_auth_subdomain }}"
       same_site: lax
+      expiration: 1h
 
 storage:
   encryption_key: /secrets/storage_secret
