@@ -7,32 +7,12 @@ services:
     volumes:
       - /opt/docker/crowdsec/data:/var/lib/crowdsec/data
       - /opt/docker/crowdsec/config:/etc/crowdsec
+      - /var/log/nginx:/var/log/nginx:ro
     restart: unless-stopped
 
 {% endif %}
 
-{% if 'authelia' in docker_apps_enabled %}
-  authelia:
-    image: authelia/authelia:latest
-    container_name: authelia
-    logging:
-      driver: loki
-      options:
-        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
-        loki-retries: "2"
-        loki-max-backoff: "800ms"
-        loki-timeout: "1s"
-        keep-file: "true"
-        mode: "non-blocking"
-    ports:
-      - "9091:9091"  # Web interface/API port
-    volumes:
-      - "{{ authelia_config_dir }}:/config"
-      - "{{ authelia_cert_dir }}:/certs"
-    environment:
-      - TZ="{{ timezone }}"
-    restart: unless-stopped
-{% endif %}
+
 
 {% if 'adguardhome' in docker_apps_enabled %}
   adguardhome:
