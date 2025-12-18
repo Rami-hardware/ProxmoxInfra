@@ -1,67 +1,58 @@
----
-# tasks/main.yml for crowdsec role
-
-- name: Install CrowdSec repository
-  ansible.builtin.import_tasks: repository.yml
-
-- name: Check if nginx-bouncer exists
-  ansible.builtin.command: docker exec crowdsec cscli bouncers list -o json
-  register: crowdsec_bouncer_list_json
+- name: Ensure CrowdSec container is running
+  ansible.builtin.command: docker inspect -f '{{ .State.Running }}' crowdsec
+  register: crowdsec_running
+  failed_when: crowdsec_running.stdout != "true"
   changed_when: false
-  ignore_errors: true
 
+# ------------------------------------------------------------
+# Create nginx bouncer ONLY IF IT DOES NOT EXIST
+# ------------------------------------------------------------
+- name: Check if nginx bouncer exists
+  ansible.builtin.command: docker exec crowdsec cscli bouncers list -o json
+  register: crowdsec_bouncers_json
+  changed_when: false
 
-- name: Create nginx-bouncer if missing
-  ansible.builtin.command: docker exec crowdsec cscli bouncers add nginx-bouncer
-  register: crowdsec_add_bouncer
-  failed_when: false
-  changed_when: "'API key' in crowdsec_add_bouncer.stdout"
-  when: >
-    crowdsec_bouncer_list_json.stdout | from_json
-    | selectattr('name', 'equalto', 'nginx-bouncer') | list | length == 0
-
-- name: Extract CrowdSec NGINX bouncer API key
+- name: Set fact if nginx bouncer exists
   ansible.builtin.set_fact:
-    crowdsec_nginx_bouncer_key: >-
-      {% if crowdsec_add_bouncer.stdout is defined and 'API key' in crowdsec_add_bouncer.stdout %}
-        {{ crowdsec_add_bouncer.stdout | regex_search('API key:\\s*(.+)', '\\1') }}
-      {% else %}
-        {{ (crowdsec_bouncer_list_json.stdout | from_json
-           | selectattr('name','equalto','nginx-bouncer')
-           | map(attribute='api_key')
-           | first | default('')) }}
-      {% endif %}
+    nginx_bouncer_exists: >-
+      {{
+        (crowdsec_bouncers_json.stdout | from_json
+         | selectattr('name', 'equalto', 'nginx-bouncer')
+         | list | length) > 0
+      }}
 
-- name: Fail if CrowdSec NGINX bouncer key is not found
+# ------------------------------------------------------------
+# Create bouncer + CAPTURE API KEY (SAFE WAY)
+# ------------------------------------------------------------
+- name: Create nginx bouncer and get API key
+  ansible.builtin.command: docker exec crowdsec cscli bouncers add nginx-bouncer -o raw
+  register: nginx_bouncer_key_cmd
+  when: not nginx_bouncer_exists
+  changed_when: true
+
+- name: Set nginx bouncer API key fact
+  ansible.builtin.set_fact:
+    crowdsec_nginx_bouncer_key: "{{ nginx_bouncer_key_cmd.stdout | trim }}"
+  when: not nginx_bouncer_exists
+
+# ------------------------------------------------------------
+# Fail clearly if key is missing
+# ------------------------------------------------------------
+- name: Fail if nginx bouncer key is missing
   ansible.builtin.fail:
-    msg: "CrowdSec NGINX bouncer API key not found! Make sure the bouncer is registered."
-  when: crowdsec_nginx_bouncer_key == ""
+    msg: "CrowdSec nginx bouncer API key could not be created!"
+  when:
+    - not nginx_bouncer_exists
+    - crowdsec_nginx_bouncer_key | default('') == ''
 
-- name: Install CrowdSec NGINX bouncer package
-  ansible.builtin.apt:
-    name: crowdsec-nginx-bouncer
-    state: present
-    update_cache: true
-
-- name: Configure CrowdSec NGINX bouncer
-  ansible.builtin.template:
-    src: crowdsec-nginx-bouncer.conf.j2
-    dest: /etc/crowdsec/bouncers/crowdsec-nginx-bouncer.conf
-    owner: root
-    group: root
-    mode: "0644"
-  notify: Restart nginx bouncer
-
-- name: Enable CrowdSec in nginx
+# ------------------------------------------------------------
+# Persist key (for reuse / idempotency)
+# ------------------------------------------------------------
+- name: Save nginx bouncer API key to file
   ansible.builtin.copy:
-    dest: /etc/nginx/conf.d/crowdsec.conf
+    dest: /opt/docker/crowdsec/nginx-bouncer.key
+    content: "{{ crowdsec_nginx_bouncer_key }}"
     owner: root
     group: root
-    mode: "0644"
-    content: |
-      load_module modules/ngx_http_crowdsec_module.so;
-
-      http {
-          crowdsec;
-      }
-  notify: Reload nginx
+    mode: "0600"
+  when: not nginx_bouncer_exists
