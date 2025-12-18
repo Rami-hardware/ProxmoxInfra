@@ -50,6 +50,8 @@ authelia_cert_dir: /opt/docker/authelia/certs
 authelia_container_name: authelia
 authelia_image: authelia/authelia:latest
 
+TimeZone: UTC
+
 crowdsec_val:
   - /opt/docker/crowdsec/config:/etc/crowdsec
   - /opt/docker/crowdsec/data:/var/lib/crowdsec/data
