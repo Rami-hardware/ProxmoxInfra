@@ -5,6 +5,22 @@
   failed_when: crowdsec_running.stdout != "true"
   changed_when: false
 
+# ------------------------------------------------------------
+# Ensure CrowdSec CAPI is registered
+# ------------------------------------------------------------
+- name: Check if CAPI credentials exist
+  ansible.builtin.stat:
+    path: /etc/crowdsec/online_api_credentials.yaml
+  register: crowdsec_capi_file
+
+- name: Register CrowdSec CAPI if missing
+  ansible.builtin.command: docker exec crowdsec cscli capi register
+  when: not crowdsec_capi_file.stat.exists
+  changed_when: true
+
+# ------------------------------------------------------------
+# Check and create Nginx bouncer
+# ------------------------------------------------------------
 - name: Check if nginx bouncer exists
   ansible.builtin.command: docker exec crowdsec cscli bouncers list -o json
   register: crowdsec_bouncers_json
@@ -30,14 +46,12 @@
     crowdsec_nginx_bouncer_key: "{{ crowdsec_nginx_bouncer_key_cmd.stdout | trim }}"
   when: not crowdsec_nginx_bouncer_exists
 
-
 - name: Fail if nginx bouncer key is missing
   ansible.builtin.fail:
     msg: "CrowdSec nginx bouncer API key could not be created!"
   when:
     - not crowdsec_nginx_bouncer_exists
     - crowdsec_nginx_bouncer_key | default('') == ''
-
 
 - name: Save nginx bouncer API key to file
   ansible.builtin.copy:
