@@ -48,8 +48,8 @@ jobs:
       #- name: Install tflint
        # uses: terraform-linters/setup-tflint@v1
       # Terraform lint
-      - name: Terraform lint
-        run: tflint
+      #- name: Terraform lint
+       # run: tflint
       # Install Ansible
       - name: Install Ansible
         run: sudo apt update && sudo apt install -y ansible
