@@ -2,13 +2,18 @@ version: "3.9"
 services:
 {% if 'crowdsec' in docker_apps_enabled %}
   crowdsec:
-    image: crowdsecurity/crowdsec:latest
-    container_name: crowdsec
+    image: crowdsecurity/crowdsec
+    restart: always
+    environment:
+      COLLECTIONS: "crowdsecurity/nginx"
+      GID: "${GID - 1000}"
+    depends_on:
+      - 'reverse-proxy'
     volumes:
-      - /opt/docker/crowdsec/data:/var/lib/crowdsec/data
-      - /opt/docker/crowdsec/config:/etc/crowdsec
-    restart: unless-stopped
-
+      - ./crowdsec/acquis.yaml:/etc/crowdsec/acquis.yaml
+      - logs:/var/log/nginx
+      - crowdsec-db:/var/lib/crowdsec/data/
+      - crowdsec-config:/etc/crowdsec/
 {% endif %}
 
 {% if 'adguardhome' in docker_apps_enabled %}
