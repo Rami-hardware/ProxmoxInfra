@@ -8,21 +8,7 @@ services:
       - /opt/docker/crowdsec/data:/var/lib/crowdsec/data
       - /opt/docker/crowdsec/config:/etc/crowdsec
     restart: unless-stopped
-    ports:
-      - "8080:8080"  # Local API
 
-  crowdsec-console:
-    image: crowdsecurity/console:latest
-    container_name: crowdsec-console
-    restart: unless-stopped
-    ports:
-      - "8081:8081"
-    environment:
-      CAPI_URL: "https://api.crowdsec.net"
-      CAPI_KEY: "{{ crowdsec_online_api_key }}"
-      CAPI_SECRET: "{{ crowdsec_online_api_secret }}"
-    depends_on:
-      - crowdsec
 {% endif %}
 
 {% if 'adguardhome' in docker_apps_enabled %}
