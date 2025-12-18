@@ -22,3 +22,4 @@
     src: users_database.yml.j2
     dest: "{{ authelia_config_dir }}/users_database.yml"
     mode: "0644"
+
