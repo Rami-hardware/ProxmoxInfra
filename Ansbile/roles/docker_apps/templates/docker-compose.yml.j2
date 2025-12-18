@@ -10,20 +10,6 @@ services:
     restart: unless-stopped
     networks:
       - nginx_network
-
-  crowdsec-nginx-bouncer:
-    image: ghcr.io/crowdsecurity/cs-nginx-bouncer:latest
-    container_name: crowdsec-nginx-bouncer
-    depends_on:
-      - crowdsec
-    environment:
-      - API_URL=http://crowdsec:8080
-      - API_KEY_FILE=/etc/crowdsec/bouncer_api_key
-    volumes:
-      - /opt/docker/crowdsec/bouncer:/etc/crowdsec
-    restart: unless-stopped
-    networks:
-      - nginx_network
 {% endif %}
 
 {% if 'adguardhome' in docker_apps_enabled %}
@@ -553,8 +539,6 @@ services:
 
 {% endif %}
 networks:
-  nginx_network:
-    driver: bridge
   prometheus_network:
     driver: bridge
 
