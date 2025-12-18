@@ -18,7 +18,6 @@
     src: configuration.yml.j2
     dest: "{{ authelia_base_dir }}/configuration.yml"
     mode: "0644"
-  notify: Restart authelia container
 
 - name: Generate Authelia secrets
   community.crypto.openssl_random:
