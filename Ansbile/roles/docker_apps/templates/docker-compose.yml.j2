@@ -1,11 +1,12 @@
 version: "3.9"
 services:
+
 {% if 'crowdsec' in docker_apps_enabled %}
   crowdsec:
     image: crowdsecurity/crowdsec:latest
     container_name: crowdsec
     volumes:
-      {% for val in crowdsec_val %}
+      {% for val in crowdsec_val | default([]) %}
       - "{{ val }}"
       {% endfor %}
     restart: unless-stopped
@@ -18,7 +19,7 @@ services:
     depends_on:
       - crowdsec
     environment: 
-      {% for env in crowdsec_nginx_env %}
+      {% for env in crowdsec_nginx_env | default([]) %}
       - "{{ env }}"
       {% endfor %}
     volumes:
