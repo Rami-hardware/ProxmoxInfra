@@ -23,21 +23,6 @@ services:
     restart: unless-stopped
 {% endif %}
 
-
-{% if 'authelia' in docker_apps_enabled %}
-  authelia:
-    image: {{ authelia_image }}
-    container_name: {{ authelia_container_name }}
-    restart: unless-stopped
-    environment:
-      TZ: "{{ authelia_timezone }}"
-    volumes:
-      - "{{ authelia_base_dir }}:/config"
-      - "{{ authelia_secrets_dir }}:/secrets"
-    expose:
-      - "9091"
-{% endif %}
-
 {% if 'promtail' in docker_apps_enabled %}
   promtail:
     image: grafana/promtail:latest
@@ -49,7 +34,24 @@ services:
     restart: unless-stopped
 {% endif %}
 
-
+{% if 'watchtower' in docker_apps_enabled %}
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    volumes:
+      - "{{ watchtower_run }}"
+    command: --cleanup --interval 3600
+    restart: unless-stopped
+{% endif %}
 
 {% if 'nginx' in docker_apps_enabled %}
   nginx:
@@ -84,6 +86,50 @@ services:
     restart: unless-stopped
 {% endif %}
 
+{% if 'portainer' in docker_apps_enabled %}
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    ports:
+{% for port in portainer_ports %}
+      - "{{ port }}"
+{% endfor %}
+    volumes:
+      - "{{ portainer_run }}"
+      - "{{ portainer_data }}"
+    restart: unless-stopped
+{% endif %}
+
+{% if 'uptime-kuma' in docker_apps_enabled %}
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: uptime-kuma
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    ports:
+{% for port in uptime_kuma_ports %}
+      - "{{ port }}"
+{% endfor %}
+    volumes:
+      - "{{ uptime_kuma_data }}"
+    restart: unless-stopped
+{% endif %}
 
 {% if 'plex' in docker_apps_enabled %}
   plex:
@@ -100,7 +146,7 @@ services:
         mode: "non-blocking"
     network_mode: host
     environment:
-      - TZ="{{ timezone }}"
+      - TZ="{{ TimeZone }}"
     ports:
 {% for port in plex_ports %}
       - "{{ port }}"
@@ -130,7 +176,7 @@ services:
       - "{{ port }}"
 {% endfor %}
     environment:
-      - TZ="{{ timezone }}"
+      - TZ="{{ TimeZone }}"
       - NVIDIA_VISIBLE_DEVICES=all
     volumes:
       - "{{ jellyfin_volume_config_dir }}:/config"
@@ -159,7 +205,7 @@ services:
       - "{{ port }}"
 {% endfor %}
     environment:
-      - TZ="{{ timezone }}"
+      - TZ="{{ TimeZone }}"
     volumes:
       - "{{ overseer_volume_config_dir }}"
     restart: unless-stopped
@@ -185,7 +231,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ="{{ timezone }}"
+      - TZ="{{ TimeZone }}"
     volumes:
       - "{{ radarr_config }}"
       - "{{ radarr_movies }}"
@@ -213,7 +259,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ="{{ timezone }}"
+      - TZ="{{ TimeZone }}"
     volumes:
       - "{{ sonarr_config }}"
       - "{{ sonarr_tv }}"
@@ -241,7 +287,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ="{{ timezone }}"
+      - TZ="{{ TimeZone }}"
     volumes:
       - "{{ bazarr_config }}"
       - "{{ bazarr_tv }}"
@@ -269,7 +315,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ="{{ timezone }}"
+      - TZ="{{ TimeZone }}"
       - WEBUI_PORT=8080
     volumes:
       - "{{ qbittorrent_config }}"
@@ -297,7 +343,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ="{{ timezone }}"
+      - TZ="{{ TimeZone }}"
     volumes:
       - "{{ prowlarr_config }}"
     restart: unless-stopped
@@ -345,7 +391,7 @@ services:
       - "{{ port }}"
 {% endfor %}
     environment:
-      - TZ="{{ timezone }}"
+      - TZ="{{ TimeZone }}"
       - LOG_LEVEL=info
       - CAPTCHA_SOLVER=none
     restart: unless-stopped
@@ -478,8 +524,8 @@ services:
       - PUID=1000 # User ID for permissions (adjust to your user's PUID)
       - PGID=1000 # Group ID for permissions (adjust to your user's PGID)
       - TZ=Europe/London # Set your timezone
-{% endif %}
 
+{% endif %}
 networks:
   prometheus_network:
     driver: bridge

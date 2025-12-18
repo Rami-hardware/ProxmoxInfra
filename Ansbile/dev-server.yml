@@ -6,7 +6,6 @@
     - DNS
     - docker_setup
     - docker_apps
-    - authelia
     - nginx_config
     - Promtail
     - ufw
