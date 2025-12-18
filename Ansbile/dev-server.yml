@@ -8,5 +8,6 @@
     - docker_apps
     - nginx_config
     - crowdsec
+    - authelia
     - Promtail
     - ufw
