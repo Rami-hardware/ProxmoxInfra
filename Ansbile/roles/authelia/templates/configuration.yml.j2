@@ -3,10 +3,15 @@ server:
   port: 9091
   tls:
     key: /certs/authelia.key
-    cert: /certs/authelia.crt
+    certificate: /certs/authelia.crt
 
-log:
-  level: info
+session:
+  name: authelia_session
+  secret: "supersecret_session_key_here"
+  expiration: 3600
+  inactivity: 300
+  # Remove 'domain'; use 'domains' instead if needed
+  domains: ["respawnxd.co"]
 
 authentication_backend:
   file:
@@ -16,18 +21,10 @@ access_control:
   default_policy: two_factor
   rules: []
 
-session:
-  name: authelia_session
-  secret: your_super_secret_session_key_here
-  expiration: 3600
-  inactivity: 300
-  domain: example.com  # must be your actual domain
-  # remove session.cookies section; no longer valid
-
 storage:
   local:
     path: /config/db.sqlite3
-  encryption_key: your_long_random_encryption_key_here
+  encryption_key: "supersecret_encryption_key_here"
 
 notifier:
   filesystem:
@@ -35,4 +32,4 @@ notifier:
 
 identity_validation:
   reset_password:
-    disable: true
+    jwt_secret: "supersecret_jwt_key_here"
