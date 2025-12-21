@@ -80,6 +80,23 @@
   changed_when: false
   failed_when: false
 
+- name: Ensure directory for bouncer key exists
+  ansible.builtin.file:
+    path: /opt/docker/crowdsec
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Save nginx bouncer API key to file
+  ansible.builtin.copy:
+    dest: /opt/docker/crowdsec/nginx-bouncer.key
+    content: "{{ crowdsec_nginx_bouncer_key }}"
+    owner: root
+    group: root
+    mode: "0600"
+
+
 - name: Start Docker Compose stack
   community.docker.docker_compose_v2:
     project_src: "{{ docker_apps_compose_dir }}"
