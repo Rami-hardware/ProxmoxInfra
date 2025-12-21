@@ -14,8 +14,6 @@ services:
     ports:
       - "8080:8080"
 {% endif %}
-
-
 {% if 'crowdsec-nginx-bouncer' in docker_apps_enabled %}
   crowdsec-nginx-bouncer:
     image: crowdsecurity/nginx-bouncer:latest
@@ -31,10 +29,8 @@ services:
       CROWDSEC_LOG_LEVEL: info
 
     secrets:
-      crowdsec_nginx_bouncer_key:
-        file: /opt/docker/crowdsec/nginx-bouncer.key
+      - crowdsec_nginx_bouncer_key
 {% endif %}
-
 {% if 'adguardhome' in docker_apps_enabled %}
   adguardhome:
     image: adguard/adguardhome
