@@ -135,14 +135,26 @@
     group: root
     mode: '0644'
 
-- name: Redirect UDP 53 → 5353
-  ansible.builtin.command: >
-    iptables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT --to-port 5353
+- name: Ensure UDP 53 → 5353 redirect exists
+  ansible.posix.iptables:
+    table: nat
+    chain: PREROUTING
+    protocol: udp
+    destination_port: 53
+    jump: REDIRECT
+    to_ports: 5353
+    state: present
   become: true
 
-- name: Redirect TCP 53 → 5353
-  ansible.builtin.command: >
-    iptables -t nat -A PREROUTING -p tcp --dport 53 -j REDIRECT --to-port 5353
+- name: Ensure TCP 53 → 5353 redirect exists
+  ansible.posix.iptables:
+    table: nat
+    chain: PREROUTING
+    protocol: tcp
+    destination_port: 53
+    jump: REDIRECT
+    to_ports: 5353
+    state: present
   become: true
 
 - name: Save iptables rules
