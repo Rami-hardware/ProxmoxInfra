@@ -1,5 +1,5 @@
-- name: Deploy to Dev Server
-  hosts: dev-server
+- name: Deploy to Gateway Server
+  hosts: gateway-server
   become: true
 
   roles:
