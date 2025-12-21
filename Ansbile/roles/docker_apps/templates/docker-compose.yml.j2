@@ -36,6 +36,8 @@ services:
     image: adguard/adguardhome
     container_name: adguardhome
     network_mode: host
+    environment:
+      - WEB_PORT=3000
     logging:
       driver: loki
       options:
