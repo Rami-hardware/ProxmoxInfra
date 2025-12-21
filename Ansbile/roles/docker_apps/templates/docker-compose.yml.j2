@@ -28,8 +28,8 @@ services:
       CROWDSEC_AGENT_HOST: crowdsec:8080
       CROWDSEC_LOG_LEVEL: info
     secrets:
-      crowdsec_nginx_bouncer_key:
-        external: true
+      - source: crowdsec_nginx_bouncer_key
+        target: crowdsec_nginx_bouncer_key
 {% endif %}
 {% if 'adguardhome' in docker_apps_enabled %}
   adguardhome:
