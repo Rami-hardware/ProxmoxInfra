@@ -29,7 +29,7 @@
     --alias loki
     --grant-all-permissions
     --disable
-  register: dock er_apps_loki_install
+  register: docker_apps_loki_install
   changed_when: "'Installed plugin' in docker_apps_loki_install.stdout"
   failed_when: docker_apps_loki_install.rc != 0 and
                "'already exists' not in docker_apps_loki_install.stderr"
