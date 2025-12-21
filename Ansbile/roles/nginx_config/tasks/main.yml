@@ -69,7 +69,8 @@
       server {
           listen 80;
           server_name jellyfin.respawnxd.co;
-
+          access_log /var/log/nginx/access.log;
+          error_log  /var/log/nginx/error.log warn;
           location / {
               proxy_pass http://192.168.1.201:8096;
               proxy_set_header Host $host;
@@ -130,5 +131,8 @@
               proxy_set_header X-Forwarded-Proto $scheme;
           }
       }
+    owner: root
+    group: root
+    mode: '0644'
   notify:
     - Reload nginx container
