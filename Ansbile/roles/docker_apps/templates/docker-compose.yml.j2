@@ -27,10 +27,6 @@ services:
       CROWDSEC_BOUNCER_API_KEY_FILE: /run/secrets/crowdsec_nginx_bouncer_key
       CROWDSEC_AGENT_HOST: crowdsec:8080
       CROWDSEC_LOG_LEVEL: info
-
-    secrets:
-      crowdsec_nginx_bouncer_key:
-        file: ./secrets/crowdsec_nginx_bouncer_key.txt
 {% endif %}
 {% if 'adguardhome' in docker_apps_enabled %}
   adguardhome:
@@ -562,3 +558,7 @@ volumes:
   portainer_data:
   uptime_kuma_data:
   pufferpanel-config:
+
+secrets:
+  crowdsec_nginx_bouncer_key:
+    file: ./secrets/crowdsec_nginx_bouncer_key.txt
