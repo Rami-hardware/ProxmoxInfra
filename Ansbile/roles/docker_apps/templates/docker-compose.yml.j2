@@ -27,6 +27,9 @@ services:
       CROWDSEC_BOUNCER_API_KEY_FILE: /run/secrets/crowdsec_nginx_bouncer_key
       CROWDSEC_AGENT_HOST: crowdsec:8080
       CROWDSEC_LOG_LEVEL: info
+    secrets:
+      - source: crowdsec_nginx_bouncer_key
+        target: crowdsec_nginx_bouncer_key
 {% endif %}
 {% if 'adguardhome' in docker_apps_enabled %}
   adguardhome:
@@ -561,4 +564,4 @@ volumes:
 
 secrets:
   crowdsec_nginx_bouncer_key:
-    file: ./secrets/crowdsec_nginx_bouncer_key.txt
+    file: /opt/docker/crowdsec/nginx-bouncer.key
