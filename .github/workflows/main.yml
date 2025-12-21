@@ -77,7 +77,7 @@ jobs:
       - name: Ansible syntax check
         run: |
           source venv/bin/activate
-          ansible-playbook  Ansbile/dev-server.yml --syntax-check
+          ansible-playbook  Ansbile/gateway-server.yml --syntax-check
       # Ansible lint
       - name: Ansible lint
         run: |
@@ -146,6 +146,6 @@ jobs:
       - name: Run Ansible Playbook
         run: |
           source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/dev-server.yml
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml
         env:
           ANSIBLE_HOST_KEY_CHECKING: 'False'
