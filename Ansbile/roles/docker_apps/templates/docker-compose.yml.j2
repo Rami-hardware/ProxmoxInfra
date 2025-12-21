@@ -35,6 +35,7 @@ services:
   adguardhome:
     image: adguard/adguardhome
     container_name: adguardhome
+    network_mode: host
     logging:
       driver: loki
       options:
