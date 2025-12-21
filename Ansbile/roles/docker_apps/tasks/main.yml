@@ -16,6 +16,11 @@
     mode: "0644"
     force: true
 
+- name: Create Docker secret for CrowdSec Nginx bouncer key
+  community.docker.docker_secret:
+    name: crowdsec_nginx_bouncer_key
+    secret: "{{ docker_apps_crowdsec_nginx_bouncer_key }}"
+
 # Bring up stack
 - name: Start Docker Compose stack
   community.docker.docker_compose_v2:
