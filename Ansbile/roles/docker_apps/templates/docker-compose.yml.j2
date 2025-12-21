@@ -35,6 +35,7 @@ services:
   adguardhome:
     image: adguard/adguardhome
     container_name: adguardhome
+    network_mode: host
     logging:
       driver: loki
       options:
@@ -44,10 +45,6 @@ services:
         loki-timeout: "1s"
         keep-file: "true"
         mode: "non-blocking"
-    ports:
-{% for port in adguardhome_ports %}
-      - "{{ port }}"
-{% endfor %}
     volumes:
       - "{{ adguardhome_volume_config_dir }}"
       - "{{ adguardhome_volume_work_dir }}"
