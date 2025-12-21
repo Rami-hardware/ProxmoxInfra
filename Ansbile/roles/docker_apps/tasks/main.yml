@@ -96,13 +96,28 @@
     group: root
     mode: "0600"
 
-- name: Stop all running containers
-  ansible.builtin.shell: "docker ps -q | xargs -r docker stop"
-  failed_when: true
+- name: Stop all running containers (idempotent)
+  ansible.builtin.shell: |
+    set -o pipefail
+    running=$(docker ps -q)
+    if [ -n "$running" ]; then
+      docker stop $running
+    fi
+  ansible.builtin.ignore_errors: true
+  check_mode: no
+  changed_when: running != ""
 
-- name: Remove all containers
-  ansible.builtin.shell: "docker ps -a -q | xargs -r docker rm -f"
-  failed_when: true
+- name: Remove all containers (idempotent)
+  ansible.builtin.shell: |
+    set -o pipefail
+    all_containers=$(docker ps -a -q)
+    if [ -n "$all_containers" ]; then
+      docker rm -f $all_containers
+    fi
+  ansible.builtin.ignore_errors: true
+  check_mode: no
+  changed_when: all_containers != ""
+
 
 - name: Start Docker Compose stack
   community.docker.docker_compose_v2:
