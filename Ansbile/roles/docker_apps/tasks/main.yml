@@ -80,6 +80,25 @@
   changed_when: false
   failed_when: false
 
+
+# Ensure the directory exists
+- name: Ensure /opt/docker/crowdsec directory exists
+  ansible.builtin.file:
+    path: /opt/docker/crowdsec
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+# Ensure the nginx bouncer key exists
+- name: Ensure nginx bouncer key file exists
+  ansible.builtin.copy:
+    dest: /opt/docker/crowdsec/nginx-bouncer.key
+    content: "{{ crowdsec_nginx_bouncer_key | default('DUMMY_KEY') }}"
+    owner: root
+    group: root
+    mode: "0600"
+
 - name: Start Docker Compose stack
   community.docker.docker_compose_v2:
     project_src: "{{ docker_apps_compose_dir }}"
