@@ -1,17 +1,63 @@
-# --------------------------------------------
-# Prepare Docker Compose environment first
-# --------------------------------------------
-- name: Ensure pip3 is installed
-  ansible.builtin.package:
-    name: python3-pip
-    state: present
+---
+- name: Ensure /opt/services directory exists
+  ansible.builtin.file:
+    path: /opt/services
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
 
-- name: Ensure Docker SDK for Python is installed
-  ansible.builtin.package:
-    name: python3-docker
-    state: present
+- name: Ensure default Nginx config file exists
+  ansible.builtin.file:
+    path: /opt/services/default.conf
+    state: touch
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
 
-    
+- name: Remove existing Loki plugin if present
+  community.docker.docker_plugin:
+    plugin_name: loki
+    state: absent
+    force_remove: true
+  failed_when: false
+  changed_when: false
+
+- name: Install Loki plugin disabled (amd64)
+  ansible.builtin.command: >
+    docker plugin install grafana/loki-docker-driver:3.3.2-amd64
+    --alias loki
+    --grant-all-permissions
+    --disable
+  register: docker_apps_loki_install
+  changed_when: "'Installed plugin' in docker_apps_loki_install.stdout"
+  failed_when: docker_apps_loki_install.rc != 0 and
+               "'already exists' not in docker_apps_loki_install.stderr"
+
+- name: Wait for Loki plugin to appear
+  ansible.builtin.command: docker plugin ls
+  register: docker_apps_loki_plugin_list
+  retries: 6
+  delay: 5
+  until: "'loki' in docker_apps_loki_plugin_list.stdout"
+  changed_when: false
+  failed_when: false
+
+- name: Enable Loki plugin
+  community.docker.docker_plugin:
+    plugin_name: loki
+    state: enable
+
+- name: Verify Loki plugin is enabled
+  ansible.builtin.command: docker plugin ls
+  register: docker_apps_plugin_list
+  changed_when: false
+  failed_when: false
+
+- name: Display Loki plugin list
+  ansible.builtin.debug:
+    msg: "{{ docker_apps_plugin_list.stdout }}"
+
 - name: Ensure Docker Compose directory exists
   ansible.builtin.file:
     path: "{{ docker_apps_compose_dir }}"
@@ -27,103 +73,14 @@
     mode: "0644"
     force: true
 
-- name: Initialize CrowdSec variables
-  ansible.builtin.set_fact:
-    docker_apps_crowdsec_exists: false
-    docker_apps_crowdsec_nginx_bouncer_exists: false
-    docker_apps_crowdsec_nginx_bouncer_key: ''
-
-- name: Ensure nginx bouncer API key fact is defined
-  ansible.builtin.set_fact:
-    docker_apps_crowdsec_nginx_bouncer_key: >-
-      {{
-        docker_apps_crowdsec_nginx_bouncer_key_cmd.stdout | trim
-        if docker_apps_crowdsec_nginx_bouncer_key_cmd is defined
-        else (lookup('file', '/opt/docker/crowdsec/nginx-bouncer.key') 
-              if (docker_apps_crowdsec_nginx_bouncer_exists | default(false)) 
-              else 'DUMMY_KEY')
-      }}
-
-- name: Ensure nginx bouncer API key fact is defined
-  ansible.builtin.set_fact:
-    docker_apps_crowdsec_nginx_bouncer_key: >-
-      {{
-        docker_apps_crowdsec_nginx_bouncer_key_cmd.stdout | trim
-        if docker_apps_crowdsec_nginx_bouncer_key_cmd is defined
-        else lookup('file', '/opt/docker/crowdsec/nginx-bouncer.key')
-        if (docker_apps_crowdsec_nginx_bouncer_exists) else 'DUMMY_KEY'
-      }}
-
-- name: Create Docker secret from key file
-  community.docker.docker_secret:
-    name: crowdsec_nginx_bouncer_key
-    state: present
-    data_src: /opt/docker/crowdsec/nginx-bouncer.key
+- name: Bring down existing Docker Compose stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ docker_apps_compose_dir }}"
+    state: absent
+  changed_when: false
+  failed_when: false
 
 - name: Start Docker Compose stack
   community.docker.docker_compose_v2:
     project_src: "{{ docker_apps_compose_dir }}"
     state: present
-
-# Wait for CrowdSec to be running
-- name: Wait for CrowdSec container to be running
-  ansible.builtin.command: docker inspect -f '{{ "{{.State.Running}}" }}' crowdsec
-  register: docker_apps_crowdsec_running
-  retries: 10
-  delay: 5
-  until: docker_apps_crowdsec_running.stdout == "true"
-  changed_when: false
-
-- name: Check if CAPI credentials exist
-  ansible.builtin.stat:
-    path: /etc/crowdsec/online_api_credentials.yaml
-  register: docker_apps_crowdsec_capi_file
-
-- name: Register CrowdSec CAPI if missing
-  ansible.builtin.command: docker exec crowdsec cscli capi register
-  when: not docker_apps_crowdsec_capi_file.stat.exists
-  changed_when: true
-
-# Check if Nginx bouncer exists
-- name: Check if nginx bouncer exists
-  ansible.builtin.command: docker exec crowdsec cscli bouncers list -o json
-  register: docker_apps_crowdsec_bouncers_json
-  changed_when: false
-
-- name: Set fact if nginx bouncer exists
-  ansible.builtin.set_fact:
-    docker_apps_crowdsec_nginx_bouncer_exists: >-
-      {{
-        (docker_apps_crowdsec_bouncers_json.stdout | from_json
-         | selectattr('name', 'equalto', 'nginx-bouncer')
-         | list | length) > 0
-      }}
-
-- name: Create nginx bouncer and get API key
-  ansible.builtin.command: docker exec crowdsec cscli bouncers add nginx-bouncer -o raw
-  register: docker_apps_crowdsec_nginx_bouncer_key_cmd
-  when: not docker_apps_crowdsec_nginx_bouncer_exists
-  changed_when: true
-
-- name: Set nginx bouncer API key fact
-  ansible.builtin.set_fact:
-    docker_apps_crowdsec_nginx_bouncer_key: "{{ docker_apps_crowdsec_nginx_bouncer_key_cmd.stdout | trim }}"
-  when: not docker_apps_crowdsec_nginx_bouncer_exists
-
-# Save key to file for Docker secret
-- name: Ensure /opt/docker/crowdsec directory exists
-  ansible.builtin.file:
-    path: /opt/docker/crowdsec
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
-
-- name: Save nginx bouncer API key to file
-  ansible.builtin.copy:
-    dest: /opt/docker/crowdsec/nginx-bouncer.key
-    content: "{{ docker_apps_crowdsec_nginx_bouncer_key | default('DUMMY_KEY') }}"
-    owner: root
-    group: root
-    mode: "0600"
-  when: not docker_apps_crowdsec_nginx_bouncer_exists
