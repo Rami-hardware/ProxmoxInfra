@@ -29,7 +29,8 @@ services:
       CROWDSEC_LOG_LEVEL: info
 
     secrets:
-      - crowdsec_nginx_bouncer_key
+      crowdsec_nginx_bouncer_key:
+        file: ./secrets/crowdsec_nginx_bouncer_key.txt
 {% endif %}
 {% if 'adguardhome' in docker_apps_enabled %}
   adguardhome:

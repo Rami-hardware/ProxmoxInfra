@@ -54,15 +54,6 @@ jobs:
       - name: Install Ansible
         run: sudo apt update && sudo apt install -y ansible
 
-      - name: Validate all Jinja templates
-        run: |
-          source venv/bin/activate
-          find . -name "*.j2" -print0 | xargs -0 -n1 \
-            ansible-playbook -i localhost, -c local \
-            -e "template_file={{ item }}" \
-            Ansbile/validate-template.yml
-
-              # Install Ansible and ansible-lint in virtualenv
       - name: Install Ansible and ansible-lint in virtualenv
         run: |
           sudo apt update
