@@ -7,13 +7,26 @@
   ansible.builtin.set_fact:
     docker_apps_crowdsec_nginx_bouncer_exists: false
 
-# Ensure CrowdSec container is running
+- name: Check if CrowdSec container exists
+  ansible.builtin.command: docker ps -a --format '{{ "{{.Names}}" }}'
+  register: docker_apps_containers
+  changed_when: false
+
+- name: Set fact if CrowdSec container exists
+  ansible.builtin.set_fact:
+    docker_apps_crowdsec_exists: "{{ 'crowdsec' in docker_apps_containers.stdout_lines }}"
+
+- name: Fail if CrowdSec container is missing
+  ansible.builtin.fail:
+    msg: "CrowdSec container is not yet created. Make sure your Docker Compose includes it."
+  when: not docker_apps_crowdsec_exists
+
 - name: Ensure CrowdSec container is running
-  ansible.builtin.command: >
-    docker inspect -f '{{ "{{.State.Running}}" }}' crowdsec
+  ansible.builtin.command: docker inspect -f '{{ "{{.State.Running}}" }}' crowdsec
   register: docker_apps_crowdsec_running
   failed_when: docker_apps_crowdsec_running.stdout != "true"
   changed_when: false
+  when: docker_apps_crowdsec_exists
 
 # ------------------------------------------------------------
 # Ensure CrowdSec CAPI is registered
