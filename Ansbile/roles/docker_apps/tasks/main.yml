@@ -80,8 +80,6 @@
   changed_when: false
   failed_when: false
 
-
-# Ensure the directory exists
 - name: Ensure /opt/docker/crowdsec directory exists
   ansible.builtin.file:
     path: /opt/docker/crowdsec
@@ -90,7 +88,6 @@
     group: root
     mode: "0755"
 
-# Ensure the nginx bouncer key exists
 - name: Ensure nginx bouncer key file exists
   ansible.builtin.copy:
     dest: /opt/docker/crowdsec/nginx-bouncer.key
@@ -101,11 +98,11 @@
 
 - name: Stop all running containers
   ansible.builtin.shell: "docker ps -q | xargs -r docker stop"
-  ignore_errors: true
+  failed_when: true
 
 - name: Remove all containers
   ansible.builtin.shell: "docker ps -a -q | xargs -r docker rm -f"
-  ignore_errors: true
+  failed_when: true
 
 - name: Start Docker Compose stack
   community.docker.docker_compose_v2:
