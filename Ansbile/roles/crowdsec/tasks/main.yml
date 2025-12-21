@@ -1,30 +1,63 @@
-# Ensure we have a defined fact for the bouncer existence
-- name: Initialize CrowdSec nginx bouncer existence fact
-  ansible.builtin.set_fact:
-    crowdsec_nginx_bouncer_exists: false
-  when: crowdsec_nginx_bouncer_exists is not defined
+- name: Ensure CrowdSec container is running
+  ansible.builtin.command: >
+    docker inspect -f '{{ "{{.State.Running}}" }}' crowdsec
+  register: crowdsec_running
+  failed_when: crowdsec_running.stdout != "true"
+  changed_when: false
 
-# Set nginx bouncer API key fact if we created it
+# ------------------------------------------------------------
+# Ensure CrowdSec CAPI is registered
+# ------------------------------------------------------------
+- name: Check if CAPI credentials exist
+  ansible.builtin.stat:
+    path: /etc/crowdsec/online_api_credentials.yaml
+  register: crowdsec_capi_file
+
+- name: Register CrowdSec CAPI if missing
+  ansible.builtin.command: docker exec crowdsec cscli capi register
+  when: not crowdsec_capi_file.stat.exists
+  changed_when: true
+
+# ------------------------------------------------------------
+# Check and create Nginx bouncer
+# ------------------------------------------------------------
+- name: Check if nginx bouncer exists
+  ansible.builtin.command: docker exec crowdsec cscli bouncers list -o json
+  register: crowdsec_bouncers_json
+  changed_when: false
+
+- name: Set fact if nginx bouncer exists
+  ansible.builtin.set_fact:
+    crowdsec_nginx_bouncer_exists: >-
+      {{
+        (crowdsec_bouncers_json.stdout | from_json
+         | selectattr('name', 'equalto', 'nginx-bouncer')
+         | list | length) > 0
+      }}
+
+- name: Create nginx bouncer and get API key
+  ansible.builtin.command: docker exec crowdsec cscli bouncers add nginx-bouncer -o raw
+  register: crowdsec_nginx_bouncer_key_cmd
+  when: not crowdsec_nginx_bouncer_exists
+  changed_when: true
+
 - name: Set nginx bouncer API key fact
   ansible.builtin.set_fact:
     crowdsec_nginx_bouncer_key: "{{ crowdsec_nginx_bouncer_key_cmd.stdout | trim }}"
-  when: not crowdsec_nginx_bouncer_exists | default(false) and
-        crowdsec_nginx_bouncer_key_cmd is defined
+  when: not crowdsec_nginx_bouncer_exists
 
-# Fail if the API key is missing
 - name: Fail if nginx bouncer key is missing
   ansible.builtin.fail:
     msg: "CrowdSec nginx bouncer API key could not be created!"
   when:
-    - not crowdsec_nginx_bouncer_exists | default(false)
+    - not crowdsec_nginx_bouncer_exists
     - crowdsec_nginx_bouncer_key | default('') == ''
 
-# Save nginx bouncer API key to file
 - name: Save nginx bouncer API key to file
   ansible.builtin.copy:
     dest: /opt/docker/crowdsec/nginx-bouncer.key
-    content: "{{ crowdsec_nginx_bouncer_key | default('DUMMY_KEY') }}"
+    content: "{{ crowdsec_nginx_bouncer_key }}"
     owner: root
     group: root
     mode: "0600"
-  when: not crowdsec_nginx_bouncer_exists | default(false)
+  when: not crowdsec_nginx_bouncer_exists
