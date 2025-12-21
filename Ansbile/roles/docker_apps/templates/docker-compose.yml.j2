@@ -16,7 +16,7 @@ services:
 {% endif %}
 {% if 'crowdsec-nginx-bouncer' in docker_apps_enabled %}
   crowdsec-nginx-bouncer:
-    image: crowdsecurity/nginx-bouncer:latest
+    image: crowdsecurity/openresty:latest
     container_name: crowdsec-nginx-bouncer
     restart: unless-stopped
     depends_on:
