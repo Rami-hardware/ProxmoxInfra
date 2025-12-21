@@ -104,8 +104,8 @@
     fi
   check_mode: false
   ignore_errors: true
-  register: stop_result
-  changed_when: docker_apps_stop_result.stdout != ""
+  register: docker_apps_stop_result
+  changed_when: stop_result.stdout != ""
 
 - name: Remove all containers (idempotent)
   ansible.builtin.shell: |
@@ -115,8 +115,10 @@
     fi
   check_mode: false
   ignore_errors: true
-  register: rm_result
-  changed_when: docker_apps_rm_result.stdout != ""
+  register: docker_apps_rm_result
+  changed_when: rm_result.stdout != ""
+
+
 
 - name: Start Docker Compose stack
   community.docker.docker_compose_v2:
