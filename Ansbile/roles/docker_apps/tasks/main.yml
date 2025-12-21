@@ -1,32 +1,17 @@
+# --------------------------------------------
+# Prepare Docker Compose environment first
+# --------------------------------------------
 - name: Ensure pip3 is installed
   ansible.builtin.package:
     name: python3-pip
     state: present
 
-- name: Ensure Python venv directory exists
-  ansible.builtin.file:
-    path: /opt/ansible_venv
-    state: directory
-
-- name: Create a Python virtual environment
-  ansible.builtin.command: python3 -m venv /opt/ansible_venv
-  args:
-    creates: /opt/ansible_venv/bin/activate
-
-- name: Install Docker SDK in virtual environment
-  ansible.builtin.command: /opt/ansible_venv/bin/pip install docker>=5.0.0
-  args:
-    creates: /opt/ansible_venv/lib/python3.12/site-packages/docker
-
-- name: Set ansible_python_interpreter to use venv
-  ansible.builtin.set_fact:
-    ansible_python_interpreter: /opt/ansible_venv/bin/python
 - name: Ensure Docker SDK for Python is installed
-  ansible.builtin.pip:
-    name: docker
+  ansible.builtin.package:
+    name: python3-docker
     state: present
-    executable: pip3
 
+    
 - name: Ensure Docker Compose directory exists
   ansible.builtin.file:
     path: "{{ docker_apps_compose_dir }}"
