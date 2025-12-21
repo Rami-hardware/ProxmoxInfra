@@ -103,7 +103,7 @@
     if [ -n "$running" ]; then
       docker stop $running
     fi
-  ansible.builtin.ignore_errors: true
+  failed_when: true
   check_mode: no
   changed_when: running != ""
 
@@ -114,7 +114,7 @@
     if [ -n "$all_containers" ]; then
       docker rm -f $all_containers
     fi
-  ansible.builtin.ignore_errors: true
+  failed_when: true
   check_mode: no
   changed_when: all_containers != ""
 
