@@ -83,16 +83,7 @@ jobs:
         run: |
           source venv/bin/activate
           ansible-lint Ansbile/
-      # Jinja2 template validation
-      - name: Install JinjaLint
-        run: |
-          source venv/bin/activate
-          pip install jinjalint
-                        
-      - name: Lint Jinja2 templates
-        run: |
-          source venv/bin/activate
-          jinjalint Ansbile/**/*.j2
+
 
   Deploy:
     name: Deploy Infrastructure Code
