@@ -16,6 +16,23 @@
     mode: "0644"
     force: true
 
+- name: Initialize CrowdSec variables
+  ansible.builtin.set_fact:
+    docker_apps_crowdsec_exists: false
+    docker_apps_crowdsec_nginx_bouncer_exists: false
+    docker_apps_crowdsec_nginx_bouncer_key: ''
+
+- name: Ensure nginx bouncer API key fact is defined
+  ansible.builtin.set_fact:
+    docker_apps_crowdsec_nginx_bouncer_key: >-
+      {{
+        docker_apps_crowdsec_nginx_bouncer_key_cmd.stdout | trim
+        if docker_apps_crowdsec_nginx_bouncer_key_cmd is defined
+        else (lookup('file', '/opt/docker/crowdsec/nginx-bouncer.key') 
+              if (docker_apps_crowdsec_nginx_bouncer_exists | default(false)) 
+              else 'DUMMY_KEY')
+      }}
+
 - name: Ensure nginx bouncer API key fact is defined
   ansible.builtin.set_fact:
     docker_apps_crowdsec_nginx_bouncer_key: >-
