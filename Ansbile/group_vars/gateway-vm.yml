@@ -24,8 +24,8 @@ adguardhome_ports:
   - "53:53/udp"
   - "8081:80"
 
-adguardhome_volume_config_dir: "adguard_config:/opt/adguardhome/conf"
-adguardhome_volume_work_dir: "adguard_work:/opt/adguardhome/work"
+adguardhome_volume_config_dir: "adguard_config:/opt/services/adguardhome/conf"
+adguardhome_volume_work_dir: "adguard_work:/opt/services/adguardhome/work"
 
 # Configuration for Promtail
 promtail_var_path: "/var/log:/var/log"
