@@ -103,7 +103,8 @@
     if [ -n "$running" ]; then
       docker stop $running
     fi
-  check_mode: no
+  failed_when: true
+  check_mode: false
   changed_when: running != ""
 
 - name: Remove all containers (idempotent)
@@ -113,7 +114,8 @@
     if [ -n "$all_containers" ]; then
       docker rm -f $all_containers
     fi
-  check_mode: no
+  failed_when: true
+  check_mode: false
   changed_when: all_containers != ""
 
 
