@@ -96,28 +96,6 @@
     group: root
     mode: "0600"
 
-- name: Stop all running containers (idempotent)
-  ansible.builtin.shell: |
-    running=$(docker ps -q)
-    if [ -n "$running" ]; then
-      docker stop $running
-    fi
-  check_mode: false
-  ignore_errors: true
-  register: docker_apps_stop_result
-  changed_when: stop_result.stdout != ""
-
-- name: Remove all containers (idempotent)
-  ansible.builtin.shell: |
-    all_containers=$(docker ps -a -q)
-    if [ -n "$all_containers" ]; then
-      docker rm -f $all_containers
-    fi
-  check_mode: false
-  ignore_errors: true
-  register: docker_apps_rm_result
-  changed_when: rm_result.stdout != ""
-
 - name: Start Docker Compose stack
   community.docker.docker_compose_v2:
     project_src: "{{ docker_apps_compose_dir }}"
