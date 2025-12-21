@@ -138,16 +138,16 @@
 - name: Redirect UDP 53 → 5353
   ansible.builtin.command: >
     iptables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT --to-port 5353
-  become: yes
+  become: true
 
 - name: Redirect TCP 53 → 5353
   ansible.builtin.command: >
     iptables -t nat -A PREROUTING -p tcp --dport 53 -j REDIRECT --to-port 5353
-  become: yes
+  become: true
 
 - name: Save iptables rules
   ansible.builtin.command: iptables-save > /etc/iptables/rules.v4
-  become: yes
-  
+  become: true
+
   notify:
     - Reload nginx container
