@@ -43,12 +43,12 @@
         if (docker_apps_crowdsec_nginx_bouncer_exists) else 'DUMMY_KEY'
       }}
 
-- name: Create Docker secret for CrowdSec Nginx bouncer key
+- name: Create Docker secret from key file
   community.docker.docker_secret:
     name: crowdsec_nginx_bouncer_key
-    secret: "{{ docker_apps_crowdsec_nginx_bouncer_key }}"
+    state: present
+    data_src: /opt/docker/crowdsec/nginx-bouncer.key
 
-# Bring up stack
 - name: Start Docker Compose stack
   community.docker.docker_compose_v2:
     project_src: "{{ docker_apps_compose_dir }}"
