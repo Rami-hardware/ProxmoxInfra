@@ -98,25 +98,26 @@
 
 - name: Stop all running containers (idempotent)
   ansible.builtin.shell: |
-    set -o pipefail
     running=$(docker ps -q)
     if [ -n "$running" ]; then
       docker stop $running
     fi
-  failed_when: true
   check_mode: false
-  changed_when: running != ""
+  ignore_errors: true
+  register: stop_result
+  changed_when: stop_result.stdout != ""
 
 - name: Remove all containers (idempotent)
   ansible.builtin.shell: |
-    set -o pipefail
     all_containers=$(docker ps -a -q)
     if [ -n "$all_containers" ]; then
       docker rm -f $all_containers
     fi
-  failed_when: true
   check_mode: false
-  changed_when: all_containers != ""
+  ignore_errors: true
+  register: rm_result
+  changed_when: rm_result.stdout != ""
+
 
 
 - name: Start Docker Compose stack
