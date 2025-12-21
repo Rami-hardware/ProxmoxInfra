@@ -82,15 +82,16 @@
 
 - name: Set nginx bouncer API key fact
   ansible.builtin.set_fact:
-    crowdsec_nginx_bouncer_key: "{{ crowdsec_nginx_bouncer_key_cmd.stdout | trim }}"
-  when: notdocker_apps_crowdsec_nginx_bouncer_exists
+    docker_apps_crowdsec_nginx_bouncer_key: "{{ crowdsec_nginx_bouncer_key_cmd.stdout | trim }}"
+  when: not docker_apps_crowdsec_nginx_bouncer_exists
+
 
 - name: Fail if nginx bouncer key is missing
   ansible.builtin.fail:
     msg: "CrowdSec nginx bouncer API key could not be created!"
   when:
     - not docker_apps_crowdsec_nginx_bouncer_exists
-    - crowdsec_nginx_bouncer_key | default('') == ''
+    - docker_apps_crowdsec_nginx_bouncer_key | default('') == ''
 
 - name: Save nginx bouncer API key to file
   ansible.builtin.copy:
@@ -100,7 +101,6 @@
     group: root
     mode: "0600"
   when: not docker_apps_crowdsec_nginx_bouncer_exists
-
 
 - name: Start Docker Compose stack
   community.docker.docker_compose_v2:
