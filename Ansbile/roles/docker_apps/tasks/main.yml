@@ -103,5 +103,3 @@
   community.docker.docker_compose_v2:
     project_src: "{{ docker_apps_compose_dir }}"
     state: present
-  changed_when: false
-  failed_when: false
