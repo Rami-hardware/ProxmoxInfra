@@ -15,6 +15,26 @@ services:
       - "8080:8080"
 {% endif %}
 
+
+{% if 'crowdsec-nginx-bouncer' in docker_apps_enabled %}
+  crowdsec-nginx-bouncer:
+    image: crowdsecurity/nginx-bouncer:latest
+    container_name: crowdsec-nginx-bouncer
+    restart: unless-stopped
+    depends_on:
+      - crowdsec
+      - nginx
+
+    environment:
+      CROWDSEC_BOUNCER_API_KEY_FILE: /run/secrets/crowdsec_nginx_bouncer_key
+      CROWDSEC_AGENT_HOST: crowdsec:8080
+      CROWDSEC_LOG_LEVEL: info
+
+    secrets:
+      crowdsec_nginx_bouncer_key:
+        file: /opt/docker/crowdsec/nginx-bouncer.key
+{% endif %}
+
 {% if 'adguardhome' in docker_apps_enabled %}
   adguardhome:
     image: adguard/adguardhome
@@ -36,25 +56,6 @@ services:
       - "{{ adguardhome_volume_config_dir }}"
       - "{{ adguardhome_volume_work_dir }}"
     restart: unless-stopped
-{% endif %}
-
-{% if 'crowdsec-nginx-bouncer' in docker_apps_enabled %}
- crowdsec-nginx-bouncer:
-    image: crowdsecurity/nginx-bouncer:latest
-    container_name: crowdsec-nginx-bouncer
-    restart: unless-stopped
-    depends_on:
-      - crowdsec
-      - nginx
-
-    environment:
-      CROWDSEC_BOUNCER_API_KEY_FILE: /run/secrets/crowdsec_nginx_bouncer_key
-      CROWDSEC_AGENT_HOST: crowdsec:8080
-      CROWDSEC_LOG_LEVEL: info
-
-    secrets:
-      crowdsec_nginx_bouncer_key:
-        file: /opt/docker/crowdsec/nginx-bouncer.key
 {% endif %}
 
 {% if 'promtail' in docker_apps_enabled %}
