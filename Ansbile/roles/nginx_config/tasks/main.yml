@@ -135,28 +135,5 @@
     group: root
     mode: '0644'
 
-- name: Ensure UDP 53 is redirected to 5353
-  ansible.posix.iptables:
-    table: nat
-    chain: PREROUTING
-    protocol: udp
-    destination_port: 53
-    jump: REDIRECT
-    to_ports: 5353
-    state: present
-  become: true
-
-- name: Ensure TCP 53 is redirected to 5353
-  ansible.posix.iptables:
-    table: nat
-    chain: PREROUTING
-    protocol: tcp
-    destination_port: 53
-    jump: REDIRECT
-    to_ports: 5353
-    state: present
-  become: true
-
-
   notify:
     - Reload nginx container
