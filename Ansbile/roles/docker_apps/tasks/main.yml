@@ -29,7 +29,7 @@
     --alias loki
     --grant-all-permissions
     --disable
-  register: docker_apps_loki_install
+  register: dock er_apps_loki_install
   changed_when: "'Installed plugin' in docker_apps_loki_install.stdout"
   failed_when: docker_apps_loki_install.rc != 0 and
                "'already exists' not in docker_apps_loki_install.stderr"
@@ -83,23 +83,23 @@
 - name: Set nginx bouncer API key fact
   ansible.builtin.set_fact:
     crowdsec_nginx_bouncer_key: "{{ crowdsec_nginx_bouncer_key_cmd.stdout | trim }}"
-  when: not crowdsec_nginx_bouncer_exists
+  when: notdocker_apps_crowdsec_nginx_bouncer_exists
 
 - name: Fail if nginx bouncer key is missing
   ansible.builtin.fail:
     msg: "CrowdSec nginx bouncer API key could not be created!"
   when:
-    - not crowdsec_nginx_bouncer_exists
+    - not docker_apps_crowdsec_nginx_bouncer_exists
     - crowdsec_nginx_bouncer_key | default('') == ''
 
 - name: Save nginx bouncer API key to file
   ansible.builtin.copy:
     dest: /opt/docker/crowdsec/nginx-bouncer.key
-    content: "{{ crowdsec_nginx_bouncer_key }}"
+    content: "{{ docker_apps_crowdsec_nginx_bouncer_key }}"
     owner: root
     group: root
     mode: "0600"
-  when: not crowdsec_nginx_bouncer_exists
+  when: not docker_apps_crowdsec_nginx_bouncer_exists
 
 
 - name: Start Docker Compose stack
