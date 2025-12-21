@@ -4,6 +4,7 @@ docker_apps_enabled:
   - nginx
   - node-exporter
   - crowdsec
+  - crowdsec-nginx-bouncer
 
 service_tcp_ports:
   - 80
