@@ -1,13 +1,3 @@
-- name: Ensure CrowdSec container is running
-  ansible.builtin.command: >
-    docker inspect -f '{{ "{{.State.Running}}" }}' crowdsec
-  register: crowdsec_running
-  failed_when: crowdsec_running.stdout != "true"
-  changed_when: false
-
-# ------------------------------------------------------------
-# Ensure CrowdSec CAPI is registered
-# ------------------------------------------------------------
 - name: Check if CAPI credentials exist
   ansible.builtin.stat:
     path: /etc/crowdsec/online_api_credentials.yaml
@@ -18,9 +8,7 @@
   when: not crowdsec_capi_file.stat.exists
   changed_when: true
 
-# ------------------------------------------------------------
-# Check and create Nginx bouncer
-# ------------------------------------------------------------
+
 - name: Check if nginx bouncer exists
   ansible.builtin.command: docker exec crowdsec cscli bouncers list -o json
   register: crowdsec_bouncers_json
