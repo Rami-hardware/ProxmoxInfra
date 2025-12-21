@@ -99,6 +99,11 @@
     group: root
     mode: "0600"
 
+- name: Ensure old Promtail container is absent
+  community.docker.docker_container:
+    name: promtail
+    state: absent
+
 - name: Start Docker Compose stack
   community.docker.docker_compose_v2:
     project_src: "{{ docker_apps_compose_dir }}"
