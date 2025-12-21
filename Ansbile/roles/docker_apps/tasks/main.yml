@@ -99,10 +99,19 @@
     group: root
     mode: "0600"
 
-- name: Ensure old Promtail container is absent
+- name: Stop all running containers
   community.docker.docker_container:
-    name: promtail
+    name: "{{ item }}"
+    state: stopped
+  loop: "{{ lookup('community.docker.docker_containers', '') | map(attribute='Names') | list }}"
+  when: lookup('community.docker.docker_containers', '') | length > 0
+
+- name: Remove all containers
+  community.docker.docker_container:
+    name: "{{ item }}"
     state: absent
+  loop: "{{ lookup('community.docker.docker_containers', '') | map(attribute='Names') | list }}"
+  when: lookup('community.docker.docker_containers', '') | length > 0
 
 - name: Start Docker Compose stack
   community.docker.docker_compose_v2:
