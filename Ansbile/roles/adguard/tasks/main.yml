@@ -26,8 +26,8 @@
     owner: root
     group: root
     mode: '0644'
-    regexp: '^bind_web_port:.*'
-    line: "bind_web_port: {{ adguard_ui_port }}"
+    regexp: '^address:.*'
+    line: "address: {{ adguard_ui_port }}"
     create: true
 
 - name: Fix AdGuard config directory permissions
