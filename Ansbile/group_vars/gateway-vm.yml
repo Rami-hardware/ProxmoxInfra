@@ -16,12 +16,6 @@ service_tcp_ports:
   - 443
   - 53
 
-# Configuration for AdGuard Home
-adguardhome_ports:
-  - "3000:3000"
-  - "5353:53/udp"
-  - "8081:80"
-
 adguardhome_volume_config_dir: "adguard_config:/opt/adguardhome/conf"
 adguardhome_volume_work_dir: "adguard_work:/opt/adguardhome/work"
 
