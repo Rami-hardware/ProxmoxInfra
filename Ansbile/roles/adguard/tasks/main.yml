@@ -21,7 +21,7 @@
       nameserver {{ fallback_dns }}
 
 - name: Change AdGuard web UI port
-  ansible.builtin.lineinfile:
+  ansible.builtin.replace:
     owner: 1000
     group: 1000
     mode: '0700'
