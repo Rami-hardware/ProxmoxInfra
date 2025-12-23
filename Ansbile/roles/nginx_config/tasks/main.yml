@@ -142,7 +142,7 @@
   ansible.builtin.systemd:
     name: systemd-resolved
     state: stopped
-    enabled: no
+    enabled: false
 
 - name: Remove /etc/resolv.conf
   ansible.builtin.file:
@@ -152,22 +152,59 @@
 - name: Create new resolv.conf pointing to AdGuard
   ansible.builtin.copy:
     dest: /etc/resolv.conf
+    owner: 1000
+    group: 1000
+    mode: '0700'
     content: |
       nameserver 127.0.0.1
       options edns0
       nameserver {{ fallback_dns }}
 
-
-- name: Change AdGuard web UI port
-  ansible.builtin.lineinfile:
-    path: "{{ adguard_config_path }}"
-    regexp: '^bind_web_port:.*'
-    line: "bind_web_port: {{ adguard_ui_port }}"
-    create: true
-
-- name: Ensure correct permissions on AdGuard config
+- name: Fix AdGuard config directory permissions
   ansible.builtin.file:
-    path: "{{ adguard_config_path }}"
-    owner: root
-    group: root
-    mode: '0644'
+    path: /var/lib/docker/volumes/docker_adguard_config/_data
+    owner: 1000
+    group: 1000
+    mode: '0700'
+    recurse: true
+    state: directory
+
+- name: Fix file permissions inside AdGuard config
+  ansible.builtin.find:
+    paths: /var/lib/docker/volumes/docker_adguard_config/_data
+    file_type: file
+  register: adguard_config_files
+
+- name: Set correct permissions on config files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    owner: 1000
+    group: 1000
+    mode: '0600'
+  loop: "{{ adguard_config_files.files }}"
+
+- name: Fix AdGuard work directory permissions
+  ansible.builtin.file:
+    path: /var/lib/docker/volumes/docker_adguard_work/_data
+    owner: 1000
+    group: 1000
+    mode: '0700'
+    recurse: true
+    state: directory
+
+- name: Fix file permissions inside AdGuard work
+  ansible.builtin.find:
+    paths: /var/lib/docker/volumes/docker_adguard_work/_data
+    file_type: file
+  register: adguard_work_files
+
+- name: Set correct permissions on work files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    owner: 1000
+    group: 1000
+    mode: '0600'
+  loop: "{{ adguard_work_files.files }}"
+
+  notify:
+    - Reload adguardhome container

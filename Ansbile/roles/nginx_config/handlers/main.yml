@@ -3,3 +3,11 @@
     name: nginx
     state: started
     restart: true
+
+- name: Reload adguardhome container
+  community.docker.docker_container:
+    name: adguardhome
+    state: started
+    restart: true
+    network_mode: host
+    restart_policy: unless-stopped
