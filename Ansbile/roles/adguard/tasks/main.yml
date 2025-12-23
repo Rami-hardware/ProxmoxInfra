@@ -21,13 +21,13 @@
       nameserver {{ fallback_dns }}
 
 - name: Change AdGuard web UI port
-  ansible.builtin.replace:
+  ansible.builtin.lineinfile:
     owner: 1000
     group: 1000
     mode: '0700'
     path: "{{ adguard_config_path }}"
-    regexp: '^(  address:).*'
-    replace: '\1 0.0.0.0:{{ adguard_ui_port }}'
+    regexp: '^\s* address:.*'
+    line: "address: 0.0.0.0:{{ adguard_ui_port }}"
     create: true
 
 - name: Fix AdGuard config directory permissions
