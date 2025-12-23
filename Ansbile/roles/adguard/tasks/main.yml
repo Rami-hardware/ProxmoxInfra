@@ -22,11 +22,11 @@
 
 - name: Change AdGuard web UI port
   ansible.builtin.lineinfile:
+    owner: 1000
+    group: 1000
+    mode: '0700'
     path: "{{ adguard_config_path }}"
-    owner: root
-    group: root
-    mode: '0644'
-    regexp: '^address:.*'
+    regexp: '^\s*address:.*'
     line: "address: 0.0.0.0:{{ adguard_ui_port }}"
     create: true
 
