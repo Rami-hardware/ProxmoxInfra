@@ -33,7 +33,7 @@
   ansible.builtin.find:
     paths: /var/lib/docker/volumes/docker_adguard_config/_data
     file_type: file
-  register: adguard_config_files
+  register: adguard_files
 
 - name: Set correct permissions on config files
   ansible.builtin.file:
@@ -56,7 +56,7 @@
   ansible.builtin.find:
     paths: /var/lib/docker/volumes/docker_adguard_work/_data
     file_type: file
-  register: adguard_work_files
+  register: adguard_files
 
 - name: Set correct permissions on work files
   ansible.builtin.file:
