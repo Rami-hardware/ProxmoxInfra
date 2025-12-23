@@ -137,3 +137,37 @@
 
   notify:
     - Reload nginx container
+
+- name: Stop systemd-resolved service
+  ansible.builtin.systemd:
+    name: systemd-resolved
+    state: stopped
+    enabled: no
+
+- name: Remove /etc/resolv.conf
+  ansible.builtin.file:
+    path: /etc/resolv.conf
+    state: absent
+
+- name: Create new resolv.conf pointing to AdGuard
+  ansible.builtin.copy:
+    dest: /etc/resolv.conf
+    content: |
+      nameserver 127.0.0.1
+      options edns0
+      nameserver {{ fallback_dns }}
+
+
+- name: Change AdGuard web UI port
+  ansible.builtin.lineinfile:
+    path: "{{ adguard_config_path }}"
+    regexp: '^bind_web_port:.*'
+    line: "bind_web_port: {{ adguard_ui_port }}"
+    create: true
+
+- name: Ensure correct permissions on AdGuard config
+  ansible.builtin.file:
+    path: "{{ adguard_config_path }}"
+    owner: root
+    group: root
+    mode: '0644'
