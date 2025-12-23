@@ -12,13 +12,23 @@
 - name: Create new resolv.conf pointing to AdGuard
   ansible.builtin.copy:
     dest: /etc/resolv.conf
-    owner: 1000
-    group: 1000
-    mode: '0700'
+    owner: root
+    group: root
+    mode: '0644'
     content: |
       nameserver 127.0.0.1
       options edns0
       nameserver {{ fallback_dns }}
+
+- name: Change AdGuard web UI port
+  ansible.builtin.lineinfile:
+    path: "{{ adguard_config_path }}"
+    owner: root
+    group: root
+    mode: '0644'
+    regexp: '^bind_web_port:.*'
+    line: "bind_web_port: {{ adguard_ui_port }}"
+    create: true
 
 - name: Fix AdGuard config directory permissions
   ansible.builtin.file:
