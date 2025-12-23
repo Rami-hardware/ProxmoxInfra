@@ -5,7 +5,9 @@ services:
     image: crowdsecurity/crowdsec:latest
     container_name: crowdsec
     restart: unless-stopped
-
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     volumes:
       - /opt/docker/crowdsec/data:/var/lib/crowdsec/data
       - /opt/docker/crowdsec/config:/etc/crowdsec
