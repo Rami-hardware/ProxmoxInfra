@@ -27,7 +27,7 @@
     group: root
     mode: '0644'
     regexp: '^address:.*'
-    line: "address: {{ adguard_ui_port }}"
+    line: "address: 0.0.0.0:{{ adguard_ui_port }}"
     create: true
 
 - name: Fix AdGuard config directory permissions

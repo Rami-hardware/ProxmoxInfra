@@ -14,6 +14,7 @@ service_tcp_ports:
   - 3001
   - 9000
   - 443
+  - 53
 
 # Configuration for AdGuard Home
 adguardhome_ports:
