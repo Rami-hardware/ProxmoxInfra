@@ -26,7 +26,7 @@
     group: 1000
     mode: '0700'
     path: "{{ adguard_config_path }}"
-    regexp: '^address:.*'
+    regexp: '^  address:.*'
     replace: 'address: "0.0.0.0:{{ adguard_ui_port }}"'
 
 - name: Fix AdGuard config directory permissions
