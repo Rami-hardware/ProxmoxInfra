@@ -24,6 +24,10 @@ adguardhome_ports:
 adguardhome_volume_config_dir: "adguard_config:/opt/adguardhome/conf"
 adguardhome_volume_work_dir: "adguard_work:/opt/adguardhome/work"
 
+adguard_config_path: "/var/lib/docker/volumes/docker_adguard_config/_data/AdGuardHome.yaml"
+adguard_ui_port: 8081
+fallback_dns: 1.1.1.1
+
 # Configuration for Promtail
 promtail_var_path: "/var/log:/var/log"
 promtail_config_path: "{{ docker_compose_dir }}/promtail-config.yml:/etc/promtail/config.yml"
