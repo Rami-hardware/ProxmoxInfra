@@ -1,8 +1,30 @@
+- name: Temporarily use public DNS for package installation
+  ansible.builtin.copy:
+    dest: /etc/resolv.conf
+    content: |
+      nameserver 1.1.1.1
+      nameserver 8.8.8.8
+    owner: root
+    group: root
+    mode: '0644'
+
 - name: Ensure UFW is installed
   ansible.builtin.apt:
     name: ufw
     state: present
     update_cache: true
+
+- name: Restore resolv.conf to AdGuard
+  ansible.builtin.copy:
+    dest: /etc/resolv.conf
+    content: |
+      nameserver 127.0.0.1
+      options edns0
+      nameserver {{ fallback_dns | default('1.1.1.1') }}
+    owner: root
+    group: root
+    mode: '0644'
+
 - name: Allow SSH
   community.general.ufw:
     rule: allow
