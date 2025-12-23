@@ -1,0 +1,65 @@
+docker_apps_enabled:
+  - adguardhome
+  - promtail
+  - nginx
+  - node-exporter
+  - crowdsec
+  - crowdsec-nginx-bouncer
+
+service_tcp_ports:
+  - 80
+  - 3000
+  - 8081
+  - 12345
+  - 3001
+  - 9000
+  - 443
+
+# Configuration for AdGuard Home
+adguardhome_ports:
+  - "3000:3000"
+  - "5353:53/udp"
+  - "8081:80"
+
+adguardhome_volume_config_dir: "adguard_config:/opt/adguardhome/conf"
+adguardhome_volume_work_dir: "adguard_work:/opt/adguardhome/work"
+
+# Configuration for Promtail
+promtail_var_path: "/var/log:/var/log"
+promtail_config_path: "{{ docker_compose_dir }}/promtail-config.yml:/etc/promtail/config.yml"
+
+# Configuration for Watchtower
+watchtower_run: /var/run/docker.sock:/var/run/docker.sock
+
+# Configuration for Nginx
+nginx_ports:
+  - "80:80"
+  - "443:443"
+
+nginx_default_val: "/opt/services/default.conf:/etc/nginx/conf.d/default.conf:ro"
+
+# Configuration for fail2ban
+fail2ban_var_path: "/var/log:/var/log:ro"
+fail2ban_data_path: "{{ docker_apps_compose_dir }}/fail2ban:/data"
+
+authelia_config_dir: /opt/docker/authelia/config
+authelia_cert_dir: /opt/docker/authelia/certs
+
+authelia_container_name: authelia
+authelia_image: authelia/authelia:latest
+
+timezone: UTC
+
+crowdsec_val:
+  - /opt/docker/crowdsec/config:/etc/crowdsec
+  - /opt/docker/crowdsec/data:/var/lib/crowdsec/data
+  - /var/log/nginx:/var/log/nginx:ro # For Nginx logs
+
+crowdsec_nginx_val: /opt/docker/crowdsec/bouncer:/etc/crowdsec
+
+crowdsec_nginx_env:
+  - API_URL=http://crowdsec:8080
+  - API_KEY_FILE=/etc/crowdsec/bouncer_api_key
+
+crowdsec_online_api_key: a7c65c19d023489a88b70036e3a10397nmDvrI0bzgfqoUau
+crowdsec_online_api_secret: K6yiJt6KCOfj0AeXbeWQ4BptCGhEYfdCwrNwrr3NoStJ3BOGyoov7JCgbW467u3v

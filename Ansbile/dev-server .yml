@@ -1,0 +1,12 @@
+- name: Deploy to Gateway Server
+  hosts: dev-server
+  become: true
+
+  roles:
+    - DNS
+    - docker_setup
+    - docker_apps
+    - nginx_config
+    - crowdsec
+    - Promtail
+    - ufw
