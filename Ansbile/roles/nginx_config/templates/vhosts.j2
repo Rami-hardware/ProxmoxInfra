@@ -3,7 +3,7 @@ server {
     listen 80;
     server_name {{ svc.name }}.home {{ svc.name }}.respawnxd.co;
 
-    {% if svc.lan_only %}
+    {% if svc.lan_only | default(false) %}
     allow 192.168.1.0/24;
     deny all;
     {% endif %}
@@ -13,7 +13,8 @@ server {
     location / {
         proxy_pass http://{{ svc.ip }}:{{ svc.port }};
         include snippets/proxy-common.conf;
-        {% if svc.disable_buffering %}
+
+        {% if svc.disable_buffering | default(false) %}
         proxy_request_buffering off;
         {% endif %}
     }
