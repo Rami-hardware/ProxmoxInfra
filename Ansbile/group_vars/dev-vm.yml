@@ -36,15 +36,6 @@ promtail_config_path: "{{ docker_compose_dir }}/promtail-config.yml:/etc/promtai
 # Configuration for Watchtower
 watchtower_run: /var/run/docker.sock:/var/run/docker.sock
 
-# Configuration for Nginx
-nginx_ports:
-  - "80:80"
-  - "443:443"
-
-nginx_volumes:
-  - /opt/nginx/conf:/etc/nginx:ro
-  - /opt/nginx/logs:/var/log/nginx
-
 # Configuration for fail2ban
 fail2ban_var_path: "/var/log:/var/log:ro"
 fail2ban_data_path: "{{ docker_apps_compose_dir }}/fail2ban:/data"
@@ -70,6 +61,15 @@ crowdsec_nginx_env:
 
 crowdsec_online_api_key: a7c65c19d023489a88b70036e3a10397nmDvrI0bzgfqoUau
 crowdsec_online_api_secret: K6yiJt6KCOfj0AeXbeWQ4BptCGhEYfdCwrNwrr3NoStJ3BOGyoov7JCgbW467u3v
+
+# Configuration for Nginx
+nginx_ports:
+  - "80:80"
+  - "443:443"
+
+nginx_volumes:
+  - /opt/nginx/conf:/etc/nginx:ro
+  - /opt/nginx/logs:/var/log/nginx
 
 nginx_services:
   - name: jellyfin
