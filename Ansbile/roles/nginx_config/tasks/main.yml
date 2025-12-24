@@ -1,45 +1,44 @@
-- name: Install nginx
-  ansible.builtin.apt:
-    name: nginx
-    state: present
-    update_cache: true
-
-- name: Ensure snippets directory exists
+- name: Ensure nginx config directories exist
   ansible.builtin.file:
-    path: /etc/nginx/snippets
+    path: "{{ item }}"
     state: directory
     owner: root
     group: root
     mode: "0755"
+  loop:
+    - /opt/nginx/conf
+    - /opt/nginx/conf/snippets
+    - /opt/nginx/conf/sites-available
+    - /opt/nginx/conf/sites-enabled
 
 - name: Deploy proxy common snippet
   ansible.builtin.template:
     src: proxy-common.conf.j2
-    dest: /etc/nginx/snippets/proxy-common.conf
+    dest: /opt/nginx/conf/snippets/proxy-common.conf
     owner: root
     group: root
     mode: "0644"
-  notify: Reload nginx
+  notify: Reload nginx container
 
 - name: Deploy vhosts config
   ansible.builtin.template:
     src: vhosts.j2
-    dest: /etc/nginx/sites-available/services.conf
+    dest: /opt/nginx/conf/sites-available/services.conf
     owner: root
     group: root
     mode: "0644"
-  notify: Reload nginx
+  notify: Reload nginx container
 
 - name: Enable services site
   ansible.builtin.file:
-    src: /etc/nginx/sites-available/services.conf
-    dest: /etc/nginx/sites-enabled/services.conf
+    src: /opt/nginx/conf/sites-available/services.conf
+    dest: /opt/nginx/conf/sites-enabled/services.conf
     state: link
     force: true
-  notify: Reload nginx
+  notify: Reload nginx container
 
-- name: Remove default nginx site
+- name: Remove default nginx site (if present)
   ansible.builtin.file:
-    path: /etc/nginx/sites-enabled/default
+    path: /opt/nginx/conf/sites-enabled/default
     state: absent
-  notify: Reload nginx
+  notify: Reload nginx container
