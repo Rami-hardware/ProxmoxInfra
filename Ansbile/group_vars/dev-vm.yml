@@ -68,3 +68,30 @@ crowdsec_nginx_env:
 
 crowdsec_online_api_key: a7c65c19d023489a88b70036e3a10397nmDvrI0bzgfqoUau
 crowdsec_online_api_secret: K6yiJt6KCOfj0AeXbeWQ4BptCGhEYfdCwrNwrr3NoStJ3BOGyoov7JCgbW467u3v
+
+nginx_services:
+  - name: jellyfin
+    ip: 192.168.1.201
+    port: 8096
+    lan_only: true
+
+  - name: overseerr
+    ip: 192.168.1.201
+    port: 5055
+    lan_only: true
+
+  - name: bazarr
+    ip: 192.168.1.201
+    port: 6767
+    lan_only: true
+
+  - name: qbittorrent
+    ip: 192.168.1.201
+    port: 8080
+    lan_only: true
+    disable_buffering: true
+
+  - name: adguard
+    ip: 192.168.1.200
+    port: 8081
+    lan_only: true

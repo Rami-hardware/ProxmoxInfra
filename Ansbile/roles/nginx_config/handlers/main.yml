@@ -1,5 +1,4 @@
-- name: Reload nginx container
-  community.docker.docker_container:
+- name: Reload nginx
+  ansible.builtin.service:
     name: nginx
-    state: started
-    restart: true
+    state: reloaded

@@ -1,0 +1,21 @@
+{% for svc in nginx_services %}
+server {
+    listen 80;
+    server_name {{ svc.name }}.home {{ svc.name }}.respawnxd.co;
+
+    {% if svc.lan_only %}
+    allow 192.168.1.0/24;
+    deny all;
+    {% endif %}
+
+    access_log off;
+
+    location / {
+        proxy_pass http://{{ svc.ip }}:{{ svc.port }};
+        include snippets/proxy-common.conf;
+        {% if svc.disable_buffering %}
+        proxy_request_buffering off;
+        {% endif %}
+    }
+}
+{% endfor %}
