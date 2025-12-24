@@ -1,4 +1,3 @@
 - name: Reload nginx container
-  ansible.builtin.service:
-    name: nginx
-    state: reloaded
+  ansible.builtin.command: docker exec nginx nginx -s reload
+  changed_when: false
