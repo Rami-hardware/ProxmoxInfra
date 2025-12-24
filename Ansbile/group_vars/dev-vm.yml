@@ -69,7 +69,6 @@ nginx_ports:
 
 nginx_volumes:
   - /opt/nginx/conf/snippets:/etc/nginx/snippets:ro
-  - /opt/nginx/conf/sites-available:/etc/nginx/sites-available:ro
   - /opt/nginx/conf/sites-enabled:/etc/nginx/sites-enabled:ro
   - /opt/nginx/logs:/var/log/nginx
 
