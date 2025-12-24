@@ -68,10 +68,9 @@ nginx_ports:
   - "443:443"
 
 nginx_volumes:
+  - /opt/nginx/conf/conf.d:/etc/nginx/conf.d:ro
   - /opt/nginx/conf/snippets:/etc/nginx/snippets:ro
-  - /opt/nginx/conf/sites-enabled:/etc/nginx/sites-enabled
   - /opt/nginx/logs:/var/log/nginx
-  - /opt/nginx/conf/sites-available:/etc/nginx/sites-available
 
 nginx_services:
   - name: jellyfin
