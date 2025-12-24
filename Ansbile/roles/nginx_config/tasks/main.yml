@@ -1,3 +1,13 @@
+- name: Deploy main nginx.conf
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: /opt/nginx/conf/nginx.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nginx container
+
+
 - name: Ensure nginx config directories exist
   ansible.builtin.file:
     path: "{{ item }}"
