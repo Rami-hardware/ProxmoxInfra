@@ -84,19 +84,22 @@ services:
 {% endif %}
 
 {% if 'nginx' in docker_apps_enabled %}
-  nginx:
-    image: nginx:latest
-    container_name: nginx
-    restart: unless-stopped
+nginx:
+  image: nginx:latest
+  container_name: nginx
+  restart: unless-stopped
 
-    ports:
+  ports:
 {% for port in nginx_ports %}
-      - "{{ port }}"
+    - "{{ port }}"
 {% endfor %}
-{% for volumes in nginx_volumes %}
-      - "{{ volumes }}"
+
+  volumes:
+{% for vol in nginx_volumes %}
+    - "{{ vol }}"
 {% endfor %}
 {% endif %}
+
 
 {% if 'fail2ban' in docker_apps_enabled %}
   fail2ban:
