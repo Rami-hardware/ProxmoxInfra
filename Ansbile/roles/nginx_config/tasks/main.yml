@@ -52,3 +52,20 @@
     path: /opt/nginx/conf/sites-enabled/default
     state: absent
   notify: Reload nginx container
+
+- name: Enable services site
+  ansible.builtin.file:
+    src: /opt/nginx/conf/sites-available/services.conf
+    dest: /opt/nginx/conf/sites-enabled/services.conf
+    state: link
+    force: true
+
+- name: Enable services site (copy, not symlink)
+  ansible.builtin.copy:
+    src: /opt/nginx/conf/sites-available/services.conf
+    dest: /opt/nginx/conf/sites-enabled/services.conf
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nginx container
