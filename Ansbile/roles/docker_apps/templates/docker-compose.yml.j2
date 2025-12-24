@@ -93,9 +93,8 @@ services:
 {% for port in nginx_ports %}
       - "{{ port }}"
 {% endfor %}
-    volumes:
-      - /opt/services/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - /opt/docker/nginx/logs:/var/log/nginx
+{% for volumes in nginx_volumes %}
+      - "{{ volumes }}"
 {% endif %}
 
 {% if 'fail2ban' in docker_apps_enabled %}
