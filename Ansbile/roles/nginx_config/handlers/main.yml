@@ -1,6 +1,6 @@
 - name: Test nginx config inside container
   ansible.builtin.command: docker exec nginx nginx -t
-  register: nginx_test
+  register: nginx_config_nginx_test
   changed_when: false
   failed_when: nginx_test.rc != 0
 
