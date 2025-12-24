@@ -77,25 +77,21 @@ nginx_services:
   - name: jellyfin
     ip: 192.168.1.201
     port: 8096
-    lan_only: true
+    disable_buffering: true
 
   - name: overseerr
     ip: 192.168.1.201
     port: 5055
-    lan_only: true
 
   - name: bazarr
     ip: 192.168.1.201
     port: 6767
-    lan_only: true
 
   - name: qbittorrent
     ip: 192.168.1.201
     port: 8080
-    lan_only: true
     disable_buffering: true
 
   - name: adguard
     ip: 192.168.1.200
     port: 8081
-    lan_only: true
