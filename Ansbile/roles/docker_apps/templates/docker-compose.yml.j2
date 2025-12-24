@@ -84,19 +84,19 @@ services:
 {% endif %}
 
 {% if 'nginx' in docker_apps_enabled %}
-nginx:
-  image: nginx:latest
-  container_name: nginx
-  restart: unless-stopped
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    restart: unless-stopped
 
-  ports:
+    ports:
 {% for port in nginx_ports %}
-    - "{{ port }}"
+      - "{{ port }}"
 {% endfor %}
 
-  volumes:
+    volumes:
 {% for vol in nginx_volumes %}
-    - "{{ vol }}"
+      - "{{ vol }}"
 {% endfor %}
 {% endif %}
 
