@@ -95,6 +95,7 @@ services:
 {% endfor %}
 {% for volumes in nginx_volumes %}
       - "{{ volumes }}"
+{% endfor %}
 {% endif %}
 
 {% if 'fail2ban' in docker_apps_enabled %}
