@@ -1,13 +1,3 @@
-- name: Deploy main nginx.conf
-  ansible.builtin.template:
-    src: nginx.conf.j2
-    dest: /opt/nginx/conf/nginx.conf
-    owner: root
-    group: root
-    mode: "0644"
-  notify: Reload nginx container
-
-
 - name: Ensure nginx config directories exist
   ansible.builtin.file:
     path: "{{ item }}"
@@ -18,8 +8,17 @@
   loop:
     - /opt/nginx/conf
     - /opt/nginx/conf/snippets
-    - /opt/nginx/conf/sites-available
-    - /opt/nginx/conf/sites-enabled
+    - /opt/nginx/conf/conf.d
+    - /opt/nginx/logs
+
+- name: Deploy main nginx.conf
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: /opt/nginx/conf/nginx.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nginx container
 
 - name: Deploy proxy common snippet
   ansible.builtin.template:
@@ -33,40 +32,18 @@
 - name: Deploy vhosts config
   ansible.builtin.template:
     src: vhosts.j2
-    dest: /opt/nginx/conf/sites-available/services.conf
+    dest: /opt/nginx/conf/conf.d/services.conf
     owner: root
     group: root
     mode: "0644"
   notify: Reload nginx container
 
-- name: Enable services site
-  ansible.builtin.file:
-    src: /opt/nginx/conf/sites-available/services.conf
-    dest: /opt/nginx/conf/sites-enabled/services.conf
-    state: link
-    force: true
-  notify: Reload nginx container
+- name: Test nginx config inside container
+  ansible.builtin.command: docker exec nginx nginx -t
+  register: nginx_config_test
+  changed_when: false
+  failed_when: nginx_config_test.rc != 0
 
-
-- name: Remove default nginx site (if present)
-  ansible.builtin.file:
-    path: /opt/nginx/conf/sites-enabled/default
-    state: absent
-  notify: Reload nginx container
-
-- name: Enable services site
-  ansible.builtin.file:
-    src: /opt/nginx/conf/sites-available/services.conf
-    dest: /opt/nginx/conf/sites-enabled/services.conf
-    state: link
-    force: true
-
-- name: Enable services site (copy, not symlink)
-  ansible.builtin.copy:
-    src: /opt/nginx/conf/sites-available/services.conf
-    dest: /opt/nginx/conf/sites-enabled/services.conf
-    remote_src: true
-    owner: root
-    group: root
-    mode: "0644"
-  notify: Reload nginx container
+- name: Reload nginx container
+  ansible.builtin.command: docker exec nginx nginx -s reload
+  changed_when: false
