@@ -1,14 +1,16 @@
 - name: Ensure nginx config directories exist
-  path: "{{ item }}"
-  state: directory
-  owner: root
-  group: root
-  mode: "0755"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
   loop:
     - /opt/nginx/conf
     - /opt/nginx/conf/snippets
     - /opt/nginx/conf/conf.d
     - /opt/nginx/logs
+
 
 - name: Deploy main nginx.conf
   ansible.builtin.template:
