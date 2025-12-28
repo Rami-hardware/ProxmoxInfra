@@ -1,10 +1,7 @@
 {% for svc in nginx_services %}
 server {
-    listen 443 ssl;
+    listen 80;
     server_name {{ svc.name }}.respawnxd.co;
-
-    ssl_certificate /etc/ssl/certs/fullchain.pem;
-    ssl_certificate_key /etc/ssl/private/privkey.pem;
 
     access_log off;
 
@@ -12,12 +9,5 @@ server {
         proxy_pass http://{{ svc.ip }}:{{ svc.port }};
         include snippets/proxy-common.conf;
     }
-}
-
-# Optional: redirect HTTP → HTTPS
-server {
-    listen 80;
-    server_name {{ svc.name }}.respawnxd.co;
-    return 301 https://$host$request_uri;
 }
 {% endfor %}
