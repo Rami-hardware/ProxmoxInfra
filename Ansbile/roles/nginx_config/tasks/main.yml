@@ -1,5 +1,6 @@
-- name: Remove wrongly created default.conf directory if it exists
+- name: Ensure nginx config directories exist
   ansible.builtin.file:
+<<<<<<< HEAD
     path: /opt/services/default.conf
     state: absent
 
@@ -131,9 +132,52 @@
               proxy_set_header X-Forwarded-Proto $scheme;
           }
       }
+=======
+    path: "{{ item }}"
+    state: directory
+>>>>>>> staging
     owner: root
     group: root
-    mode: '0644'
+    mode: "0755"
+  loop:
+    - /opt/nginx/conf
+    - /opt/nginx/conf/snippets
+    - /opt/nginx/conf/conf.d
+    - /opt/nginx/logs
 
-  notify:
-    - Reload nginx container
+- name: Deploy main nginx.conf
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: /opt/nginx/conf/nginx.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nginx container
+
+- name: Deploy proxy common snippet
+  ansible.builtin.template:
+    src: proxy-common.conf.j2
+    dest: /opt/nginx/conf/snippets/proxy-common.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nginx container
+
+- name: Deploy vhosts config
+  ansible.builtin.template:
+    src: vhosts.j2
+    dest: /opt/nginx/conf/conf.d/services.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nginx container
+
+- name: Test nginx config inside container
+  ansible.builtin.command: docker exec nginx nginx -t
+  register: nginx_config_test
+  changed_when: false
+  failed_when: nginx_config_test.rc != 0
+
+- name: Reload nginx container
+  ansible.builtin.command: docker exec nginx nginx -s reload
+  changed_when: false

@@ -1,0 +1,38 @@
+server {
+    listen 81 default_server;
+    listen [::]:81 default_server;
+
+    root /var/www/html;
+    index index.html index.htm index.nginx-debian.html;
+
+    server_name _;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    location /nginx_status {
+        stub_status;
+        allow 127.0.0.1;
+        deny all;
+    }
+}
+
+# Dynamic service servers on port 80
+{% for svc in nginx_services %}
+server {
+    listen 80;
+    server_name {{ svc.name }}.respawnxd.co;
+
+    access_log off;
+
+    location / {
+        proxy_pass http://{{ svc.ip }}:{{ svc.port }};
+        include snippets/proxy-common.conf;
+
+        {% if svc.disable_buffering | default(false) %}
+        proxy_request_buffering off;
+        {% endif %}
+    }
+}
+{% endfor %}

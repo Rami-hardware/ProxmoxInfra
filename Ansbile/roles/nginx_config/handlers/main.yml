@@ -1,5 +1,9 @@
+- name: Test nginx config inside container
+  ansible.builtin.command: docker exec nginx nginx -t
+  register: nginx_config_nginx_test
+  changed_when: false
+  failed_when: nginx_config_nginx_test.rc != 0
+
 - name: Reload nginx container
-  community.docker.docker_container:
-    name: nginx
-    state: started
-    restart: true
+  ansible.builtin.command: docker exec nginx nginx -s reload
+  changed_when: false

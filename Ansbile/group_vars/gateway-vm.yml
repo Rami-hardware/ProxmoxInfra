@@ -30,13 +30,6 @@ promtail_config_path: "{{ docker_compose_dir }}/promtail-config.yml:/etc/promtai
 # Configuration for Watchtower
 watchtower_run: /var/run/docker.sock:/var/run/docker.sock
 
-# Configuration for Nginx
-nginx_ports:
-  - "80:80"
-  - "443:443"
-
-nginx_default_val: "/opt/services/default.conf:/etc/nginx/conf.d/default.conf:ro"
-
 # Configuration for fail2ban
 fail2ban_var_path: "/var/log:/var/log:ro"
 fail2ban_data_path: "{{ docker_apps_compose_dir }}/fail2ban:/data"
@@ -62,3 +55,38 @@ crowdsec_nginx_env:
 
 crowdsec_online_api_key: a7c65c19d023489a88b70036e3a10397nmDvrI0bzgfqoUau
 crowdsec_online_api_secret: K6yiJt6KCOfj0AeXbeWQ4BptCGhEYfdCwrNwrr3NoStJ3BOGyoov7JCgbW467u3v
+
+# Configuration for Nginx
+nginx_ports:
+  - "80:80"
+  - "443:443"
+
+nginx_volumes:
+  - /opt/nginx/conf/nginx.conf:/etc/nginx/nginx.conf:ro
+  - /opt/nginx/conf/conf.d:/etc/nginx/conf.d:ro
+  - /opt/nginx/conf/snippets:/etc/nginx/snippets:ro
+  - /opt/nginx/logs:/var/log/nginx
+  - /opt/nginx/conf/sites-enabled:/etc/nginx/sites-enabled:ro
+
+nginx_services:
+  - name: jellyfin
+    ip: 192.168.1.201
+    port: 8096
+    disable_buffering: true
+
+  - name: overseerr
+    ip: 192.168.1.201
+    port: 5055
+
+  - name: bazarr
+    ip: 192.168.1.201
+    port: 6767
+
+  - name: qbittorrent
+    ip: 192.168.1.201
+    port: 8080
+    disable_buffering: true
+
+  - name: adguard
+    ip: 192.168.1.200
+    port: 3000
