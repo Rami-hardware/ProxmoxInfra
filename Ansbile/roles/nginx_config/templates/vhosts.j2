@@ -8,10 +8,6 @@ server {
     location / {
         proxy_pass http://{{ svc.ip }}:{{ svc.port }};
         include snippets/proxy-common.conf;
-
-        {% if svc.disable_buffering | default(false) %}
-        proxy_request_buffering off;
-        {% endif %}
     }
 }
 {% endfor %}
