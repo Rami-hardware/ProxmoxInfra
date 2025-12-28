@@ -36,13 +36,3 @@
     group: root
     mode: "0644"
   notify: Reload nginx container
-
-- name: Test nginx config inside container
-  ansible.builtin.command: docker exec nginx nginx -t
-  register: nginx_config_test
-  changed_when: false
-  failed_when: nginx_config_test.rc != 0
-
-- name: Reload nginx container
-  ansible.builtin.command: docker exec nginx nginx -s reload
-  changed_when: false
