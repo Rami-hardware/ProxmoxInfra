@@ -9,5 +9,5 @@
     - nginx_config
     - adguard
     - crowdsec
-    - Promtail
+    - promtail
     - ufw

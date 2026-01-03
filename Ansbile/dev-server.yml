@@ -1,13 +1,12 @@
-- name: Deploy to Gateway Server
+- name: Deploy Monitor Server Configuration
   hosts: dev-server
   become: true
 
   roles:
     - DNS
     - docker_setup
+    - promtail
+    - config
+    - middleware
     - docker_apps
-    - nginx_config
-    - adguard
-    - crowdsec
-    - Promtail
-    - ufw
+    - speed
