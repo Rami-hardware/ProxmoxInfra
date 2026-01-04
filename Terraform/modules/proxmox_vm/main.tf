@@ -38,6 +38,7 @@ dynamic "disk" {
       }
     }
     user_account {
+      keys     = [trimspace(var.ssh_public_key)]
       username = var.ciuser
       password = var.cipassword
     }
