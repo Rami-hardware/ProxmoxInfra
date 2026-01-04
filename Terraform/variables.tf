@@ -14,7 +14,7 @@ variable "vms" {
       size         = number  # in GB
       file_format  = string  # e.g., "qcow2"
       file_id      = string  # empty string if creating new
-      iothread     = bool    # true/false
+      iothread     = bool    
       discard      = string  
     })), [])
   }))
