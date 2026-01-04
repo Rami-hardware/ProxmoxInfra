@@ -62,7 +62,7 @@
 
 - name: Check if Node.js 20 is installed
   ansible.builtin.command: node -v
-  register: node_version_check
+  register: middleware_node_version_check
   ignore_errors: true
   changed_when: false
 
@@ -115,13 +115,13 @@
   ansible.builtin.command: pm2 start server.js --name alert-forwarder
   args:
     chdir: "{{ app_dir }}"
-  register: pm2_start
+  register: middleware_pm2_start
   changed_when: "'[PM2] App server.js online' in pm2_start.stdout"
   failed_when: pm2_start.rc != 0 and "'[PM2] App server.js online' not in pm2_start.stdout"
 
 - name: Save pm2 process list
   ansible.builtin.command: pm2 save
-  register: pm2_save
+  register: middleware_pm2_save
   changed_when: "'[PM2] Dumping process list' in pm2_save.stdout"
 
 - name: Enable pm2 to start on boot
