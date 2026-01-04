@@ -103,7 +103,7 @@ jobs:
         working-directory: Terraform
         env:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-          TF_VAR_pm_user: ${{ secrets.TOKEN }}
+          TF_VAR_pm_user: ${{ secrets.PM_API_TOKEN }}
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         run: terraform init -upgrade
 
@@ -111,7 +111,7 @@ jobs:
         working-directory: Terraform
         env:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-          TF_VAR_pm_user: ${{ secrets.TOKEN }}
+          TF_VAR_pm_user: ${{ secrets.PM_API_TOKEN }}
         run: |
           terraform init -upgrade
           terraform state replace-provider \
@@ -123,7 +123,7 @@ jobs:
         working-directory: Terraform
         env:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-          TF_VAR_pm_user: ${{ secrets.TOKEN }}
+          TF_VAR_pm_user: ${{ secrets.PM_API_TOKEN }}
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         run: terraform plan -input=false -no-color
 
@@ -131,7 +131,7 @@ jobs:
         working-directory: Terraform
         env:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-          TF_VAR_pm_user: ${{ secrets.TOKEN }}
+          TF_VAR_pm_user: ${{ secrets.PM_API_TOKEN }}
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         run: |
           echo "Importing existing VMs into Terraform state..."
@@ -150,7 +150,7 @@ jobs:
         working-directory: Terraform
         env:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-          TF_VAR_pm_user: ${{ secrets.TOKEN }}
+          TF_VAR_pm_user: ${{ secrets.PM_API_TOKEN }}
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         run: terraform apply -auto-approve -target="module.proxmox_vms[\"dev\"]"
 

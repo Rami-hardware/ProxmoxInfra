@@ -26,9 +26,9 @@ variable "pm_api_url" {
   sensitive   = true
 }
 
-variable "token" {
+variable "pm_api_token" {
   type        = string
-  description = "Proxmox user"
+  description = "Proxmox API token (user@realm!tokenid=secret)"
   sensitive   = true
 }
 
