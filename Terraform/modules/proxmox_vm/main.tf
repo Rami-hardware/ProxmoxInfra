@@ -1,44 +1,37 @@
-resource "proxmox_vm_qemu" "vm" {
-  name        = var.name
-  target_node = var.target_node
-  clone       = var.clone
-  full_clone  = var.full_clone
-  vmid        = var.vmid
+resource "proxmox_virtual_environment_vm" "vm" {
+  name      = var.name
+  node_name = var.target_node
+  vm_id     = var.vmid
+  # optional clone block — documented for this resource
+  clone {
+    vm_id     = 9000   # ID of the template to clone
+    node_name = var.target_node   # node where the template lives
+    full      = var.full_clone
+  }
 
-  cores  = var.cores
-  memory = var.memory
+  cpu {
+    cores = var.cores
+  }
 
-  ciuser     = var.ciuser
-  cipassword = var.cipassword
+  memory {
+    dedicated = var.memory
+  }
+
+dynamic "disk" {
+  for_each = var.disks
+  content {
+    datastore_id = disk.value.datastore_id
+    interface    = disk.value.interface
+    size         = disk.value.size
+    file_format  = lookup(disk.value, "file_format", null)
+    file_id      = lookup(disk.value, "file_id", null)
+    iothread     = lookup(disk.value, "iothread", null)
+    discard      = lookup(disk.value, "discard", null)
+  }
+}
 
 
-  ipconfig0 = "ip=${var.ip},gw=192.168.1.1,nameserver=192.168.1.1"
-  sshkeys = var.ssh_public_key
-  
-  network {
-    id     = 0
-    model  = "virtio"   
+  network_device {
     bridge = "vmbr0"
   }
-
-  scsihw = "virtio-scsi-pci"
- # PCI passthrough as a block
-  dynamic "hostpci" {
-    for_each = var.hostpcis
-    content {
-      host = hostpci.value  # e.g., "0000:01:00.0"
-      pcie = true           # enable PCIe
-    }
-  }
-
-  dynamic "disk" {
-    for_each = var.disks
-    content {
-      slot    = disk.value.slot
-      storage = disk.value.storage
-      size    = disk.value.size
-      type    = disk.value.type 
-    }
-  }
-
 }

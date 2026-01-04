@@ -1,6 +1,6 @@
 provider "proxmox" {
-  pm_api_url      =  var.pm_api_url
-  pm_user         =  var.pm_user
-  pm_password     =  var.pm_password
-  pm_tls_insecure = true
+  endpoint = var.pm_api_url      # e.g., "https://proxmox.example.com:8006/api2/json"
+  username = var.pm_user         # e.g., "root@pam"
+  password = var.pm_password
+  insecure = true                # set to false if you have proper TLS
 }

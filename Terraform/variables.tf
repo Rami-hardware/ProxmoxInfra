@@ -7,14 +7,19 @@ variable "vms" {
     memory     = number
     ciuser     = string
     cipassword = string
+    hostpcis   = optional(list(string), [])  # optional PCI passthrough
     disks = optional(list(object({
-      slot    = string
-      storage = string
-      size    = string
-      type    = string
-    })))
+      datastore_id = string  # e.g., "local-lvm"
+      interface    = string  # e.g., "virtio0" or "scsi0"
+      size         = number  # in GB
+      file_format  = string  # e.g., "qcow2"
+      file_id      = string  # empty string if creating new
+      iothread     = bool    # true/false
+      discard      = string  # "on" or "off"
+    })), [])
   }))
 }
+
 variable "pm_api_url" {
   type        = string
   description = "Proxmox API URL"

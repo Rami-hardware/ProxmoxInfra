@@ -7,10 +7,26 @@ vms = {
     memory     = 1536
     ciuser     = "gateway"
     cipassword = "gateway@123"
-    hostpcis = []  # no PCI devices
+    hostpcis   = []
     disks = [
-      { slot = "ide2", storage = "local-lvm", size = "5G", type = "cloudinit" },
-      { slot = "scsi0", storage = "local-lvm", size = "20G", type = "disk" },
+      {
+        datastore_id = "local-lvm"
+        interface    = "virtio0"
+        size         = 5
+        file_format  = "qcow2"
+        file_id      = ""
+        iothread     = true
+        discard      = "on"
+      },
+      {
+        datastore_id = "local-lvm"
+        interface    = "scsi0"
+        size         = 20
+        file_format  = "qcow2"
+        file_id      = ""
+        iothread     = true
+        discard      = "on"
+      }
     ]
   }
 
@@ -22,12 +38,29 @@ vms = {
     memory     = 4096
     ciuser     = "media"
     cipassword = "media@123"
-    hostpcis = ["0000:01:00.0", "0000:01:00.1"]  # <-- list of strings
+    hostpcis   = ["0000:01:00.0", "0000:01:00.1"]
     disks = [
-      { slot = "ide2", storage = "local-lvm", size = "5G", type = "cloudinit" },
-      { slot = "scsi0", storage = "local-lvm", size = "200G", type = "disk" , boot = true},
+      {
+        datastore_id = "local-lvm"
+        interface    = "virtio0"
+        size         = 5
+        file_format  = "qcow2"
+        file_id      = ""
+        iothread     = true
+        discard      = "on"
+      },
+      {
+        datastore_id = "local-lvm"
+        interface    = "scsi0"
+        size         = 200
+        file_format  = "qcow2"
+        file_id      = ""
+        iothread     = true
+        discard      = "on"
+      }
     ]
   }
+
   game = {
     name       = "game-server"
     vmid       = 619
@@ -38,8 +71,24 @@ vms = {
     cipassword = "game@123"
     hostpci    = null
     disks = [
-      { slot = "ide2", storage = "local-lvm", size = "5G", type = "cloudinit" },
-      { slot = "scsi0", storage = "local-lvm", size = "50G", type = "disk" },
+      {
+        datastore_id = "local-lvm"
+        interface    = "virtio0"
+        size         = 5
+        file_format  = "qcow2"
+        file_id      = ""
+        iothread     = true
+        discard      = "on"
+      },
+      {
+        datastore_id = "local-lvm"
+        interface    = "scsi0"
+        size         = 50
+        file_format  = "qcow2"
+        file_id      = ""
+        iothread     = true
+        discard      = "on"
+      }
     ]
   }
 
@@ -53,8 +102,24 @@ vms = {
     cipassword = "monitor@123"
     hostpci    = null
     disks = [
-      { slot = "ide2", storage = "local-lvm", size = "5G", type = "cloudinit" },
-      { slot = "scsi0", storage = "local-lvm", size = "20G", type = "disk" },
+      {
+        datastore_id = "local-lvm"
+        interface    = "virtio0"
+        size         = 5
+        file_format  = "qcow2"
+        file_id      = ""
+        iothread     = true
+        discard      = "on"
+      },
+      {
+        datastore_id = "local-lvm"
+        interface    = "scsi0"
+        size         = 20
+        file_format  = "qcow2"
+        file_id      = ""
+        iothread     = true
+        discard      = "on"
+      }
     ]
   }
 
@@ -68,11 +133,28 @@ vms = {
     cipassword = "github@123"
     hostpci    = null
     disks = [
-      { slot = "ide2", storage = "local-lvm", size = "5G", type = "cloudinit" },
-      { slot = "scsi0", storage = "local-lvm", size = "20G", type = "disk" },
+      {
+        datastore_id = "local-lvm"
+        interface    = "virtio0"
+        size         = 5
+        file_format  = "qcow2"
+        file_id      = ""
+        iothread     = true
+        discard      = "on"
+      },
+      {
+        datastore_id = "local-lvm"
+        interface    = "scsi0"
+        size         = 20
+        file_format  = "qcow2"
+        file_id      = ""
+        iothread     = true
+        discard      = "on"
+      }
     ]
   }
-  dev  = {
+
+  dev = {
     name       = "dev-server"
     vmid       = 223
     ip         = "192.168.1.205/24"
@@ -82,8 +164,15 @@ vms = {
     cipassword = "dev@123"
     hostpci    = null
     disks = [
-      { slot = "ide2", storage = "local-lvm", size = "5G", type = "cloudinit" },
-      { slot = "scsi0", storage = "local-lvm", size = "20G", type = "disk" },
+      {
+        datastore_id = "local-lvm"
+        interface    = "virtio0"
+        size         = 10
+        file_format  = "qcow2"
+        file_id      = ""
+        iothread     = true
+        discard      = "on"
+      }
     ]
   }
 }
