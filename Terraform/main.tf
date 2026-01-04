@@ -1,6 +1,6 @@
 module "proxmox_vms" {
-  source       = "./modules/proxmox_vm"
-  for_each     = var.vms
+  source   = "./modules/proxmox_vm"
+  for_each = var.vms
   name         = each.value.name
   target_node  = "rami"
   clone        = "ubuntu-24.04-cloud-init-template"

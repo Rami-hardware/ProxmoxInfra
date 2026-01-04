@@ -30,27 +30,13 @@ dynamic "disk" {
   }
 }
 
-initialization {
-     ip_config {
-         ipv4 {
-             address = var.ip
-             gateway = "192.168.1.1" 
-          }
-      }
-     user_account { 
-         password = var.cipassword
-         username = var.ciuser
-      }
-  }
-
 
   network_device {
     bridge = "vmbr0"
   }
-
-  
   lifecycle {
   prevent_destroy = false
+  
 }
 
 }

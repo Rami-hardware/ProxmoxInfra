@@ -7,15 +7,11 @@ variable "vmid" {
 }
 
 variable "ciuser" {
-  type      = string
-  default   = ""    # now optional
-  description = "Optional: cloud-init user (ignored by bpg/proxmox)"
+  type = string
 }
 
 variable "cipassword" {
-  type      = string
-  default   = ""    # now optional
-  description = "Optional: cloud-init password (ignored by bpg/proxmox)"
+  type = string
 }
 
 variable "ip" {
