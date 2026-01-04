@@ -18,6 +18,10 @@ variable "ip" {
   type        = string
   description = "Static IP for the VM"
 }
+variable "gateway" {
+  type        = string
+  description = "Default gateway (e.g. 192.168.1.1)"
+}
 
 variable "cores" {
   type = number

@@ -1,7 +1,7 @@
 module "proxmox_vms" {
-  source   = "./modules/proxmox_vm"
-  for_each = var.vms
-
+  source       = "./modules/proxmox_vm"
+  for_each     = var.vms
+  gateway      = "192.168.1.1"
   name         = each.value.name
   target_node  = "rami"
   clone        = "ubuntu-24.04-cloud-init-template"
@@ -12,7 +12,7 @@ module "proxmox_vms" {
   ip           = each.value.ip
   cores        = each.value.cores
   memory       = each.value.memory
-  hostpcis       = lookup(each.value, "hostpcis", [])
+  hostpcis     = lookup(each.value, "hostpcis", [])
   disks        = lookup(each.value, "disks", [])
   ssh_public_key  = var.ssh_public_key
 }
