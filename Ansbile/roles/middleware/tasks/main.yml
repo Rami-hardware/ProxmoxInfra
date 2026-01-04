@@ -90,20 +90,21 @@
 
 
 - name: Initialize npm project
-  ansible.builtin.command: npm init -y
-  args:
+  ansible.builtin.command:
+    cmd: npm init -y
     chdir: "{{ app_dir }}"
+    creates: "{{ app_dir }}/package.json"
   environment:
     HOME: "/root"
-  creates: "{{ app_dir }}/package.json"
+
 
 - name: Install required npm packages
-  ansible.builtin.command: npm install express axios
-  args:
+  ansible.builtin.command:
+    cmd: npm install express axios
     chdir: "{{ app_dir }}"
+    creates: "{{ app_dir }}/node_modules"
   environment:
     HOME: "/root"
-  creates: "{{ app_dir }}/node_modules"
 
 - name: Install pm2 globally
   community.general.npm:
