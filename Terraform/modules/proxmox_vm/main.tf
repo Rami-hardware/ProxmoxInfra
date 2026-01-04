@@ -35,7 +35,7 @@ dynamic "disk" {
     bridge = "vmbr0"
   }
   lifecycle {
-  prevent_destroy = false
+  prevent_destroy = true
   ignore_changes = [
       disk,
       initialization,
