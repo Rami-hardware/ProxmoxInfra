@@ -6,7 +6,10 @@
     - DNS
     - docker_setup
     - promtail
-    - config
+    - prometheus
+    - alertmanager
+    - grafana
+    - loki
     - middleware
     - docker_apps
     - speed

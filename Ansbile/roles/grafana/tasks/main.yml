@@ -1,0 +1,18 @@
+- name: Ensure Grafana data directory exists
+  ansible.builtin.file:
+    path: /opt/docker/grafana
+    state: directory
+    mode: '0755'
+
+- name: Set ownership of Grafana data directory to UID 472 (grafana user)
+  ansible.builtin.file:
+    path: /opt/docker/grafana
+    owner: 472
+    group: 472
+    recurse: true
+
+- name: Set permissions for Grafana data directory
+  ansible.builtin.file:
+    path: /opt/docker/grafana
+    mode: '0755'
+    recurse: true

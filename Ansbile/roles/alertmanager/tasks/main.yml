@@ -1,0 +1,43 @@
+- name: Check if Alertmanager config.yml exists
+  ansible.builtin.stat:
+    path: /opt/docker/alertmanager/config.yml
+  register: alertmanager_config_stat
+
+- name: Remove alertmanager config.yml if it is a directory
+  ansible.builtin.file:
+    path: /opt/docker/alertmanager/config.yml
+    state: absent
+  when: alertmanager_config_stat.stat.isdir | default(false)
+
+- name: Ensure Alertmanager config directory exists
+  ansible.builtin.file:
+    path: /opt/docker/alertmanager
+    state: directory
+    mode: '0755'
+
+- name: Create Alertmanager config file with correct webhook config
+  ansible.builtin.copy:
+    dest: /opt/docker/alertmanager/config.yml
+    mode: '0644'
+    content: |
+      global:
+        resolve_timeout: 5m
+
+      route:
+        receiver: 'nodejs-webhook'
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 3h
+
+      receivers:
+        - name: 'nodejs-webhook'
+          webhook_configs:
+            - url: 'http://192.168.1.203:3002/Alertmanager'
+              send_resolved: true
+
+      inhibit_rules:
+        - source_match:
+            severity: 'critical'
+          target_match:
+            severity: 'warning'
+          equal: ['alertname', 'dev', 'instance']

@@ -1,0 +1,47 @@
+- name: Ensure dependencies are installed
+  ansible.builtin.apt:
+    name:
+      - curl
+      - tar
+    state: present
+    update_cache: true
+
+- name: Download SpeedTest CLI
+  ansible.builtin.get_url:
+    url: "{{ speedtest_cli_url }}"
+    dest: /tmp/speedtest-cli.tgz
+    mode: '0644'
+
+- name: Extract SpeedTest CLI
+  ansible.builtin.unarchive:
+    src: /tmp/speedtest-cli.tgz
+    dest: /usr/local/bin/
+    remote_src: true
+    creates: /usr/local/bin/speedtest
+
+- name: Ensure speedtest binary is executable
+  ansible.builtin.file:
+    path: /usr/local/bin/speedtest
+    state: file
+    mode: '0755'
+
+- name: Accept SpeedTest license as telegraf user
+  ansible.builtin.command: /usr/local/bin/speedtest --accept-license
+  become: true
+  become_user: telegraf
+  args:
+    creates: /home/telegraf/.config/ookla/Speedtest
+
+- name: Copy SpeedTest Telegraf config
+  ansible.builtin.copy:
+    src: files/speedtest.conf
+    dest: "{{ telegraf_config_path }}"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Restart Telegraf
+  ansible.builtin.systemd:
+    name: telegraf
+    state: restarted
+    enabled: true
