@@ -107,7 +107,7 @@ jobs:
           TF_VAR_pm_password: ${{ secrets.PM_PASSWORD }}
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         run: terraform init -upgrade
-        
+
       - name: Migrate Proxmox provider in state
         working-directory: Terraform
         env:
@@ -120,7 +120,7 @@ jobs:
             "registry.terraform.io/telmate/proxmox" \
             "registry.terraform.io/bpg/proxmox"
         
-          
+
       - name: Terraform Plan
         working-directory: Terraform
         env:
@@ -130,6 +130,24 @@ jobs:
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         run: terraform plan -input=false -no-color
 
+      - name: Terraform import existing VMs
+        working-directory: Terraform
+        env:
+          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
+          TF_VAR_pm_user: ${{ secrets.PM_USER }}
+          TF_VAR_pm_password: ${{ secrets.PM_PASSWORD }}
+        run: |
+          echo "Importing existing VMs into Terraform state..."
+          
+          terraform import -lock=false 'module.proxmox_vms["gateway"].proxmox_virtual_environment_vm.vm' 505 || echo "VM 505 not found or already imported"
+          terraform import -lock=false 'module.proxmox_vms["media"].proxmox_virtual_environment_vm.vm' 911 || echo "VM 911 not found or already imported"
+          terraform import -lock=false 'module.proxmox_vms["game"].proxmox_virtual_environment_vm.vm' 619 || echo "VM 619 not found or already imported"
+          terraform import -lock=false 'module.proxmox_vms["monitor"].proxmox_virtual_environment_vm.vm' 511 || echo "VM 511 not found or already imported"
+          terraform import -lock=false 'module.proxmox_vms["github"].proxmox_virtual_environment_vm.vm' 115 || echo "VM 115 not found or already imported"
+          terraform import -lock=false 'module.proxmox_vms["dev"].proxmox_virtual_environment_vm.vm' 223 || echo "VM 223 not found or already imported"
+          
+          echo "Import complete. Terraform can now manage all existing VMs."
+          
 
       - name: Terraform Apply
         working-directory: Terraform
