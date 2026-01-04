@@ -15,7 +15,7 @@ variable "vms" {
       file_format  = string  # e.g., "qcow2"
       file_id      = string  # empty string if creating new
       iothread     = bool    # true/false
-      discard      = string  # "on" or "off"
+      discard      = string  
     })), [])
   }))
 }
