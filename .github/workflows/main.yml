@@ -107,7 +107,19 @@ jobs:
           TF_VAR_pm_password: ${{ secrets.PM_PASSWORD }}
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         run: terraform init -upgrade
-
+        
+      - name: Migrate Proxmox provider in state
+        working-directory: Terraform
+        env:
+          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
+          TF_VAR_pm_user: ${{ secrets.PM_USER }}
+          TF_VAR_pm_password: ${{ secrets.PM_PASSWORD }}
+        run: |
+          terraform init -upgrade
+          terraform state replace-provider \
+            "registry.terraform.io/telmate/proxmox" \
+            "registry.terraform.io/bpg/proxmox"
+        
           
       - name: Terraform Plan
         working-directory: Terraform

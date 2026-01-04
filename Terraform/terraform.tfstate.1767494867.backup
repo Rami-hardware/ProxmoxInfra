@@ -1,7 +1,7 @@
 {
   "version": 4,
   "terraform_version": "1.14.1",
-  "serial": 11,
+  "serial": 10,
   "lineage": "9c928499-ccfd-682c-3873-a40a077d5164",
   "outputs": {},
   "resources": [
@@ -10,7 +10,7 @@
       "mode": "managed",
       "type": "proxmox_vm_qemu",
       "name": "vm",
-      "provider": "provider[\"registry.terraform.io/bpg/proxmox\"]",
+      "provider": "provider[\"registry.terraform.io/telmate/proxmox\"]",
       "instances": [
         {
           "schema_version": 0,
