@@ -7,21 +7,22 @@ variable "vmid" {
 }
 
 variable "ciuser" {
-  type = string
+  type      = string
+  default   = ""    # now optional
+  description = "Optional: cloud-init user (ignored by bpg/proxmox)"
 }
 
 variable "cipassword" {
-  type = string
+  type      = string
+  default   = ""    # now optional
+  description = "Optional: cloud-init password (ignored by bpg/proxmox)"
 }
 
 variable "ip" {
   type        = string
   description = "Static IP for the VM"
 }
-variable "gateway" {
-  type        = string
-  description = "Default gateway (e.g. 192.168.1.1)"
-}
+
 
 variable "cores" {
   type = number
