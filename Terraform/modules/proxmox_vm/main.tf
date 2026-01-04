@@ -34,4 +34,14 @@ dynamic "disk" {
   network_device {
     bridge = "vmbr0"
   }
+  lifecycle {
+  prevent_destroy = true
+  ignore_changes = [
+      disk,
+      initialization,
+      clone,
+      vm_id,
+    ]
+}
+
 }

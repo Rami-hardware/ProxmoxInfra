@@ -26,17 +26,12 @@ variable "pm_api_url" {
   sensitive   = true
 }
 
-variable "pm_user" {
+variable "token" {
   type        = string
   description = "Proxmox user"
   sensitive   = true
 }
 
-variable "pm_password" {
-  type        = string
-  description = "Proxmox password"
-  sensitive   = true
-}
 variable "ssh_public_key" {
   description = "Public SSH key for VMs"
   type        = string
