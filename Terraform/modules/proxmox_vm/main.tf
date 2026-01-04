@@ -38,8 +38,6 @@ dynamic "disk" {
   prevent_destroy = true
   ignore_changes = [
       disk,
-      initialization,
-      clone,
       vm_id,
     ]
 }
