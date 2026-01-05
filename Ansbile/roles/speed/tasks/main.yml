@@ -1,3 +1,10 @@
+- name: Install Telegraf
+  ansible.builtin.apt:
+    name: telegraf
+    state: present
+    update_cache: true
+  become: true
+
 - name: Install Speedtest dependencies
   ansible.builtin.apt:
     name:
