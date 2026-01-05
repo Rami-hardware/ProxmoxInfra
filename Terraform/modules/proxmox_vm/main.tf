@@ -49,9 +49,9 @@ dynamic "disk" {
   }
   lifecycle {
   ignore_changes = [ 
-    #"disk",
-    #"initialization",
-    #"clone"
+    "disk",
+    "initialization",
+    "clone"
    ]
 }
 
