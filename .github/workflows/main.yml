@@ -107,6 +107,18 @@ jobs:
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         run: terraform init -upgrade
 
+      - name: Migrate Proxmox provider in state
+        working-directory: Terraform
+        env:
+          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
+          TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
+        run: |
+          terraform init -upgrade
+          terraform state replace-provider \
+            "registry.terraform.io/telmate/proxmox" \
+            "registry.terraform.io/bpg/proxmox"
+        
+
       - name: Terraform Plan
         working-directory: Terraform
         env:
@@ -115,24 +127,24 @@ jobs:
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         run: terraform plan -input=false -no-color
 
-     # - name: Terraform import existing VMs
-      #   working-directory: Terraform
-      #   env:
-      #     TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-      #     TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
-      #     TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-      #   run: |
-      #     echo "Importing existing VMs into Terraform state..."
-      #     
-      #     terraform import -lock=false 'module.proxmox_vms["gateway"].proxmox_virtual_environment_vm.vm' pve/505 || echo "VM 505 not found or already imported"
-      #     terraform import -lock=false 'module.proxmox_vms["media"].proxmox_virtual_environment_vm.vm' pve/911 || echo "VM 911 not found or already imported"
-      #     terraform import -lock=false 'module.proxmox_vms["game"].proxmox_virtual_environment_vm.vm' pve/619 || echo "VM 619 not found or already imported"
-      #     terraform import -lock=false 'module.proxmox_vms["monitor"].proxmox_virtual_environment_vm.vm' pve/511 || echo "VM 511 not found or already imported"
-      #     terraform import -lock=false 'module.proxmox_vms["github"].proxmox_virtual_environment_vm.vm' pve/115 || echo "VM 115 not found or already imported"
-      #     terraform import -lock=false 'module.proxmox_vms["dev"].proxmox_virtual_environment_vm.vm' pve/223 || echo "VM 223 not found or already imported"
-      #     
-      #     echo "Import complete. Terraform can now manage all existing VMs."
-      #     
+      - name: Terraform import existing VMs
+        working-directory: Terraform
+        env:
+          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
+          TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
+          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+        run: |
+          echo "Importing existing VMs into Terraform state..."
+          
+          terraform import -lock=false 'module.proxmox_vms["gateway"].proxmox_virtual_environment_vm.vm' pve/505 || echo "VM 505 not found or already imported"
+          terraform import -lock=false 'module.proxmox_vms["media"].proxmox_virtual_environment_vm.vm' pve/911 || echo "VM 911 not found or already imported"
+          terraform import -lock=false 'module.proxmox_vms["game"].proxmox_virtual_environment_vm.vm' pve/619 || echo "VM 619 not found or already imported"
+          terraform import -lock=false 'module.proxmox_vms["monitoring"].proxmox_virtual_environment_vm.vm' pve/511 || echo "VM 511 not found or already imported"
+          terraform import -lock=false 'module.proxmox_vms["github"].proxmox_virtual_environment_vm.vm' pve/115 || echo "VM 115 not found or already imported"
+          terraform import -lock=false 'module.proxmox_vms["dev"].proxmox_virtual_environment_vm.vm' pve/223 || echo "VM 223 not found or already imported"
+          
+          echo "Import complete. Terraform can now manage all existing VMs."
+          
 
       - name: Terraform Apply
         working-directory: Terraform
@@ -170,7 +182,7 @@ jobs:
       - name: Run Ansible Playbook
         run: |
           source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/dev-server.yml
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           ANSIBLE_HOST_KEY_CHECKING: 'False'
