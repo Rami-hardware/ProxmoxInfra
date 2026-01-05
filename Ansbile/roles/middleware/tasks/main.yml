@@ -17,8 +17,12 @@
       const app = express();
       app.use(express.json());
 
-      const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1409027915898683442/obgBtcIBBvrfMKXbmECGOkzG0G6r9RwFjD0yIEuLeCTBx1wBP-MJ0gv72Av04dgbvdTy';
+          const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
+          if (!DISCORD_WEBHOOK_URL) {
+            console.error("DISCORD_WEBHOOK_URL is not set");
+            process.exit(1);
+          }
       app.post('/alertmanager', async (req, res) => {
         const alerts = req.body.alerts || [];
 
@@ -114,12 +118,12 @@
     global: true
 
 - name: Start the app with pm2
-  ansible.builtin.command: pm2 start server.js --name alert-forwarder
+  ansible.builtin.command: >
+    pm2 start server.js --name alert-forwarder --update-env
   args:
     chdir: "{{ app_dir }}"
-  register: middleware_pm2_start
-  changed_when: "'online' in middleware_pm2_start.stdout"
-  failed_when: middleware_pm2_start.rc != 0
+  environment:
+    DISCORD_WEBHOOK_URL: "{{ lookup('env','DISCORD_WEBHOOK_URL') }}"
 
 - name: Save pm2 process list
   ansible.builtin.command: pm2 save
