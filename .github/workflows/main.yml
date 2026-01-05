@@ -152,7 +152,7 @@ jobs:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
           TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-        run: terraform destroy -auto-approve -target="module.proxmox_vms[\"monitoring\"]"
+        run: terraform apply -auto-approve -target="module.proxmox_vms[\"monitoring\"]"
 
       - name: Install system dependencies
         run: sudo apt update && sudo apt install -y ansible python3-venv python3-pip
