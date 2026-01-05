@@ -106,8 +106,8 @@ vms = {
         datastore_id = "local-lvm"
         interface    = "virtio0"
         size         = 5
-        file_format  = "ra"
-        file_id      = "raw"
+        file_format  = "raw"
+        file_id      = ""
         iothread     = true
         discard      = "on"
       },
