@@ -11,15 +11,6 @@ vms = {
     disks = [
       {
         datastore_id = "local-lvm"
-        interface    = "virtio0"
-        size         = 5
-        file_format  = "raw"
-        file_id      = ""
-        iothread     = true
-        discard      = "on"
-      },
-      {
-        datastore_id = "local-lvm"
         interface    = "scsi0"
         size         = 20
         file_format  = "raw"
@@ -40,15 +31,6 @@ vms = {
     cipassword = "media@123"
     hostpcis   = ["0000:01:00.0", "0000:01:00.1"]
     disks = [
-      {
-        datastore_id = "local-lvm"
-        interface    = "virtio0"
-        size         = 5
-        file_format  = "raw"
-        file_id      = ""
-        iothread     = true
-        discard      = "on"
-      },
       {
         datastore_id = "local-lvm"
         interface    = "scsi0"
@@ -73,15 +55,6 @@ vms = {
     disks = [
       {
         datastore_id = "local-lvm"
-        interface    = "virtio0"
-        size         = 5
-        file_format  = "raw"
-        file_id      = ""
-        iothread     = true
-        discard      = "on"
-      },
-      {
-        datastore_id = "local-lvm"
         interface    = "scsi0"
         size         = 50
         file_format  = "raw"
@@ -102,15 +75,6 @@ vms = {
     cipassword = "monitoring@123"
     hostpci    = null
     disks = [
-      {
-        datastore_id = "local-lvm"
-        interface    = "virtio0"
-        size         = 5
-        file_format  = "raw"
-        file_id      = ""
-        iothread     = true
-        discard      = "on"
-      },
       {
         datastore_id = "local-lvm"
         interface    = "scsi0"
