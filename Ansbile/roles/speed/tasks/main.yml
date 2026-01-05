@@ -5,11 +5,9 @@
     mode: '0644'
   become: true
 
-- name: Install Telegraf
+- name: Install Telegraf from .deb
   ansible.builtin.apt:
-    name: telegraf
-    state: present
-    update_cache: true
+    deb: /tmp/telegraf.deb
   become: true
 
 - name: Install Speedtest dependencies
