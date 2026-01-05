@@ -39,10 +39,20 @@
     create_home: true
   become: true
 
-- name: Accept Speedtest license as telegraf user
+- name: Fix ownership of Speedtest config
+  ansible.builtin.file:
+    path: /home/telegraf/.config
+    owner: telegraf
+    group: telegraf
+    recurse: true
+  become: true
+
+
+- name: Accept Speedtest license for telegraf
   ansible.builtin.command: /usr/local/bin/speedtest --accept-license
   become: true
-  become_user: telegraf
+  environment:
+    HOME: /home/telegraf
   args:
     creates: /home/telegraf/.config/ookla/Speedtest
 
