@@ -12,4 +12,4 @@
     - loki
     - middleware
     - docker_apps
-    - speed
+   # - speed
