@@ -58,7 +58,7 @@
 
 - name: Copy SpeedTest Telegraf config
   ansible.builtin.copy:
-    src: files/speedtest.conf
+    src: speedtest.conf
     dest: "{{ telegraf_config_path }}"
     owner: root
     group: root
