@@ -3,12 +3,12 @@
     url: https://dl.influxdata.com/telegraf/releases/telegraf_1.32.3-1_amd64.deb
     dest: /tmp/telegraf.deb
     mode: '0644'
-  become: true
 
 - name: Install Telegraf from .deb
   ansible.builtin.apt:
     deb: /tmp/telegraf.deb
-  become: true
+    state: present
+
 
 - name: Install Speedtest dependencies
   ansible.builtin.apt:
@@ -21,52 +21,50 @@
       - unzip
     state: present
     update_cache: true
-  become: true
 
 - name: Download Speedtest CLI
   ansible.builtin.get_url:
     url: https://install.speedtest.net/app/cli/ookla-speedtest-1.2.0-linux-x86_64.tgz
     dest: /tmp/speedtest-cli.tgz
     mode: '0644'
-  become: true
 
 - name: Extract Speedtest CLI
   ansible.builtin.unarchive:
     src: /tmp/speedtest-cli.tgz
     dest: /usr/local/bin/
     remote_src: true
-  become: true
 
 - name: Ensure speedtest binary is executable
   ansible.builtin.file:
     path: /usr/local/bin/speedtest
     state: file
     mode: '0755'
-  become: true
+
 
 - name: Ensure telegraf user exists
   ansible.builtin.user:
     name: telegraf
     system: true
     create_home: true
-  become: true
 
-- name: Fix ownership of Speedtest config
+- name: Ensure Speedtest config directory exists for telegraf
   ansible.builtin.file:
-    path: /home/telegraf/.config
+    path: "{{ telegraf_home }}/.config/ookla"
+    state: directory
     owner: telegraf
     group: telegraf
+    mode: '0755'
     recurse: true
-  become: true
-
 
 - name: Accept Speedtest license for telegraf
-  ansible.builtin.command: /usr/local/bin/speedtest --accept-license
+  ansible.builtin.command: /usr/local/bin/speedtest --accept-license -f json
   become: true
+  become_user: telegraf
   environment:
-    HOME: /home/telegraf
+    HOME: "{{ telegraf_home }}"
   args:
-    creates: /home/telegraf/.config/ookla/Speedtest
+    creates: "{{ telegraf_home }}/.config/ookla/speedtest-cli.json"
+
 
 - name: Ensure Telegraf config directory exists
   ansible.builtin.file:
@@ -75,20 +73,22 @@
     owner: root
     group: root
     mode: '0755'
-  become: true
 
 - name: Copy SpeedTest Telegraf config
   ansible.builtin.copy:
-    src: speedtest.conf
     dest: "{{ telegraf_config_path }}"
+    content: |
+      [[inputs.exec]]
+        commands = ["/usr/local/bin/speedtest -f json"]
+        timeout = "60s"
+        interval = "5m"
+        data_format = "json"
     owner: root
     group: root
     mode: '0644'
-  become: true
 
 - name: Restart Telegraf
   ansible.builtin.systemd:
     name: telegraf
     state: restarted
     enabled: true
-  become: true
