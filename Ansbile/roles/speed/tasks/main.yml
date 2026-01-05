@@ -56,6 +56,15 @@
   args:
     creates: /home/telegraf/.config/ookla/Speedtest
 
+- name: Ensure Telegraf config directory exists
+  ansible.builtin.file:
+    path: /etc/telegraf/telegraf.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+
 - name: Copy SpeedTest Telegraf config
   ansible.builtin.copy:
     src: speedtest.conf
