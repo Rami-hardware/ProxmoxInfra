@@ -5,20 +5,8 @@ docker_apps_enabled:
   - alertmanager
   - prometheus
   - node-exporter
-  - portainer_agent
-  - watchtower
 
 app_dir: /opt/alert-forwarder
-
-# Configuration for Watchtower
-watchtower_run: /var/run/docker.sock:/var/run/docker.sock
-
-# Settings for Portainer Agent
-portainer_agent_ports:
-  - "9001:9001"
-portainer_agent_run: /var/run/docker.sock:/var/run/docker.sock
-portainer_agent_volumes: /var/lib/docker/volumes:/var/lib/docker/volumes
-portainer_agent_host: /:/host
 
 promtail_var_path: "/var/log:/var/log"
 promtail_config_path: "{{ docker_compose_dir }}/promtail-config.yml:/etc/promtail/config.yml"

@@ -92,14 +92,14 @@ vms = {
     ]
   }
 
-  monitor = {
-    name       = "monitor-server"
+  monitoring = {
+    name       = "monitoring-server"
     vmid       = 511
     ip         = "192.168.1.203/24"
     cores      = 2
     memory     = 2048
-    ciuser     = "monitor"
-    cipassword = "monitor@123"
+    ciuser     = "monitoring"
+    cipassword = "monitoring@123"
     hostpci    = null
     disks = [
       {
@@ -159,7 +159,7 @@ vms = {
     vmid       = 223
     ip         = "192.168.1.205/24"
     cores      = 2
-    memory     = 2048
+    memory     = 1024
     ciuser     = "dev"
     cipassword = "dev@123"
     hostpci    = null
