@@ -166,7 +166,7 @@ vms = {
     disks = [
       {
         datastore_id = "local-lvm"
-        interface    = "virtio0"
+        interface    = "scsi0"
         size         = 10
         file_format  = "raw"
         file_id      = ""
