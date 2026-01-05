@@ -118,13 +118,13 @@
   args:
     chdir: "{{ app_dir }}"
   register: middleware_pm2_start
-  changed_when: "'[PM2] App server.js online' in pm2_start.stdout"
-  failed_when: pm2_start.rc != 0 and "'[PM2] App server.js online' not in pm2_start.stdout"
+  changed_when: "'online' in middleware_pm2_start.stdout"
+  failed_when: middleware_pm2_start.rc != 0
 
 - name: Save pm2 process list
   ansible.builtin.command: pm2 save
   register: middleware_pm2_save
-  changed_when: "'[PM2] Dumping process list' in pm2_save.stdout"
+  changed_when: "'Dumping process list' in middleware_pm2_save.stdout"
 
 - name: Enable pm2 to start on boot
   ansible.builtin.command: pm2 startup systemd -u root --hp /root
