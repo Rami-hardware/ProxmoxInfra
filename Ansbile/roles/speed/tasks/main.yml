@@ -1,14 +1,8 @@
-- name: Add InfluxData repository key
-  ansible.builtin.apt_key:
-    url: https://repos.influxdata.com/influxdb.key
-    state: present
-  become: true
-
-- name: Add InfluxData repository
-  ansible.builtin.apt_repository:
-    repo: "deb https://repos.influxdata.com/ubuntu {{ ansible_distribution_release }} stable"
-    state: present
-    filename: influxdata
+- name: Download Telegraf .deb package
+  ansible.builtin.get_url:
+    url: https://dl.influxdata.com/telegraf/releases/telegraf_1.32.3-1_amd64.deb
+    dest: /tmp/telegraf.deb
+    mode: '0644'
   become: true
 
 - name: Install Telegraf
