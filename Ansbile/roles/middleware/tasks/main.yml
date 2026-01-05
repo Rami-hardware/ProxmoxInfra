@@ -72,14 +72,16 @@
     url: https://deb.nodesource.com/setup_20.x
     dest: /tmp/setup_node_20.sh
     mode: '0755'
-  when: node_version_check.stdout is not search("^v20\.")
+  when: middleware_node_version_check.rc != 0
+        or middleware_node_version_check.stdout is not search("^v20\.")
 
 
 - name: Run NodeSource Node.js 20 setup script
   ansible.builtin.command: /bin/bash /tmp/setup_node_20.sh
   become: true
   changed_when: true
-  when: node_version_check.stdout is not search("^v20\.")
+  when: middleware_node_version_check.rc != 0
+        or middleware_node_version_check.stdout is not search("^v20\.")
 
 - name: Install Node.js 20
   ansible.builtin.apt:
