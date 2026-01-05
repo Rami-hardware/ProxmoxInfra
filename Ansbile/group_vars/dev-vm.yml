@@ -23,5 +23,5 @@ portainer_agent_host: /:/host
 promtail_var_path: "/var/log:/var/log"
 promtail_config_path: "{{ docker_compose_dir }}/promtail-config.yml:/etc/promtail/config.yml"
 
-speedtest_cli_url: https://packagecloud.io/install/repositories/ookla/speedtest-cli/script.deb.sh
-telegraf_config_path: "/etc/telegraf/telegraf.d/speedtest.conf"
+telegraf_home: /home/telegraf
+telegraf_config_path: /etc/telegraf/telegraf.d/speedtest.conf
