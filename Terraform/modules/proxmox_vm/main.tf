@@ -50,9 +50,9 @@ dynamic "disk" {
   lifecycle {
   prevent_destroy = false
   ignore_changes = [ 
-    #"disk",
-    #"initialization",
-    #"clone"
+    "disk",
+    "initialization",
+    "clone"
    ]
 }
 
