@@ -55,7 +55,7 @@
 - name: Fix interrupted dpkg state
   ansible.builtin.command: dpkg --configure -a
   become: true
-  register: dpkg_fix
+  register: docker_setup_dpkg_fix
   changed_when: "'Setting up' in dpkg_fix.stdout"
   failed_when: dpkg_fix.rc != 0
 
