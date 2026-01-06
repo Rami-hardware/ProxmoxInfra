@@ -30,9 +30,13 @@
           static_configs:
             - targets: ['192.168.1.202:9100']
 
-        - job_name: 'mointer_node'
+        - job_name: 'monitoring_node'
           static_configs:
             - targets: ['192.168.1.203:9100']
+
+        - job_name: 'Loki'
+          static_configs:
+            - targets: ['192.168.1.203:3100']
 
         - job_name: 'speedtest'
           metrics_path: /probe
