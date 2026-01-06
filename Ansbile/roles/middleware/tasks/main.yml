@@ -116,6 +116,7 @@
   community.general.npm:
     name: pm2
     global: true
+  changed_when: false
 
 - name: Start the app with pm2
   ansible.builtin.command: pm2 start server.js --name alert-forwarder --update-env
