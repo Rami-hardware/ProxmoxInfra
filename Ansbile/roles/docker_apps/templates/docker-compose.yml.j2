@@ -510,6 +510,20 @@ services:
       - "9090:9090"
     restart: unless-stopped
 {% endif %}
+{% if 'graphite' in docker_apps_enabled %}
+  graphite:
+    image: graphiteapp/graphite-statsd
+    container_name: graphite
+    ports:
+      - "2003:2003"   # Carbon plaintext
+      - "2004:2004"   # Carbon pickle
+      - "7002:7002"   # Carbon cache query
+      - "8080:80"     # Graphite web UI
+      - "8125:8125/udp" # StatsD
+    environment:
+      - GRAPHITE_TIME_ZONE=UTC
+    restart: unless-stopped
+{% endif %}
 
 {% if 'node-exporter' in docker_apps_enabled %}
   node-exporter:
