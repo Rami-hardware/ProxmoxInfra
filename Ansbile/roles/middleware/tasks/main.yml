@@ -131,7 +131,7 @@
     creates: "/root/.pm2/pids/alert-forwarder.pid"
   environment:
     DISCORD_WEBHOOK_URL: "{{ lookup('env', 'DISCORD_WEBHOOK_URL') }}"
-  when: pm2_check.rc != 0
+  when: middleware_pm2_check.rc != 0
   become: true
 
 - name: Save pm2 process list
