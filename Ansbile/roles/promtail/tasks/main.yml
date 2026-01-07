@@ -1,10 +1,10 @@
-- name: Get host hostname
-  ansible.builtin.command: hostname
-  register: host_name_result
+- name: Set Promtail hostname fact
+  set_fact:
+    promtail_hostname: "{{ ansible_hostname }}"
 
 - name: Ensure Promtail config directory exists
   ansible.builtin.file:
-    path: /opt/services/promtail
+    path: "{{ promtail_config_dir }}"
     state: directory
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
@@ -12,15 +12,15 @@
 
 - name: Create .env file for Docker Compose
   ansible.builtin.copy:
-    dest: /opt/services/promtail/.env
-    content: "HOSTNAME={{ host_name_result.stdout }}\n"
+    dest: "{{ promtail_config_dir }}/.env"
+    content: "HOSTNAME={{ promtail_hostname }}\n"
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
     mode: '0644'
 
 - name: Create Promtail config file
   ansible.builtin.copy:
-    dest: /opt/services/promtail/config.yml
+    dest: "{{ promtail_config_dir }}/config.yml"
     content: |
       server:
         http_listen_port: 9080
@@ -30,7 +30,7 @@
         filename: /tmp/positions.yaml
 
       clients:
-        - url: http://192.168.1.203:3100/loki/api/v1/push
+        - url: {{ promtail_loki_url }}
 
       scrape_configs:
         - job_name: samba-logs
@@ -59,8 +59,3 @@
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
     mode: '0644'
-
-- name: Start Promtail via Docker Compose
-  ansible.builtin.command: docker-compose -f /opt/services/promtail/docker-compose.yml up -d
-  args:
-    chdir: /opt/services/promtail
