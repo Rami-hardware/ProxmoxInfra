@@ -549,16 +549,16 @@ services:
 {% endif %}
 
 
-{% if 'nextpvr' in docker_apps_enabled %}
+{% if 'qbittorrent-exporter' in docker_apps_enabled %}
   qbittorrent-exporter:
     image: caseyscarborough/qbittorrent-exporter:latest
     container_name: qbittorrent-exporter
     ports:
       - "17871:17871"
     environment:
-      QBITTORRENT_USERNAME: username
-      QBITTORRENT_PASSWORD: password
-      QBITTORRENT_BASE_URL: http://localhost:8080
+      QBITTORRENT_USERNAME: "{{ qbittorrent_exporter_username }}"
+      QBITTORRENT_PASSWORD: "{{ qbittorrent_exporter_password }}"
+      QBITTORRENT_BASE_URL: "{{ qbittorrent_exporter_base_url }}"
     restart: unless-stopped
 {% endif %}
 networks:
