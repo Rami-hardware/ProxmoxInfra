@@ -6,7 +6,7 @@
   roles:
   # - DNS
   # - docker_setup
-  # - docker_apps
+   - docker_apps
   # - Promtail
-   - ufw
+  # - ufw
   # - smb
