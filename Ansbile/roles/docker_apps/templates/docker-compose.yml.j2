@@ -549,22 +549,17 @@ services:
 {% endif %}
 
 
-{% if 'nextpvr' in docker_apps_enabled %}
-  nextpvr:
-    image: nextpvr/nextpvr_amd64:stable # Use nextpvr/nextpvr_arm32v7:stable for ARM devices like Raspberry Pi
-    container_name: nextpvr
-    restart: unless-stopped
+{% if 'qbittorrent-exporter' in docker_apps_enabled %}
+  qbittorrent-exporter:
+    image: caseyscarborough/qbittorrent-exporter:latest
+    container_name: qbittorrent-exporter
     ports:
-      - "8866:8866" # NextPVR web interface
-    volumes:
-      - /opt/nextpvr/config:/config # Persistent storage for NextPVR configuration
-      - /opt/nextpvr/recordings:/recordings # Storage for recorded TV shows
-      - /opt/nextpvr/buffer:/buffer # Storage for live TV buffer
+      - "17871:17871"
     environment:
-      - PUID=1000 # User ID for permissions (adjust to your user's PUID)
-      - PGID=1000 # Group ID for permissions (adjust to your user's PGID)
-      - TZ=Europe/London # Set your timezone
-
+      QBITTORRENT_USERNAME: "{{ qbittorrent_exporter_username }}"
+      QBITTORRENT_PASSWORD: "{{ qbittorrent_exporter_password }}"
+      QBITTORRENT_BASE_URL: "{{ qbittorrent_exporter_base_url }}"
+    restart: unless-stopped
 {% endif %}
 networks:
   prometheus_network:

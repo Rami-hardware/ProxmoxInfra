@@ -11,8 +11,7 @@ docker_apps_enabled:
   - jellyfin
   - promtail
   - node-exporter
-  - watchtower
-  - nextpvr
+  - qbittorrent-exporter
 
 service_tcp_ports:
   - 8096 # Jellyfin HTTP
