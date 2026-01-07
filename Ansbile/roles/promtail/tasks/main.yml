@@ -25,9 +25,9 @@
           - targets: ['localhost']
             labels:
               job: samba
-              host: ${HOSTNAME}   # automatically sets host label
-              __path__: /var/log/samba/*.log  # skip directories
-            
+              host: ${HOSTNAME}
+              __path__: /var/log/samba/*.log
+
         - job_name: docker-logs
           static_configs:
             - targets: ['localhost']
