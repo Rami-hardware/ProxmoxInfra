@@ -9,7 +9,6 @@ docker_apps_enabled:
   - overseer
   - flaresolverr
   - jellyfin
-  - promtail
   - node-exporter
   - qbittorrent-exporter
 
