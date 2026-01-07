@@ -6,6 +6,6 @@
   # - DNS
   # - docker_setup
    - docker_apps
-   - Promtail
+   - promtail
   # - ufw
   # - smb
