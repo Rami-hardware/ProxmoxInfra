@@ -9,9 +9,9 @@ docker_apps_enabled:
   #  - overseer
   #  - flaresolverr
   #  - jellyfin
-  # - promtail
+  - promtail
   #  - node-exporter
-  - qbittorrent-exporter
+  #  - qbittorrent-exporter
 
 service_tcp_ports:
   - 8096 # Jellyfin HTTP
