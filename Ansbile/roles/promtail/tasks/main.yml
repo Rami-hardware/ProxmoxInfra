@@ -1,5 +1,5 @@
 - name: Set Promtail hostname fact
-  set_fact:
+  ansible.builtin.set_fact:
     promtail_hostname: "{{ ansible_hostname }}"
 
 - name: Ensure Promtail config directory exists
