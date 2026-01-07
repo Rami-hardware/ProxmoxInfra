@@ -112,6 +112,7 @@ flaresolverr_config: "/opt/flaresolverr:/config"
 
 # Configuration for Promtail
 promtail_var_path: "/var/log:/var/log"
+promtail_config_dir: /opt/services/promtail/config.yml
 promtail_config_path: "{{ docker_compose_dir }}/promtail-config.yml:/etc/promtail/config.yml"
 
 # Samba settings

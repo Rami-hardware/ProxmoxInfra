@@ -20,7 +20,7 @@
 
 - name: Create Promtail config file
   ansible.builtin.copy:
-    dest: /opt/services/promtail/config.yml
+    dest: "{{ promtail_config_dir }}"
     content: |
       server:
         http_listen_port: 9080
