@@ -60,8 +60,8 @@ services:
     volumes:
       - "/var/log:/var/log"
       - "/opt/services/promtail:/etc/promtail"
-    environment:
-      - HOSTNAME=${HOSTNAME} 
+    env_file:
+      - /opt/services/promtail/.env   # <-- loads HOSTNAME
     command: -config.file=/etc/promtail/config.yml -config.expand-env=true
     restart: unless-stopped
 {% endif %}
