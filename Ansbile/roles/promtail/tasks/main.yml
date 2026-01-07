@@ -20,11 +20,20 @@
       clients:
         - url: http://192.168.1.203:3100/loki/api/v1/push
 
+      - job_name: samba-logs
+        static_configs:
+          - targets: ['localhost']
+            labels:
+              job: samba
+              host: ${HOSTNAME}   # automatically sets host label
+              __path__: /var/log/samba/*.log  # skip directories
+            
         - job_name: docker-logs
           static_configs:
             - targets: ['localhost']
               labels:
                 job: docker
+                host: ${HOSTNAME}
                 __path__: /var/log/containers/*.log
 
         - job_name: system
@@ -32,6 +41,7 @@
             - targets: ['localhost']
               labels:
                 job: varlogs
+                host: ${HOSTNAME}
                 __path__: /var/log/{syslog,*.log}
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
