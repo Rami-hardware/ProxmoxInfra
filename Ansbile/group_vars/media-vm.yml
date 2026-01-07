@@ -30,7 +30,7 @@ service_udp_ports:
   - 6881 # qBittorrent UDP
 
 # Set your timezone
-TimeZone: "Asia/Riyadh"
+time_zone: "Asia/Riyadh"
 
 docker_daemon_json: "/etc/docker/daemon.json"
 

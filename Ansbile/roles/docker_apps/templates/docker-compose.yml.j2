@@ -172,7 +172,7 @@ services:
         mode: "non-blocking"
     network_mode: host
     environment:
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ time_zone }}"
     ports:
 {% for port in plex_ports %}
       - "{{ port }}"
@@ -202,7 +202,7 @@ services:
       - "{{ port }}"
 {% endfor %}
     environment:
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ time_zone }}"
       - NVIDIA_VISIBLE_DEVICES=all
     volumes:
       - "{{ jellyfin_volume_config_dir }}:/config"
@@ -231,7 +231,7 @@ services:
       - "{{ port }}"
 {% endfor %}
     environment:
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ time_zone }}"
     volumes:
       - "{{ overseer_volume_config_dir }}"
     restart: unless-stopped
@@ -257,7 +257,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ time_zone }}"
     volumes:
       - "{{ radarr_config }}"
       - "{{ radarr_movies }}"
@@ -285,7 +285,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ time_zone }}"
     volumes:
       - "{{ sonarr_config }}"
       - "{{ sonarr_tv }}"
@@ -313,7 +313,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ time_zone }}"
     volumes:
       - "{{ bazarr_config }}"
       - "{{ bazarr_tv }}"
@@ -341,7 +341,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ time_zone }}"
       - WEBUI_PORT=8080
     volumes:
       - "{{ qbittorrent_config }}"
@@ -369,7 +369,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ time_zone }}"
     volumes:
       - "{{ prowlarr_config }}"
     restart: unless-stopped
@@ -417,7 +417,7 @@ services:
       - "{{ port }}"
 {% endfor %}
     environment:
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ time_zone }}"
       - LOG_LEVEL=info
       - CAPTCHA_SOLVER=none
     restart: unless-stopped
@@ -549,16 +549,16 @@ services:
 {% endif %}
 
 
-{% if 'qbittorrent-exporter' in docker_apps_enabled %}
+{% if 'nextpvr' in docker_apps_enabled %}
   qbittorrent-exporter:
     image: caseyscarborough/qbittorrent-exporter:latest
     container_name: qbittorrent-exporter
     ports:
       - "17871:17871"
     environment:
-      QBITTORRENT_USERNAME: "{{ qbittorrent_exporter_username }}"
-      QBITTORRENT_PASSWORD: "{{ qbittorrent_exporter_password }}"
-      QBITTORRENT_BASE_URL: "{{ qbittorrent_exporter_base_url }}"
+      QBITTORRENT_USERNAME: username
+      QBITTORRENT_PASSWORD: password
+      QBITTORRENT_BASE_URL: http://localhost:8080
     restart: unless-stopped
 {% endif %}
 networks:
