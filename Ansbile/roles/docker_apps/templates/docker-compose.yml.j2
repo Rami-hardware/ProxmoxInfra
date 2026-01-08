@@ -66,23 +66,19 @@ services:
     restart: unless-stopped
 {% endif %}
 
-{% if 'watchtower' in docker_apps_enabled %}
-  watchtower:
-    image: containrrr/watchtower
-    container_name: watchtower
-    logging:
-      driver: loki
-      options:
-        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
-        loki-retries: "2"
-        loki-max-backoff: "800ms"
-        loki-timeout: "1s"
-        keep-file: "true"
-        mode: "non-blocking"
-    volumes:
-      - "{{ watchtower_run }}"
-    command: --cleanup --interval 3600
+{% if 'cadvisor' in docker_apps_enabled %}
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: cadvisor
     restart: unless-stopped
+    ports:
+      - "8081:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    privileged: true
 {% endif %}
 
 {% if 'nginx' in docker_apps_enabled %}

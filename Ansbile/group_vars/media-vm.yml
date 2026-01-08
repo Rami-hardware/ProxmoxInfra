@@ -10,6 +10,7 @@ docker_apps_enabled:
   #  - flaresolverr
   #  - jellyfin
   - promtail
+  - cadvisor
   #  - node-exporter
   #  - qbittorrent-exporter
 
@@ -25,6 +26,7 @@ service_tcp_ports:
   - 9001 # Portainer Agent
   - 8191 # FlareSolverr
   - 32400 # Plex web & DLNA
+  - 8081
 
 service_udp_ports:
   - 6881 # qBittorrent UDP
