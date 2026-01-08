@@ -1,6 +1,6 @@
 - name: Set Promtail hostname fact
   ansible.builtin.set_fact:
-    promtail_hostname: "{{ ansible_hostname }}"
+    promtail_hostname: "{{ ansible_facts['hostname'] }}"
 
 - name: Ensure Promtail config directory exists
   ansible.builtin.file:
@@ -12,15 +12,16 @@
 
 - name: Create .env file for Docker Compose
   ansible.builtin.copy:
-    dest: "{{ promtail_config_dir }}/.env"
+    dest: /opt/services/promtail/.env
     content: "HOSTNAME={{ promtail_hostname }}\n"
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
     mode: '0644'
 
+
 - name: Create Promtail config file
   ansible.builtin.copy:
-    dest: "{{ promtail_config_dir }}"
+    dest: /opt/services/promtail/config.yml
     content: |
       server:
         http_listen_port: 9080
