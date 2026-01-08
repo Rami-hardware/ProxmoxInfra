@@ -42,17 +42,12 @@
           static_configs:
             - targets: [ '192.168.1.201:17871' ]
 
-        - job_name: 'speedtest'
-          metrics_path: /probe
-          params:
-            script: ['speedtest']
+        - job_name: ''
           static_configs:
-            - targets: ['192.168.1.203:9469']
-          scrape_interval: 60s
-          scrape_timeout: 30s
+            - targets: [ '192.168.1.201:17871' ]
 
-        - job_name: 'script_exporter'
+        - job_name: 'cAdvisor'
           metrics_path: /metrics
           static_configs:
             - targets:
-                - 192.168.1.203:9469
+                - 192.168.1.201:8081
