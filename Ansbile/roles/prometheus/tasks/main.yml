@@ -26,10 +26,6 @@
           static_configs:
             - targets: ['192.168.1.201:9100']
 
-        - job_name: 'game_node'
-          static_configs:
-            - targets: ['192.168.1.202:9100']
-
         - job_name: 'monitoring_node'
           static_configs:
             - targets: ['192.168.1.203:9100']
