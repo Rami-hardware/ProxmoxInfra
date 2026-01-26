@@ -8,7 +8,7 @@ docker_apps_enabled:
   #  - portainer_agent
   #  - overseer
   #  - flaresolverr
-  #  - jellyfin
+  - jellyfin
   - promtail
   - cadvisor
   #  - node-exporter
