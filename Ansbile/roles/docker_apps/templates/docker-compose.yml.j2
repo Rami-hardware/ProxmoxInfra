@@ -197,9 +197,13 @@ services:
         keep-file: "true"
         mode: "non-blocking"
     ports:
-  {% for port in jellyfin_ports %}
+{% if jellyfin_ports | length > 0 %}
+{% for port in jellyfin_ports %}
       - "{{ port }}"
-  {% endfor %}
+{% endfor %}
+{% else %}
+      - "8096:8096"  # default port if jellyfin_ports is empty
+{% endif %}
     environment:
       TZ: "{{ time_zone }}"
       LIBVA_DRIVER_NAME: iHD
