@@ -197,20 +197,21 @@ services:
         keep-file: "true"
         mode: "non-blocking"
     ports:
-{% if jellyfin_ports | length > 0 %}
-{% for port in jellyfin_ports %}
+  {% if jellyfin_ports | length > 0 %}
+  {% for port in jellyfin_ports %}
       - "{{ port }}"
-{% endfor %}
-{% else %}
-      - "8096:8096"  # default port if jellyfin_ports is empty
-{% endif %}
+  {% endfor %}
+  {% else %}
+      - "8096:8096"  # default HTTP port
+      - "8920:8920"  # optional HTTPS
+  {% endif %}
     environment:
       TZ: "{{ time_zone }}"
       LIBVA_DRIVER_NAME: iHD
       VAAPI_DEVICE: /dev/dri/renderD128
+      JELLYFIN_HWACCEL=vaapi
     devices:
-      - /dev/dri/renderD128:/dev/dri/renderD128
-      - /dev/dri/card0:/dev/dri/card0
+      - /dev/dri:/dev/dri
     volumes:
       - "{{ jellyfin_volume_config_dir }}:/config"
       - "{{ jellyfin_volume_media_dir }}:/media"
