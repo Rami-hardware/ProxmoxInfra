@@ -219,9 +219,6 @@ services:
     restart: unless-stopped
 {% endif %}
 
-
-
-
 {% if 'overseer' in docker_apps_enabled %}
   overseerr:
     image: sctx/overseerr:latest
