@@ -5,7 +5,8 @@
 
 - name: Update apt cache
   ansible.builtin.apt:
-    update_cache:true
+    update_cache: true
+
 
 - name: Install Intel Arc packages
   ansible.builtin.apt:
