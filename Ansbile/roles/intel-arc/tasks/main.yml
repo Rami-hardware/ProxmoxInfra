@@ -2,6 +2,7 @@
   ansible.builtin.apt_repository:
     repo: "deb http://archive.ubuntu.com/ubuntu {{ ansible_distribution_release }} universe"
     state: present
+    filename: "archive_ubuntu_com_universe"  # prevent duplicates
 
 - name: Add Intel Linux Graphics repo key
   ansible.builtin.apt_key:
@@ -14,6 +15,7 @@
       deb [signed-by=/usr/share/keyrings/intel-graphics-archive-keyring.gpg]
       https://repositories.intel.com/graphics/ubuntu {{ ansible_distribution_release }} main
     state: present
+    filename: "intel-graphics"  # unique file name
 
 - name: Update apt cache
   ansible.builtin.apt:
