@@ -200,7 +200,7 @@ services:
       - "{{ port }}"
       {% endfor %}
     environment:
-      - TZ="{{ time_zone }}"
+      - TZ={{ time_zone }}
       - LIBVA_DRIVER_NAME=iHD
       - VAAPI_DEVICE=/dev/dri/renderD128
     devices:
@@ -212,7 +212,7 @@ services:
       - "{{ jellyfin_volume_media_dir }}:/media"
       - "{{ jellyfin_volume_cache_dir }}:/cache"
     restart: unless-stopped
-{% endif %}
+  {% endif %}
 
 {% if 'overseer' in docker_apps_enabled %}
   overseerr:
