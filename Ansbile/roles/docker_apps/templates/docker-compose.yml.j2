@@ -196,9 +196,9 @@ services:
         keep-file: "true"
         mode: "non-blocking"
     ports:
-  {% for port in jellyfin_ports %}
+      {% for port in jellyfin_ports %}
       - "{{ port }}"
-  {% endfor %}
+      {% endfor %}
     environment:
       - TZ="{{ time_zone }}"
       - LIBVA_DRIVER_NAME=iHD
@@ -206,7 +206,7 @@ services:
     devices:
       - /dev/dri:/dev/dri
     group_add:
-      - 226  # 'render' group on Ubuntu hosts
+      - 226  # render group
     volumes:
       - "{{ jellyfin_volume_config_dir }}:/config"
       - "{{ jellyfin_volume_media_dir }}:/media"
