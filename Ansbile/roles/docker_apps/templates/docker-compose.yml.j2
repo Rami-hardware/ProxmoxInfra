@@ -202,14 +202,14 @@ services:
       - "{{ port }}"
   {% endfor %}
   {% else %}
-      - "8096:8096"  # default HTTP port
-      - "8920:8920"  # optional HTTPS
+      - "8096:8096"
+      - "8920:8920"
   {% endif %}
     environment:
       TZ: "{{ time_zone }}"
       LIBVA_DRIVER_NAME: iHD
       VAAPI_DEVICE: /dev/dri/renderD128
-      JELLYFIN_HWACCEL=vaapi
+      JELLYFIN_HWACCEL: vaapi
     devices:
       - /dev/dri:/dev/dri
     volumes:
@@ -218,6 +218,7 @@ services:
       - "{{ jellyfin_volume_cache_dir }}:/cache"
     restart: unless-stopped
 {% endif %}
+
 
 
 
