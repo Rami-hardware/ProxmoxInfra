@@ -3,10 +3,19 @@
     repo: "deb http://archive.ubuntu.com/ubuntu {{ ansible_distribution_release }} universe"
     state: present
 
+- name: Add Intel Linux Graphics repo key
+  ansible.builtin.apt_key:
+    url: https://repositories.intel.com/graphics/intel-graphics.key
+    state: present
+
+- name: Add Intel Linux Graphics repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/intel-graphics-archive-keyring.gpg] https://repositories.intel.com/graphics/ubuntu {{ ansible_distribution_release }} main"
+    state: present
+
 - name: Update apt cache
   ansible.builtin.apt:
     update_cache: true
-
 
 - name: Install Intel Arc packages
   ansible.builtin.apt:
