@@ -197,7 +197,6 @@ services:
         keep-file: "true"
         mode: "non-blocking"
     ports:
-  {% if jellyfin_ports | length > 0 %}
   {% for port in jellyfin_ports %}
       - "{{ port }}"
   {% endfor %}
