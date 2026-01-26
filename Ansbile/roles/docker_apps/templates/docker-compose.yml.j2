@@ -198,7 +198,7 @@ services:
         mode: "non-blocking"
     ports:
   {% for port in jellyfin_ports %}
-      - "{{ port }}"
+    - "{{ port }}"
   {% endfor %}
     environment:
       TZ: "{{ time_zone }}"
