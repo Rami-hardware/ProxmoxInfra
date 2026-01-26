@@ -183,35 +183,35 @@ services:
 {% endif %}
 
 {% if 'jellyfin' in docker_apps_enabled %}
-jellyfin:
-  image: jellyfin/jellyfin:latest
-  container_name: jellyfin
-  logging:
-    driver: loki
-    options:
-      loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
-      loki-retries: "2"
-      loki-max-backoff: "800ms"
-      loki-timeout: "1s"
-      keep-file: "true"
-      mode: "non-blocking"
-  ports:
-{% for port in jellyfin_ports %}
-    - "{{ port }}"
-{% endfor %}
-  environment:
-    - TZ="{{ time_zone }}"
-    - LIBVA_DRIVER_NAME=iHD
-    - VAAPI_DEVICE=/dev/dri/renderD128
-  devices:
-    - /dev/dri:/dev/dri
-  group_add:
-    - 226  # 'render' group on Ubuntu hosts
-  volumes:
-    - "{{ jellyfin_volume_config_dir }}:/config"
-    - "{{ jellyfin_volume_media_dir }}:/media"
-    - "{{ jellyfin_volume_cache_dir }}:/cache"
-  restart: unless-stopped
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+        mode: "non-blocking"
+    ports:
+  {% for port in jellyfin_ports %}
+      - "{{ port }}"
+  {% endfor %}
+    environment:
+      - TZ="{{ time_zone }}"
+      - LIBVA_DRIVER_NAME=iHD
+      - VAAPI_DEVICE=/dev/dri/renderD128
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:
+      - 226  # 'render' group on Ubuntu hosts
+    volumes:
+      - "{{ jellyfin_volume_config_dir }}:/config"
+      - "{{ jellyfin_volume_media_dir }}:/media"
+      - "{{ jellyfin_volume_cache_dir }}:/cache"
+    restart: unless-stopped
 {% endif %}
 
 {% if 'overseer' in docker_apps_enabled %}
