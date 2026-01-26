@@ -6,6 +6,5 @@
   # - DNS
   # - docker_setup
   #  - promtail
-    - intel-arc
     - docker_apps
   # - ufw
