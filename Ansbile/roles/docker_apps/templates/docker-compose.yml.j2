@@ -200,10 +200,7 @@ services:
   {% for port in jellyfin_ports %}
       - "{{ port }}"
   {% endfor %}
-  {% else %}
-      - "8096:8096"
-      - "8920:8920"
-  {% endif %}
+  
     environment:
       TZ: "{{ time_zone }}"
       LIBVA_DRIVER_NAME: iHD
