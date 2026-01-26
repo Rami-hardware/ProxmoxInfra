@@ -197,19 +197,27 @@ services:
         keep-file: "true"
         mode: "non-blocking"
     ports:
-{% for port in jellyfin_ports %}
+  {% if jellyfin_ports | length > 0 %}
+  {% for port in jellyfin_ports %}
       - "{{ port }}"
-{% endfor %}
+  {% endfor %}
+  {% else %}
+      - "8096:8096"
+      - "8920:8920"
+  {% endif %}
     environment:
-      - TZ="{{ time_zone }}"
-      - NVIDIA_VISIBLE_DEVICES=all
+      TZ: "{{ time_zone }}"
+      LIBVA_DRIVER_NAME: iHD
+      VAAPI_DEVICE: /dev/dri/renderD128
+      JELLYFIN_HWACCEL: vaapi
+    devices:
+      - /dev/dri:/dev/dri
     volumes:
       - "{{ jellyfin_volume_config_dir }}:/config"
       - "{{ jellyfin_volume_media_dir }}:/media"
       - "{{ jellyfin_volume_cache_dir }}:/cache"
     restart: unless-stopped
 {% endif %}
-
 
 
 {% if 'overseer' in docker_apps_enabled %}
