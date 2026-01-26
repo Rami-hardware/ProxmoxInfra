@@ -1,0 +1,19 @@
+- name: Ensure universe repo is enabled
+  ansible.builtin.apt_repository:
+    repo: "deb http://archive.ubuntu.com/ubuntu {{ ansible_distribution_release }} universe"
+    state: present
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache:true
+
+- name: Install Intel Arc packages
+  ansible.builtin.apt:
+    name: "{{ intel_packages }}"
+    state: present
+
+- name: Add media user to video and render groups
+  ansible.builtin.user:
+    name: media
+    groups: "video,render"
+    append: true

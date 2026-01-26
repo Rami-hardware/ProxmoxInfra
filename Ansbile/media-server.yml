@@ -5,6 +5,7 @@
   roles:
   # - DNS
   # - docker_setup
-    - promtail
+  #  - promtail
+    - intel-arc
     - docker_apps
   # - ufw

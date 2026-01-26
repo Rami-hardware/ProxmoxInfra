@@ -1,0 +1,13 @@
+intel_packages:
+  - intel-media-va-driver-non-free
+  - libze-intel-gpu1
+  - libze1
+  - intel-metrics-discovery
+  - intel-opencl-icd
+  - clinfo
+  - intel-gsc
+  - libvpl2
+  - libvpl-tools
+  - libva-glx2
+  - va-driver-all
+  - vainfo
