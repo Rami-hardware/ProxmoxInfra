@@ -10,7 +10,9 @@
 
 - name: Add Intel Linux Graphics repository
   ansible.builtin.apt_repository:
-    repo: "deb [signed-by=/usr/share/keyrings/intel-graphics-archive-keyring.gpg] https://repositories.intel.com/graphics/ubuntu {{ ansible_distribution_release }} main"
+    repo: >
+      deb [signed-by=/usr/share/keyrings/intel-graphics-archive-keyring.gpg]
+      https://repositories.intel.com/graphics/ubuntu {{ ansible_distribution_release }} main
     state: present
 
 - name: Update apt cache
