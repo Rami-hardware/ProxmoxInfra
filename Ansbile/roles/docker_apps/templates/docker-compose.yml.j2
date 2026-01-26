@@ -182,7 +182,6 @@ services:
     restart: unless-stopped
 {% endif %}
 
-
 {% if 'jellyfin' in docker_apps_enabled %}
 jellyfin:
   image: jellyfin/jellyfin:latest
@@ -205,17 +204,15 @@ jellyfin:
     - LIBVA_DRIVER_NAME=iHD
     - VAAPI_DEVICE=/dev/dri/renderD128
   devices:
-    - /dev/dri/renderD128:/dev/dri/renderD128
-    - /dev/dri/card0:/dev/dri/card0
+    - /dev/dri:/dev/dri
+  group_add:
+    - 44  # 'render' group on Ubuntu hosts
   volumes:
     - "{{ jellyfin_volume_config_dir }}:/config"
     - "{{ jellyfin_volume_media_dir }}:/media"
     - "{{ jellyfin_volume_cache_dir }}:/cache"
   restart: unless-stopped
 {% endif %}
-
-
-
 
 {% if 'overseer' in docker_apps_enabled %}
   overseerr:
