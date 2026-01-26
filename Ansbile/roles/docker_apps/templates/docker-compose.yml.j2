@@ -79,7 +79,7 @@ services:
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
     privileged: true
-    #cgroupns: host
+    cgroupns: host
 {% endif %}
 
 {% if 'nginx' in docker_apps_enabled %}
@@ -197,16 +197,12 @@ services:
         keep-file: "true"
         mode: "non-blocking"
     ports:
-  {% for port in jellyfin_ports %}
-    - "{{ port }}"
-  {% endfor %}
+{% for port in jellyfin_ports %}
+      - "{{ port }}"
+{% endfor %}
     environment:
-      TZ: "{{ time_zone }}"
-      LIBVA_DRIVER_NAME: iHD
-      VAAPI_DEVICE: /dev/dri/renderD128
-      JELLYFIN_HWACCEL: vaapi
-    devices:
-      - /dev/dri:/dev/dri
+      - TZ="{{ time_zone }}"
+      - NVIDIA_VISIBLE_DEVICES=all
     volumes:
       - "{{ jellyfin_volume_config_dir }}:/config"
       - "{{ jellyfin_volume_media_dir }}:/media"
