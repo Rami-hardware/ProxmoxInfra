@@ -200,7 +200,6 @@ services:
   {% for port in jellyfin_ports %}
       - "{{ port }}"
   {% endfor %}
-  
     environment:
       TZ: "{{ time_zone }}"
       LIBVA_DRIVER_NAME: iHD
@@ -214,6 +213,7 @@ services:
       - "{{ jellyfin_volume_cache_dir }}:/cache"
     restart: unless-stopped
 {% endif %}
+
 
 
 {% if 'overseer' in docker_apps_enabled %}
