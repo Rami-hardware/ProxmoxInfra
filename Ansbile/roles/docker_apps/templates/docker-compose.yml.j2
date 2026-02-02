@@ -136,18 +136,19 @@ services:
 
 {% if 'subsyncarr' in docker_apps_enabled %}
   subsyncarr:
-    image: ghcr.io/kaeeeee/subsyncarr:latest
+    image: mrorbitman/subsyncarr:latest
     container_name: subsyncarr
+    volumes:
+      - /mnt/media/movies:/movies
+      - /mnt/media/tv:/tv
     restart: unless-stopped
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=UTC
-    volumes:
-      - ./config/subsyncarr:/config
-      - /path/to/media:/media
-    ports:
-      - "8282:8282"
+      - TZ=Etc/UTC  
+      - CRON_SCHEDULE=0 0 * * * 
+      - SCAN_PATHS=/movies,/tv,/anime  
+      - EXCLUDE_PATHS=/movies/temp,/tv/downloads  
+      - MAX_CONCURRENT_SYNC_TASKS=1  
+      - INCLUDE_ENGINES=ffsubsync,autosubsync  
 {% endif %}
 
 
