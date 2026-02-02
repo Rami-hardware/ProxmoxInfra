@@ -8,9 +8,9 @@ docker_apps_enabled:
   #  - portainer_agent
   #  - overseer
   #  - flaresolverr
-  #- jellyfin
-  #- promtail
-  #- cadvisor
+  # - jellyfin
+  # - promtail
+  # - cadvisor
   #  - node-exporter
   - subsyncarr
   #  - qbittorrent-exporter
