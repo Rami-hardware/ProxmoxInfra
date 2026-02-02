@@ -145,7 +145,7 @@ services:
     environment:
       - TZ=Etc/UTC  
       - CRON_SCHEDULE=0 0 * * * 
-      - SCAN_PATHS=/movies,/tv,/anime  
+      - SCAN_PATHS=/movies,/tv
       - EXCLUDE_PATHS=/movies/temp,/tv/downloads  
       - MAX_CONCURRENT_SYNC_TASKS=1  
       - INCLUDE_ENGINES=ffsubsync,autosubsync  
