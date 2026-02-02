@@ -134,6 +134,23 @@ services:
     restart: unless-stopped
 {% endif %}
 
+{% if 'subsyncarr' in docker_apps_enabled %}
+  subsyncarr:
+    image: ghcr.io/kaeeeee/subsyncarr:latest
+    container_name: subsyncarr
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+    volumes:
+      - ./config/subsyncarr:/config
+      - /path/to/media:/media
+    ports:
+      - "8282:8282"
+{% endif %}
+
+
 {% if 'uptime-kuma' in docker_apps_enabled %}
   uptime-kuma:
     image: louislam/uptime-kuma:latest

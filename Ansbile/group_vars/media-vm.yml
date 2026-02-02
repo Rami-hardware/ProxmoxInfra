@@ -12,6 +12,7 @@ docker_apps_enabled:
   - promtail
   - cadvisor
   #  - node-exporter
+  - subsyncarr
   #  - qbittorrent-exporter
 
 service_tcp_ports:
@@ -27,6 +28,7 @@ service_tcp_ports:
   - 8191 # FlareSolverr
   - 32400 # Plex web & DLNA
   - 8081
+  - 8282
 
 service_udp_ports:
   - 6881 # qBittorrent UDP
