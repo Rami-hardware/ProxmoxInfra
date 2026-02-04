@@ -67,6 +67,7 @@ nginx_volumes:
   - /opt/nginx/conf/snippets:/etc/nginx/snippets:ro
   - /opt/nginx/logs:/var/log/nginx
   - /opt/nginx/conf/sites-enabled:/etc/nginx/sites-enabled:ro
+  - /opt/nginx/certs:/etc/nginx/certs:ro
 
 nginx_services:
   - name: jellyfin

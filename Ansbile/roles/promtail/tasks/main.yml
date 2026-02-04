@@ -18,7 +18,6 @@
     group: "{{ ansible_user }}"
     mode: '0644'
 
-
 - name: Create Promtail config file
   ansible.builtin.copy:
     dest: /opt/services/promtail/config.yml
