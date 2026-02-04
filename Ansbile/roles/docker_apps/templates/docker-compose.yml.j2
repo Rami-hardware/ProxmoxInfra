@@ -16,6 +16,7 @@ services:
     ports:
       - "8080:8080"
 {% endif %}
+
 {% if 'crowdsec-nginx-bouncer' in docker_apps_enabled %}
   crowdsec-nginx-bouncer:
     image: crowdsecurity/openresty:latest
@@ -24,7 +25,6 @@ services:
     depends_on:
       - crowdsec
       - nginx
-
     environment:
       CROWDSEC_BOUNCER_API_KEY_FILE: /run/secrets/crowdsec_nginx_bouncer_key
       CROWDSEC_AGENT_HOST: crowdsec:8080
