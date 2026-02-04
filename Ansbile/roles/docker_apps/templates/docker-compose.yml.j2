@@ -138,6 +138,7 @@ services:
   jellyfin-subsyncer:
     image: novinem/jellyfin-subsyncer:latest
     container_name: jellyfin-subsyncer
+    user: "${UID}:${GID}"            # Match your host user for write permissions
     volumes:
       - /mnt/media/movies:/media/movies
       - /mnt/media/tv:/media/tv
@@ -149,9 +150,9 @@ services:
       - EXCLUDE_PATHS=/media/movies/temp,/media/tv/downloads
       - MAX_CONCURRENT_SYNC_TASKS=1
       - INCLUDE_ENGINES=autosubsync
-      - MODE=watch                     # Continuous mode
-      - WATCH_RECURSIVE=true           # Recursive scan
-      - SET_SYNCED_AS_DEFAULT=true     # Auto-select synced subtitles
+      - MODE=watch                   # Continuous mode
+      - WATCH_RECURSIVE=true         # Scan subfolders
+      - SET_SYNCED_AS_DEFAULT=true   # Make synced subtitles default
 {% endif %}
 
 {% if 'uptime-kuma' in docker_apps_enabled %}
