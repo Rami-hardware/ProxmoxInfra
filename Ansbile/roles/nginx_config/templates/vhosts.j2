@@ -41,6 +41,10 @@ server {
 
     access_log off;
 
+    {% if svc.streaming | default(false) %}
+    gzip off;
+    {% endif %}
+
     location / {
         proxy_pass http://{{ svc.ip }}:{{ svc.port }};
         include snippets/proxy-common.conf;
