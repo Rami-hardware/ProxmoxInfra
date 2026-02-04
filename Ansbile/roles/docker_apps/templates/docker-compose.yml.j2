@@ -134,23 +134,22 @@ services:
     restart: unless-stopped
 {% endif %}
 
-{% if 'subsyncarr' in docker_apps_enabled %}
-  subsyncarr:
-    image: mrorbitman/subsyncarr:latest
-    container_name: subsyncarr
+{% if 'jellyfin-subsyncer' in docker_apps_enabled %}
+  jellyfin-subsyncer:
+    image: novinem/jellyfin-subsyncer:latest
+    container_name: jellyfin-subsyncer
     volumes:
-      - /mnt/media/movies:/movies
-      - /mnt/media/tv:/tv
+      - /mnt/media/movies:/media/movies
+      - /mnt/media/tv:/media/tv
+      - /mnt/config/jellyfin-subsyncer:/config
     restart: unless-stopped
     environment:
-      - TZ=Etc/UTC  
-      - CRON_SCHEDULE=0 0 * * * 
-      - SCAN_PATHS=/movies,/tv
-      - EXCLUDE_PATHS=/movies/temp,/tv/downloads  
-      - MAX_CONCURRENT_SYNC_TASKS=1  
-      - INCLUDE_ENGINES=autosubsync  
+      - TZ=Etc/UTC
+      - SCAN_PATHS=/media/movies,/media/tv
+      - EXCLUDE_PATHS=/media/movies/temp,/media/tv/downloads
+      - MAX_CONCURRENT_SYNC_TASKS=1
+      - INCLUDE_ENGINES=autosubsync
 {% endif %}
-
 
 {% if 'uptime-kuma' in docker_apps_enabled %}
   uptime-kuma:
