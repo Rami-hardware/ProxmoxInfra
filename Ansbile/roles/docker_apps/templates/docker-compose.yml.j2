@@ -149,6 +149,9 @@ services:
       - EXCLUDE_PATHS=/media/movies/temp,/media/tv/downloads
       - MAX_CONCURRENT_SYNC_TASKS=1
       - INCLUDE_ENGINES=autosubsync
+      - MODE=watch                     # Continuous mode
+      - WATCH_RECURSIVE=true           # Recursive scan
+      - SET_SYNCED_AS_DEFAULT=true     # Auto-select synced subtitles
 {% endif %}
 
 {% if 'uptime-kuma' in docker_apps_enabled %}
