@@ -138,6 +138,7 @@ services:
   jellyfin-subsyncer:
     image: novinem/jellyfin-subsyncer:latest
     container_name: jellyfin-subsyncer
+    cpus: 1.0         # limit to 1 CPU
     volumes:
       - /mnt/media/movies:/media/movies
       - /mnt/media/tv:/media/tv
@@ -151,6 +152,7 @@ services:
       - VERBOSE=true
       - MAX_CONCURRENT_SYNC_TASKS=1
       - SCAN_PATHS=/media/movies,/media/tv
+
 {% endif %}
 
 {% if 'uptime-kuma' in docker_apps_enabled %}
