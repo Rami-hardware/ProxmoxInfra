@@ -149,6 +149,7 @@ services:
       - RECURSIVE=true
       - SET_SYNC_AS_DEFAULT=true
       - VERBOSE=true
+      - MAX_CONCURRENT_SYNC_TASKS=1
 {% endif %}
 
 {% if 'uptime-kuma' in docker_apps_enabled %}
