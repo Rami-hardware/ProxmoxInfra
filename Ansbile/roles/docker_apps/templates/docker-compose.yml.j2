@@ -150,6 +150,7 @@ services:
       - SET_SYNC_AS_DEFAULT=true
       - VERBOSE=true
       - MAX_CONCURRENT_SYNC_TASKS=1
+      - SCAN_PATHS=/media/movies,/media/tv
 {% endif %}
 
 {% if 'uptime-kuma' in docker_apps_enabled %}
