@@ -145,9 +145,10 @@ services:
     restart: unless-stopped
     environment:
       - TZ=Etc/UTC
-      - MODE=watch
-      - WATCH_RECURSIVE=true
-      - SET_SYNCED_AS_DEFAULT=true
+      - LOOP_MODE=true
+      - RECURSIVE=true
+      - SET_SYNC_AS_DEFAULT=true
+      - VERBOSE=true
 {% endif %}
 
 {% if 'uptime-kuma' in docker_apps_enabled %}
