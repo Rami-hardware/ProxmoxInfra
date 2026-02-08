@@ -134,24 +134,20 @@ services:
     restart: unless-stopped
 {% endif %}
 
-{% if 'jellyfin-subsyncer' in docker_apps_enabled %}
-  jellyfin-subsyncer:
-    image: novinem/jellyfin-subsyncer:latest
-    container_name: jellyfin-subsyncer
-    cpus: 1.0         # limit to 1 CPU
+{% if 'subsyncer' in docker_apps_enabled %}
+  subsyncarr:
+    image: mrorbitman/subsyncarr:latest
+    container_name: subsyncarr
     volumes:
       - /mnt/media/movies:/movies
       - /mnt/media/tv:/tv
-      - /mnt/config/jellyfin-subsyncer:/config
     restart: unless-stopped
     environment:
       - TZ=Etc/UTC
-      - LOOP_MODE=true
-      - RECURSIVE=true
-      - SET_SYNC_AS_DEFAULT=true
-      - VERBOSE=true
-      - MAX_CONCURRENT_SYNC_TASKS=1
       - SCAN_PATHS=/movies,/tv
+      - MAX_CONCURRENT_SYNC_TASKS=1
+      - INCLUDE_ENGINES=ffsubsync,autosubsync
+      - DOWNLOAD_SUBS=false   # disable downloading, sync only
 {% endif %}
 
 {% if 'uptime-kuma' in docker_apps_enabled %}

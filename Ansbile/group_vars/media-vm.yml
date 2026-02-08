@@ -12,7 +12,7 @@ docker_apps_enabled:
   # - promtail
   # - cadvisor
   #  - node-exporter
-  - jellyfin-subsyncer
+  - subsyncer
   #  - qbittorrent-exporter
 
 service_tcp_ports:
