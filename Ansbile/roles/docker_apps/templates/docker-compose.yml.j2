@@ -140,8 +140,8 @@ services:
     container_name: jellyfin-subsyncer
     cpus: 1.0         # limit to 1 CPU
     volumes:
-      - /mnt/media/movies:/media/movies
-      - /mnt/media/tv:/media/tv
+      - /mnt/media/movies:/movies
+      - /mnt/media/tv:/tv
       - /mnt/config/jellyfin-subsyncer:/config
     restart: unless-stopped
     environment:
@@ -151,8 +151,7 @@ services:
       - SET_SYNC_AS_DEFAULT=true
       - VERBOSE=true
       - MAX_CONCURRENT_SYNC_TASKS=1
-      - SCAN_PATHS=/media/movies,/media/tv
-
+      - SCAN_PATHS=/movies,/tv
 {% endif %}
 
 {% if 'uptime-kuma' in docker_apps_enabled %}
