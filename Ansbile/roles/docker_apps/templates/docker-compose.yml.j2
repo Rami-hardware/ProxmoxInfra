@@ -138,19 +138,20 @@ services:
   subsyncarr:
     image: mrorbitman/subsyncarr:latest
     container_name: subsyncarr
-    mem_limit: 2g       # limit to 2 GB RAM
-    cpus: 2.0           # limit to 2 CPU cores
+    mem_limit: 2g            # limit to 2 GB RAM
+    restart: unless-stopped
+    devices:
+      - /dev/dri:/dev/dri    # grant GPU access for Intel Arc
     volumes:
       - /mnt/media/movies:/movies
       - /mnt/media/tv:/tv
       - /mnt/config/subsyncarr:/config
-    restart: unless-stopped
     environment:
       - TZ=Etc/UTC
       - SCAN_PATHS=/movies,/tv
-      - MAX_CONCURRENT_SYNC_TASKS=1    # only one file at a time
-      - INCLUDE_ENGINES=ffsubsync      # autosubsync skipped for safety
-      - DOWNLOAD_SUBS=false            # we only want to sync existing subs
+      - MAX_CONCURRENT_SYNC_TASKS=1
+      - INCLUDE_ENGINES=ffsubsync
+      - DOWNLOAD_SUBS=false
 
 {% endif %}
 
