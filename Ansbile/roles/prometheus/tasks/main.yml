@@ -1,17 +1,20 @@
 - name: Ensure Prometheus config directory exists
   ansible.builtin.file:
-    path: /opt/docker/prometheus
+    path: "{{ prometheus_config_dir }}"
     state: directory
     mode: '0755'
 
-- name: Create Prometheus config file with minimal valid config
+- name: Copy Prometheus main config file
   ansible.builtin.copy:
-    dest: /opt/docker/prometheus/prometheus.yml
+    dest: "{{ prometheus_config_file }}"
     mode: '0644'
     force: true
     content: |
       global:
         scrape_interval: 15s
+
+      rule_files:
+        - "{{ prometheus_rule_file }}"
 
       scrape_configs:
         - job_name: 'prometheus'
@@ -36,14 +39,21 @@
 
         - job_name: 'qbittorrent'
           static_configs:
-            - targets: [ '192.168.1.201:17871' ]
+            - targets: ['192.168.1.201:17871']
 
         - job_name: 'cAdvisor'
           static_configs:
             - targets:
                 - 192.168.1.201:8081
 
-        - job_name: docker
+        - job_name: 'docker'
           static_configs:
             - targets:
                 - 192.168.1.201:9323
+
+- name: Copy Docker rules file
+  ansible.builtin.copy:
+    src: docker.rules.yml
+    dest: "{{ prometheus_rule_file }}"
+    mode: '0644'
+    force: true

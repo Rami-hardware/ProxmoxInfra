@@ -1,0 +1,82 @@
+groups:
+  - name: docker_friendly_names
+    rules:
+      - record: container_cpu_usage_named
+        expr: container_cpu_usage_seconds_total{id=~"/system.slice/docker-72101e4e4c19.*"}
+        labels:
+          container_name: "bazarr"
+
+      - record: container_cpu_usage_named
+        expr: container_cpu_usage_seconds_total{id=~"/system.slice/docker-bfa35d9b414b.*"}
+        labels:
+          container_name: "subsyncarr"
+
+      - record: container_cpu_usage_named
+        expr: container_cpu_usage_seconds_total{id=~"/system.slice/docker-f87d943f8b81.*"}
+        labels:
+          container_name: "jellyfin"
+
+      - record: container_cpu_usage_named
+        expr: container_cpu_usage_seconds_total{id=~"/system.slice/docker-6ce2bff445b2.*"}
+        labels:
+          container_name: "cadvisor"
+
+      - record: container_cpu_usage_named
+        expr: container_cpu_usage_seconds_total{id=~"/system.slice/docker-f663f3c2eb6.*"}
+        labels:
+          container_name: "promtail"
+
+      - record: container_cpu_usage_named
+        expr: container_cpu_usage_seconds_total{id=~"/system.slice/docker-7a98c7de7afa.*"}
+        labels:
+          container_name: "qbittorrent-exporter"
+
+      - record: container_cpu_usage_named
+        expr: container_cpu_usage_seconds_total{id=~"/system.slice/docker-c8d9de6072b4.*"}
+        labels:
+          container_name: "flaresolverr"
+
+      - record: container_cpu_usage_named
+        expr: container_cpu_usage_seconds_total{id=~"/system.slice/docker-a875f085a2ea.*"}
+        labels:
+          container_name: "overseerr"
+
+      - record: container_cpu_usage_named
+        expr: container_cpu_usage_seconds_total{id=~"/system.slice/docker-2e6bb6df4579.*"}
+        labels:
+          container_name: "qbittorrent"
+
+      - record: container_cpu_usage_named
+        expr: container_cpu_usage_seconds_total{id=~"/system.slice/docker-0f737b4a6ce2.*"}
+        labels:
+          container_name: "radarr"
+
+      - record: container_cpu_usage_named
+        expr: container_cpu_usage_seconds_total{id=~"/system.slice/docker-bd575296469b.*"}
+        labels:
+          container_name: "sonarr"
+
+      - record: container_cpu_usage_named
+        expr: container_cpu_usage_seconds_total{id=~"/system.slice/docker-9bcfe71a0d43.*"}
+        labels:
+          container_name: "prowlarr"
+
+      - record: container_cpu_usage_named
+        expr: container_cpu_usage_seconds_total{id=~"/system.slice/docker-578c45ffabdd.*"}
+        labels:
+          container_name: "portainer_agent"
+
+      - record: container_cpu_usage_named
+        expr: container_cpu_usage_seconds_total{id=~"/system.slice/docker-584f0c832964.*"}
+        labels:
+          container_name: "plex"
+
+      - record: container_cpu_usage_named
+        expr: container_cpu_usage_seconds_total{id=~"/system.slice/docker-d7df0d95acb7.*"}
+        labels:
+          container_name: "node-exporter"
+
+      - record: container_cpu_usage_named
+        expr: container_cpu_usage_seconds_total{id=~"/system.slice/docker-7cc6999c8b73.*"}
+        labels:
+          container_name: "nextpvr"
