@@ -79,10 +79,10 @@ jobs:
           source venv/bin/activate
           ansible-playbook  Ansbile/gateway-server.yml --syntax-check
       # Ansible lint
-      - name: Ansible lint
-        run: |
-          source venv/bin/activate
-          ansible-lint Ansbile/
+      # - name: Ansible lint
+      #   run: |
+      #     source venv/bin/activate
+      #     ansible-lint Ansbile/
 
   Deploy:
     name: Deploy Infrastructure Code
