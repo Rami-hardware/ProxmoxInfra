@@ -1,6 +1,6 @@
 - name: Check if swap is enabled
   ansible.builtin.command: swapon --summary
-  register: swap_status
+  register: k3s_agent_swap_status
   changed_when: false
   failed_when: false
 

@@ -1,6 +1,6 @@
 - name: Check if swap is enabled
   ansible.builtin.command: swapon --summary
-  register: swap_status
+  register: k3s_server_swap_status
   changed_when: false
   failed_when: false
 
@@ -31,7 +31,7 @@
 - name: Read K3s node token
   ansible.builtin.slurp:
     src: /var/lib/rancher/k3s/server/node-token
-  register: k3s_token_raw
+  register: k3s_server_k3s_token_raw
 
 - name: Set K3s token fact
   ansible.builtin.set_fact:

@@ -1,2 +1,2 @@
 ---
-k3s_version: "latest"
+k3s_server_k3s_version: "latest"
