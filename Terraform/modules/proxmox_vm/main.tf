@@ -53,7 +53,6 @@ dynamic "disk" {
     "disk",
     "initialization",
     "clone",
-    "cpu"
    ]
 }
 
