@@ -52,8 +52,7 @@ dynamic "disk" {
   ignore_changes = [ 
     "disk",
     "initialization",
-    "clone",
-    "cpu"
+    "clone"
    ]
 }
 
