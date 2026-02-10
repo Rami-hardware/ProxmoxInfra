@@ -1,0 +1,6 @@
+---
+- name: Install K3s server
+  hosts: github-server
+  become: true
+  roles:
+    - k3s_server

@@ -1,0 +1,31 @@
+- name: Check if swap is enabled
+  ansible.builtin.command: swapon --summary
+  register: swap_status
+  changed_when: false
+  failed_when: false
+
+- name: Disable swap
+  ansible.builtin.command: swapoff -a
+  when: swap_status.stdout | trim != ""
+  changed_when: swap_status.stdout | trim != ""
+
+
+- name: Install curl
+  ansible.builtin.package:
+    name: curl
+    state: present
+
+- name: Download K3s install script
+  ansible.builtin.get_url:
+    url: https://get.k3s.io
+    dest: /usr/local/bin/k3s-install.sh
+    mode: '0755'
+
+- name: Install K3s agent
+  ansible.builtin.command: /usr/local/bin/k3s-install.sh
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    K3S_URL: "https://{{ hostvars['server']['ansible_host'] }}:6443"
+    K3S_TOKEN: "{{ hostvars['server']['k3s_token'] }}"
+  args:
+    creates: /usr/local/bin/k3s
