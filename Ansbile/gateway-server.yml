@@ -5,9 +5,9 @@
   roles:
     - DNS
     - docker_setup
+    - promtail
     - docker_apps
     - nginx_config
     - adguard
     - crowdsec
-    - promtail
     - ufw

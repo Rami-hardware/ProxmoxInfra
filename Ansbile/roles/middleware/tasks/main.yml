@@ -117,6 +117,13 @@
     name: pm2
     global: true
 
+- name: Check if pm2 app is running
+  ansible.builtin.command: pm2 describe alert-forwarder
+  register: middleware_pm2_check
+  failed_when: false
+  changed_when: false
+  become: true
+
 - name: Start the app with pm2
   ansible.builtin.command: pm2 start server.js --name alert-forwarder --update-env
   args:
@@ -124,8 +131,8 @@
     creates: "/root/.pm2/pids/alert-forwarder.pid"
   environment:
     DISCORD_WEBHOOK_URL: "{{ lookup('env', 'DISCORD_WEBHOOK_URL') }}"
+  when: middleware_pm2_check.rc != 0
   become: true
-
 
 - name: Save pm2 process list
   ansible.builtin.command: pm2 save

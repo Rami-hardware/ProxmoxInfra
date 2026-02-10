@@ -13,8 +13,18 @@ http {
     tcp_nodelay on;
     keepalive_timeout 65;
     types_hash_max_size 2048;
+
     include /etc/nginx/mime.types;
     default_type application/octet-stream;
+
+    # === Enable gzip compression globally ===
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+    gzip_min_length 256;
+    gzip_proxied any;
+    gzip_vary on;
+    # === End gzip ===
+
     include /etc/nginx/snippets/*.conf;
     include /etc/nginx/conf.d/*.conf;
 }

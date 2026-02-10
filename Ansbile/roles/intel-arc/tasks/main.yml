@@ -1,0 +1,37 @@
+- name: Ensure universe repo is enabled
+  ansible.builtin.apt_repository:
+    repo: "deb http://archive.ubuntu.com/ubuntu {{ ansible_distribution_release }} universe"
+    state: present
+    filename: "archive_ubuntu_com_universe"  # prevent duplicates
+
+- name: Add Intel Linux Graphics repo key
+  ansible.builtin.apt_key:
+    url: https://repositories.intel.com/graphics/intel-graphics.key
+    state: present
+
+
+- name: Add Intel Linux Graphics repository
+  ansible.builtin.apt_repository:
+    repo: >
+      deb [signed-by=/usr/share/keyrings/intel-graphics-archive-keyring.gpg]
+      https://repositories.intel.com/graphics/ubuntu {{ ansible_distribution_release }} main
+    state: present
+  when: ansible_distribution_release in ["jammy", "focal"]
+
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Install Intel Arc packages
+  ansible.builtin.apt:
+    name: "{{ intel_packages }}"
+    state: present
+  when: ansible_distribution_release in ["jammy", "focal"]
+
+
+- name: Add media user to video and render groups
+  ansible.builtin.user:
+    name: media
+    groups: "video,render"
+    append: true

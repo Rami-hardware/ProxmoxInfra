@@ -1,3 +1,8 @@
 docker_apps_compose_dir: /opt/docker
 docker_apps_compose_file: /opt/docker/docker-compose.yml
 docker_apps_timezone: UTC
+
+docker_apps_qbittorrent_exporter_username: ""
+docker_apps_qbittorrent_exporter_password: ""
+docker_apps_qbittorrent_exporter_base_url: http://localhost:8080
+docker_apps_qbittorrent_exporter_port: 17871

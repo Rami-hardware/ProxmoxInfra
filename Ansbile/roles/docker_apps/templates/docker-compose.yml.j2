@@ -16,6 +16,7 @@ services:
     ports:
       - "8080:8080"
 {% endif %}
+
 {% if 'crowdsec-nginx-bouncer' in docker_apps_enabled %}
   crowdsec-nginx-bouncer:
     image: crowdsecurity/openresty:latest
@@ -24,7 +25,6 @@ services:
     depends_on:
       - crowdsec
       - nginx
-
     environment:
       CROWDSEC_BOUNCER_API_KEY_FILE: /run/secrets/crowdsec_nginx_bouncer_key
       CROWDSEC_AGENT_HOST: crowdsec:8080
@@ -58,29 +58,28 @@ services:
     image: grafana/promtail:latest
     container_name: promtail
     volumes:
-        - "/var/log:/var/log"
-        - "/opt/services/promtail:/etc/promtail"
-    command: -config.file=/etc/promtail/config.yml
+      - "/var/log:/var/log"
+      - "/opt/services/promtail:/etc/promtail"
+    env_file:
+      - /opt/services/promtail/.env   # <-- loads HOSTNAME
+    command: -config.file=/etc/promtail/config.yml -config.expand-env=true
     restart: unless-stopped
 {% endif %}
 
-{% if 'watchtower' in docker_apps_enabled %}
-  watchtower:
-    image: containrrr/watchtower
-    container_name: watchtower
-    logging:
-      driver: loki
-      options:
-        loki-url: "http://192.168.1.203:3100/loki/api/v1/push"
-        loki-retries: "2"
-        loki-max-backoff: "800ms"
-        loki-timeout: "1s"
-        keep-file: "true"
-        mode: "non-blocking"
-    volumes:
-      - "{{ watchtower_run }}"
-    command: --cleanup --interval 3600
+{% if 'cadvisor' in docker_apps_enabled %}
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: cadvisor
     restart: unless-stopped
+    ports:
+      - "8081:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    privileged: true
+    #cgroupns: host
 {% endif %}
 
 {% if 'nginx' in docker_apps_enabled %}
@@ -135,6 +134,28 @@ services:
     restart: unless-stopped
 {% endif %}
 
+{% if 'subsyncer' in docker_apps_enabled %}
+  subsyncarr:
+    image: mrorbitman/subsyncarr:latest
+    container_name: subsyncarr
+    mem_limit: 2g            # limit to 2 GB RAM
+    restart: unless-stopped
+    devices:
+      - /dev/dri:/dev/dri    # grant GPU access for Intel Arc
+    volumes:
+      - /mnt/media/movies:/movies
+      - /mnt/media/tv:/tv
+      - /mnt/config/subsyncarr:/config
+    environment:
+      - TZ=Etc/UTC
+      - SCAN_PATHS=/movies,/tv
+      - MAX_CONCURRENT_SYNC_TASKS=1
+      - INCLUDE_ENGINES=ffsubsync
+      - DOWNLOAD_SUBS=false
+      - FFMPEG_HWACCEL=vaapi 
+
+{% endif %}
+
 {% if 'uptime-kuma' in docker_apps_enabled %}
   uptime-kuma:
     image: louislam/uptime-kuma:latest
@@ -172,7 +193,7 @@ services:
         mode: "non-blocking"
     network_mode: host
     environment:
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ time_zone }}"
     ports:
 {% for port in plex_ports %}
       - "{{ port }}"
@@ -202,8 +223,12 @@ services:
       - "{{ port }}"
 {% endfor %}
     environment:
-      - TZ="{{ TimeZone }}"
-      - NVIDIA_VISIBLE_DEVICES=all
+      - TZ="{{ time_zone }}"
+      - LIBVA_DRIVER_NAME=iHD
+      - VAAPI_DEVICE=/dev/dri/renderD128
+      - JELLYFIN_HWACCEL=vaapi
+    devices:
+      - /dev/dri:/dev/dri
     volumes:
       - "{{ jellyfin_volume_config_dir }}:/config"
       - "{{ jellyfin_volume_media_dir }}:/media"
@@ -231,7 +256,7 @@ services:
       - "{{ port }}"
 {% endfor %}
     environment:
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ time_zone }}"
     volumes:
       - "{{ overseer_volume_config_dir }}"
     restart: unless-stopped
@@ -257,7 +282,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ time_zone }}"
     volumes:
       - "{{ radarr_config }}"
       - "{{ radarr_movies }}"
@@ -285,7 +310,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ time_zone }}"
     volumes:
       - "{{ sonarr_config }}"
       - "{{ sonarr_tv }}"
@@ -313,7 +338,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ time_zone }}"
     volumes:
       - "{{ bazarr_config }}"
       - "{{ bazarr_tv }}"
@@ -341,7 +366,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ time_zone }}"
       - WEBUI_PORT=8080
     volumes:
       - "{{ qbittorrent_config }}"
@@ -369,7 +394,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ time_zone }}"
     volumes:
       - "{{ prowlarr_config }}"
     restart: unless-stopped
@@ -417,7 +442,7 @@ services:
       - "{{ port }}"
 {% endfor %}
     environment:
-      - TZ="{{ TimeZone }}"
+      - TZ="{{ time_zone }}"
       - LOG_LEVEL=info
       - CAPTCHA_SOLVER=none
     restart: unless-stopped
@@ -510,6 +535,20 @@ services:
       - "9090:9090"
     restart: unless-stopped
 {% endif %}
+{% if 'graphite' in docker_apps_enabled %}
+  graphite:
+    image: graphiteapp/graphite-statsd
+    container_name: graphite
+    ports:
+      - "2003:2003"   # Carbon plaintext
+      - "2004:2004"   # Carbon pickle
+      - "7002:7002"   # Carbon cache query
+      - "8080:80"     # Graphite web UI
+      - "8125:8125/udp" # StatsD
+    environment:
+      - GRAPHITE_TIME_ZONE=UTC
+    restart: unless-stopped
+{% endif %}
 
 {% if 'node-exporter' in docker_apps_enabled %}
   node-exporter:
@@ -535,22 +574,17 @@ services:
 {% endif %}
 
 
-{% if 'nextpvr' in docker_apps_enabled %}
-  nextpvr:
-    image: nextpvr/nextpvr_amd64:stable # Use nextpvr/nextpvr_arm32v7:stable for ARM devices like Raspberry Pi
-    container_name: nextpvr
-    restart: unless-stopped
+{% if 'qbittorrent-exporter' in docker_apps_enabled %}
+  qbittorrent-exporter:
+    image: caseyscarborough/qbittorrent-exporter:latest
+    container_name: qbittorrent-exporter
     ports:
-      - "8866:8866" # NextPVR web interface
-    volumes:
-      - /opt/nextpvr/config:/config # Persistent storage for NextPVR configuration
-      - /opt/nextpvr/recordings:/recordings # Storage for recorded TV shows
-      - /opt/nextpvr/buffer:/buffer # Storage for live TV buffer
+      - "17871:17871"
     environment:
-      - PUID=1000 # User ID for permissions (adjust to your user's PUID)
-      - PGID=1000 # Group ID for permissions (adjust to your user's PGID)
-      - TZ=Europe/London # Set your timezone
-
+      QBITTORRENT_USERNAME: "{{ qbittorrent_exporter_username }}"
+      QBITTORRENT_PASSWORD: "{{ qbittorrent_exporter_password }}"
+      QBITTORRENT_BASE_URL: "{{ qbittorrent_exporter_base_url }}"
+    restart: unless-stopped
 {% endif %}
 networks:
   prometheus_network:

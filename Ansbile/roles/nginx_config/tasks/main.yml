@@ -1,3 +1,30 @@
+- name: Ensure nginx cert directory exists
+  ansible.builtin.file:
+    path: /opt/nginx/certs
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy Cloudflare origin certificate
+  ansible.builtin.copy:
+    src: origin.pem
+    dest: /opt/nginx/certs/origin.pem
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nginx container
+
+- name: Deploy Cloudflare origin private key
+  ansible.builtin.copy:
+    src: origin.key
+    dest: /opt/nginx/certs/origin.key
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Reload nginx container
+
+
 - name: Ensure nginx config directories exist
   ansible.builtin.file:
     path: "{{ item }}"

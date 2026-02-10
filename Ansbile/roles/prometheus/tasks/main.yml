@@ -26,25 +26,24 @@
           static_configs:
             - targets: ['192.168.1.201:9100']
 
-        - job_name: 'game_node'
-          static_configs:
-            - targets: ['192.168.1.202:9100']
-
-        - job_name: 'mointer_node'
+        - job_name: 'monitoring_node'
           static_configs:
             - targets: ['192.168.1.203:9100']
 
-        - job_name: 'speedtest'
-          metrics_path: /probe
-          params:
-            script: ['speedtest']
+        - job_name: 'Loki'
           static_configs:
-            - targets: ['192.168.1.203:9469']
-          scrape_interval: 60s
-          scrape_timeout: 30s
+            - targets: ['192.168.1.203:3100']
 
-        - job_name: 'script_exporter'
-          metrics_path: /metrics
+        - job_name: 'qbittorrent'
+          static_configs:
+            - targets: [ '192.168.1.201:17871' ]
+
+        - job_name: 'cAdvisor'
           static_configs:
             - targets:
-                - 192.168.1.203:9469
+                - 192.168.1.201:8081
+
+        - job_name: docker
+          static_configs:
+            - targets:
+                - 192.168.1.201:9323

@@ -5,6 +5,7 @@ docker_apps_enabled:
   - alertmanager
   - prometheus
   - node-exporter
+  - graphite
 
 app_dir: /opt/alert-forwarder
 

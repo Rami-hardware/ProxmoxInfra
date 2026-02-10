@@ -1,5 +1,5 @@
-- name: Deploy Monitor Server Configuration
-  hosts: dev-server
+- name: Deploy monitoring Server Configuration
+  hosts: monitoring-server
   become: true
 
   roles:
@@ -12,4 +12,3 @@
     - loki
     - middleware
     - docker_apps
-   # - speed

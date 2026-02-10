@@ -1,3 +1,7 @@
+- name: Set Promtail hostname fact
+  ansible.builtin.set_fact:
+    promtail_hostname: "{{ ansible_facts['hostname'] }}"
+
 - name: Ensure Promtail config directory exists
   ansible.builtin.file:
     path: /opt/services/promtail
@@ -5,6 +9,14 @@
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
     mode: '0755'
+
+- name: Create .env file for Docker Compose
+  ansible.builtin.copy:
+    dest: /opt/services/promtail/.env
+    content: "HOSTNAME={{ promtail_hostname }}\n"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
 
 - name: Create Promtail config file
   ansible.builtin.copy:
@@ -26,13 +38,15 @@
             - targets: ['localhost']
               labels:
                 job: samba
-                __path__: /var/log/samba/*
+                host: ${HOSTNAME}
+                __path__: /var/log/samba/*.log
 
         - job_name: docker-logs
           static_configs:
             - targets: ['localhost']
               labels:
                 job: docker
+                host: ${HOSTNAME}
                 __path__: /var/log/containers/*.log
 
         - job_name: system
@@ -40,6 +54,7 @@
             - targets: ['localhost']
               labels:
                 job: varlogs
+                host: ${HOSTNAME}
                 __path__: /var/log/{syslog,*.log}
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"

@@ -1,18 +1,19 @@
 docker_apps_enabled:
-  - plex
-  - radarr
-  - sonarr
-  - bazarr
-  - qbittorrent
-  - prowlarr
-  - portainer_agent
-  - overseer
-  - flaresolverr
-  - jellyfin
-  - promtail
-  - node-exporter
-  - watchtower
-  - nextpvr
+  #  - plex
+  #  - radarr
+  #  - sonarr
+  #  - bazarr
+  #  - qbittorrent
+  #  - prowlarr
+  #  - portainer_agent
+  #  - overseer
+  #  - flaresolverr
+  # - jellyfin
+  # - promtail
+  # - cadvisor
+  #  - node-exporter
+  - subsyncer
+  #  - qbittorrent-exporter
 
 service_tcp_ports:
   - 8096 # Jellyfin HTTP
@@ -26,6 +27,8 @@ service_tcp_ports:
   - 9001 # Portainer Agent
   - 8191 # FlareSolverr
   - 32400 # Plex web & DLNA
+  - 8081
+  - 8282
 
 service_udp_ports:
   - 6881 # qBittorrent UDP
@@ -113,6 +116,7 @@ flaresolverr_config: "/opt/flaresolverr:/config"
 
 # Configuration for Promtail
 promtail_var_path: "/var/log:/var/log"
+promtail_config_dir: /opt/services/promtail
 promtail_config_path: "{{ docker_compose_dir }}/promtail-config.yml:/etc/promtail/config.yml"
 
 # Samba settings

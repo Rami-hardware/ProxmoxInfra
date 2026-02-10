@@ -18,13 +18,32 @@ server {
     }
 }
 
-# Dynamic service servers on port 80
+# HTTP → HTTPS redirect
 {% for svc in nginx_services %}
 server {
     listen 80;
-    server_name {{ svc.name }}.respawnxd.co;
+    server_name {{ svc.name }}.darkestserver.com;
+    return 301 https://$host$request_uri;
+}
+{% endfor %}
+
+
+# HTTPS services (Cloudflare origin cert)
+{% for svc in nginx_services %}
+server {
+    listen 443 ssl http2;
+    server_name {{ svc.name }}.darkestserver.com;
+
+    ssl_certificate     /etc/nginx/certs/origin.pem;
+    ssl_certificate_key /etc/nginx/certs/origin.key;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
 
     access_log off;
+
+    {% if svc.streaming | default(false) %}
+    gzip off;
+    {% endif %}
 
     location / {
         proxy_pass http://{{ svc.ip }}:{{ svc.port }};

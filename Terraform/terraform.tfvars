@@ -11,18 +11,9 @@ vms = {
     disks = [
       {
         datastore_id = "local-lvm"
-        interface    = "virtio0"
-        size         = 5
-        file_format  = "qcow2"
-        file_id      = ""
-        iothread     = true
-        discard      = "on"
-      },
-      {
-        datastore_id = "local-lvm"
         interface    = "scsi0"
         size         = 20
-        file_format  = "qcow2"
+        file_format  = "raw"
         file_id      = ""
         iothread     = true
         discard      = "on"
@@ -42,18 +33,9 @@ vms = {
     disks = [
       {
         datastore_id = "local-lvm"
-        interface    = "virtio0"
-        size         = 5
-        file_format  = "qcow2"
-        file_id      = ""
-        iothread     = true
-        discard      = "on"
-      },
-      {
-        datastore_id = "local-lvm"
         interface    = "scsi0"
         size         = 200
-        file_format  = "qcow2"
+        file_format  = "raw"
         file_id      = ""
         iothread     = true
         discard      = "on"
@@ -73,18 +55,9 @@ vms = {
     disks = [
       {
         datastore_id = "local-lvm"
-        interface    = "virtio0"
-        size         = 5
-        file_format  = "qcow2"
-        file_id      = ""
-        iothread     = true
-        discard      = "on"
-      },
-      {
-        datastore_id = "local-lvm"
         interface    = "scsi0"
         size         = 50
-        file_format  = "qcow2"
+        file_format  = "raw"
         file_id      = ""
         iothread     = true
         discard      = "on"
@@ -104,18 +77,9 @@ vms = {
     disks = [
       {
         datastore_id = "local-lvm"
-        interface    = "virtio0"
-        size         = 5
-        file_format  = "qcow2"
-        file_id      = ""
-        iothread     = true
-        discard      = "on"
-      },
-      {
-        datastore_id = "local-lvm"
         interface    = "scsi0"
         size         = 20
-        file_format  = "qcow2"
+        file_format  = "raw"
         file_id      = ""
         iothread     = true
         discard      = "on"
@@ -137,7 +101,7 @@ vms = {
         datastore_id = "local-lvm"
         interface    = "virtio0"
         size         = 5
-        file_format  = "qcow2"
+        file_format  = "raw"
         file_id      = ""
         iothread     = true
         discard      = "on"
@@ -146,7 +110,7 @@ vms = {
         datastore_id = "local-lvm"
         interface    = "scsi0"
         size         = 20
-        file_format  = "qcow2"
+        file_format  = "raw"
         file_id      = ""
         iothread     = true
         discard      = "on"
