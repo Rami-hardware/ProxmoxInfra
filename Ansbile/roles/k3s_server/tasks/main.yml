@@ -1,12 +1,16 @@
 - name: Check if swap is enabled
-  ansible.builtin.command: swapon --summary
-  register: k3s_server_swap_status
+  ansible.builtin.command: swapon --noheadings
+  register: swap_status
   changed_when: false
   failed_when: false
+  ignore_errors: true
 
 - name: Disable swap if any swap is enabled
   ansible.builtin.command: swapoff -a
-  when: swap_status.stdout != ""
+  become: true
+  changed_when: swap_status.stdout != ""
+  when: swap_status is defined and swap_status.stdout != ""
+
 
 - name: Install curl
   ansible.builtin.package:
