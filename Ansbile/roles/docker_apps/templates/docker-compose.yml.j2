@@ -320,7 +320,7 @@ services:
 
 {% if 'bazarr' in docker_apps_enabled %}
   bazarr:
-    image: lscr.io/linuxserver/bazarr:1.5.6-development
+    image: linuxserver/bazarr:latest
     container_name: bazarr
     logging:
       driver: loki
