@@ -10,5 +10,5 @@
     - alertmanager
     - grafana
     - loki
-  #  - middleware
+    - middleware
     - docker_apps
