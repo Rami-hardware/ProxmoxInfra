@@ -562,6 +562,16 @@ services:
     restart: unless-stopped
 {% endif %}
 
+{% if 'nginx_prometheus_exporter' in docker_apps_enabled %}
+  nginx_prometheus_exporter:
+    image: nginx/nginx-prometheus-exporter:1.5.1
+    container_name: nginx_prometheus_exporter
+    ports:
+      - "9113:9113"
+    command:
+      - --nginx.scrape-uri=http://192.168.1.200:8080/stub_status
+{% endif %}
+
 {% if 'node-exporter' in docker_apps_enabled %}
   node-exporter:
     image: prom/node-exporter:latest
