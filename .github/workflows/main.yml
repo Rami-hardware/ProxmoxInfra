@@ -186,10 +186,10 @@ jobs:
           ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
 
       - name: Run Ansible Playbook
+        env:
+          ANSIBLE_VAULT_PASSWORD_FILE: ~/.vault_pass
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          ANSIBLE_HOST_KEY_CHECKING: 'False'
         run: |
           source venv/bin/activate
           ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml
-        env:
-          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          ANSIBLE_HOST_KEY_CHECKING: 'False'
