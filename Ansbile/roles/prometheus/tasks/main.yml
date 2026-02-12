@@ -47,10 +47,3 @@
           static_configs:
             - targets:
                 - 192.168.1.201:9323
-
-- name: Copy Docker rules file
-  ansible.builtin.copy:
-    src: docker.rules.yml
-    dest: "{{ prometheus_rule_file }}"
-    mode: '0644'
-    force: true
