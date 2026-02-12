@@ -2,7 +2,7 @@ docker_apps_enabled:
   #  - plex
   #  - radarr
   #  - sonarr
-  - bazarr
+  #  - bazarr
   #  - qbittorrent
   #  - prowlarr
   #  - portainer_agent
@@ -10,7 +10,7 @@ docker_apps_enabled:
   #  - flaresolverr
   #  - jellyfin
   #  - promtail
-  #  - cadvisor
+  - cadvisor
   #  - node-exporter
   #  - subsyncer
   #  - qbittorrent-exporter

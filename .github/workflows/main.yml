@@ -150,7 +150,7 @@ jobs:
     #    working-directory: Terraform
     #    env:
     #      TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-     #     TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
+    #     TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
     #      TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
     #    run: terraform apply -auto-approve -target="module.proxmox_vms[\"monitoring\"]"
 
@@ -178,11 +178,10 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H 192.168.1.204 >> ~/.ssh/known_hosts || true
 
-
       - name: Run Ansible Playbook
         run: |
           source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           ANSIBLE_HOST_KEY_CHECKING: 'False'

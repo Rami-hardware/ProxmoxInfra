@@ -68,7 +68,7 @@ services:
 
 {% if 'cadvisor' in docker_apps_enabled %}
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    image: gcr.io/cadvisor/cadvisor:latest
     container_name: cadvisor
     restart: unless-stopped
     ports:
