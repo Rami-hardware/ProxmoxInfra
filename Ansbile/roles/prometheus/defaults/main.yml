@@ -1,3 +1,0 @@
-prometheus_config_dir: /opt/docker/prometheus
-prometheus_config_file: "{{ prometheus_config_dir }}/prometheus.yml"
-prometheus_rule_file: "{{ prometheus_config_dir }}/docker.rules.yml"
