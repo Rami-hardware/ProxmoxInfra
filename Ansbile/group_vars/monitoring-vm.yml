@@ -14,3 +14,7 @@ promtail_config_path: "{{ docker_compose_dir }}/promtail-config.yml:/etc/promtai
 
 telegraf_home: /home/telegraf
 telegraf_config_path: /etc/telegraf/telegraf.d/speedtest.conf
+
+prometheus_config_dir: /opt/docker/prometheus
+prometheus_config_file: "{{ prometheus_config_dir }}/prometheus.yml"
+prometheus_rule_file: "{{ prometheus_config_dir }}/docker.rules.yml"
