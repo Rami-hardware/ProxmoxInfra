@@ -66,6 +66,18 @@ services:
     restart: unless-stopped
 {% endif %}
 
+
+{% if 'docker_exporter' in docker_apps_enabled %}
+  docker_exporter:
+    image: prometheusnet/docker_exporter
+    container_name: docker_exporter
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "9417:9417"
+{% endif %}
+
 {% if 'cadvisor' in docker_apps_enabled %}
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
