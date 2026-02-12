@@ -1,6 +1,7 @@
 server {
     listen 81 default_server;
     listen [::]:81 default_server;
+    listen 8080;
 
     root /var/www/html;
     index index.html index.htm index.nginx-debian.html;
@@ -16,7 +17,12 @@ server {
         allow 127.0.0.1;
         deny all;
     }
+    location /status {
+        stub_status;
+    }
 }
+
+
 
 # HTTP → HTTPS redirect
 {% for svc in nginx_services %}
