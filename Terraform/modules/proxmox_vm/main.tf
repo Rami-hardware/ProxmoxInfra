@@ -44,6 +44,17 @@ dynamic "disk" {
     }
   }
 
+dynamic "hostpci" {
+  for_each = var.hostpcis
+  content {
+    device = hostpci.value
+    # optional settings:
+    # pci_model = "vfio-pci"
+    # romfile   = "auto"
+    # iommu     = true
+  }
+}
+
   network_device {
     bridge = "vmbr0"
   }
