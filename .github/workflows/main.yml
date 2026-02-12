@@ -146,13 +146,13 @@ jobs:
           echo "Import complete. Terraform can now manage all existing VMs."
           
 
-    #  - name: Terraform Apply
-    #    working-directory: Terraform
-    #    env:
-    #      TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-    #      TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
-    #      TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-    #    run: terraform apply -auto-approve -target="module.proxmox_vms[\"media\"]"
+      - name: Terraform Apply
+        working-directory: Terraform
+        env:
+          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
+          TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
+          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+        run: terraform apply -auto-approve -target="module.proxmox_vms[\"media\"]"
 
       - name: Install system dependencies
         run: sudo apt update && sudo apt install -y ansible python3-venv python3-pip
