@@ -178,6 +178,13 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H 192.168.1.204 >> ~/.ssh/known_hosts || true
 
+      - name: Create Ansible Vault password file
+        run: |
+          echo "${ANSIBLE_VAULT_PASSWORD}" > ~/.vault_pass
+          chmod 600 ~/.vault_pass
+        env:
+          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+
       - name: Run Ansible Playbook
         run: |
           source venv/bin/activate
