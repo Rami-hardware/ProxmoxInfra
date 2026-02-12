@@ -29,7 +29,7 @@ vms = {
     memory     = 4096
     ciuser     = "media"
     cipassword = "media@123"
-    hostpcis   = ["0000:01:00.0", "0000:01:00.1"]
+    hostpcis   = ["0000:03:00.0", "0000:04:00.0"]
     disks = [
       {
         datastore_id = "local-lvm"
