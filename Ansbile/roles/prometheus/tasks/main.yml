@@ -30,6 +30,10 @@
           static_configs:
             - targets: ['192.168.1.203:9100']
 
+        - job_name: 'host_node'
+          static_configs:
+            - targets: ['192.168.1.250:9100']
+
         - job_name: 'Loki'
           static_configs:
             - targets: ['192.168.1.203:3100']
