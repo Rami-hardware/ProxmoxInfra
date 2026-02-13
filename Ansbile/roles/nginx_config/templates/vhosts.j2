@@ -1,21 +1,16 @@
 server {
-    listen 81 default_server;
-    listen [::]:81 default_server;
     listen 8080;
+    server_name localhost;
 
-    root /var/www/html;
-    index index.html index.htm index.nginx-debian.html;
-
-    server_name _;
-
-    location / {
-        try_files $uri $uri/ =404;
-        root /usr/share/nginx/html;  # Define the root for the server
-        index index.html index.htm;   # Default index files
-    }
     location /status {
-        stub_status on;   # Enable stub status
-        allow all;        # Deny access from all other IPs
+        stub_status;
+        access_log off;
+
+        # Allow Docker network / exporter
+        allow 127.0.0.1;
+        allow ::1;
+        allow 172.16.0.0/12;   # Docker networks
+        deny all;
     }
 }
 
