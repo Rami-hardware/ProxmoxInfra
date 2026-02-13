@@ -1,14 +1,13 @@
-- name: Create Scraparr directory
+- name: Ensure scraparr dir exists
   ansible.builtin.file:
     path: "{{ scraparr_dir }}"
     state: directory
     mode: '0755'
 
-- name: Deploy Scraparr config
+- name: Deploy Scraparr YAML config
   ansible.builtin.template:
-    src: config.cnf.j2
-    dest: "{{ scraparr_dir }}/config.cnf"
+    src: config.yaml.j2
+    dest: "{{ scraparr_dir }}/config.yaml"
     owner: root
     group: root
     mode: '0600'
-  notify: Restart Scraparr
