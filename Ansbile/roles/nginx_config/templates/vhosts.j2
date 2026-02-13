@@ -10,15 +10,12 @@ server {
 
     location / {
         try_files $uri $uri/ =404;
-    }
-
-    location /nginx_status {
-        stub_status;
-        allow 127.0.0.1;
-        deny all;
+        root /usr/share/nginx/html;  # Define the root for the server
+        index index.html index.htm;   # Default index files
     }
     location /status {
-        stub_status;
+        stub_status on;   # Enable stub status
+        allow all;        # Deny access from all other IPs
     }
 }
 
