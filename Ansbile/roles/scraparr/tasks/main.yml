@@ -4,9 +4,10 @@
     state: directory
     mode: '0755'
 
+
 - name: Deploy Scraparr YAML config
   ansible.builtin.template:
-    src: config.yaml.j2
+    src: config.yaml.j2        # matches the file name exactly
     dest: "{{ scraparr_dir }}/config.yaml"
     owner: root
     group: root
