@@ -1,15 +1,13 @@
 server {
     listen 8080;
     server_name localhost;
+    access_log off;
 
     location /status {
         stub_status;
-        access_log off;
 
-        # Allow Docker network / exporter
-        allow 127.0.0.1;
-        allow ::1;
-        allow 172.16.0.0/12;   # Docker networks
+        allow 192.168.1.0/24;
+        allow 172.16.0.0/12;
         deny all;
     }
 }
