@@ -17,8 +17,8 @@
 
 - name: Deploy Scraparr YAML config
   ansible.builtin.template:
-    src: config.yml.j2
-    dest: "{{ scraparr_dir }}"
+    src: config.yaml.j2
+    dest: "{{ scraparr_dir }}/config/config.yaml"
     owner: root
     group: root
     mode: '0600'
