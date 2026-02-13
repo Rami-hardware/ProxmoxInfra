@@ -581,9 +581,10 @@ services:
     ports:
       - "{{ scraparr_port }}:7100"
     volumes:
-      - /opt/scraparr/config.yaml:/scraparr/config/config.yaml:ro
+      - "{{ scraparr_dir }}/config.yaml:/scraparr/config/config.yaml:ro"
     restart: unless-stopped
 {% endif %}
+
 
 {% if 'node-exporter' in docker_apps_enabled %}
   node-exporter:
