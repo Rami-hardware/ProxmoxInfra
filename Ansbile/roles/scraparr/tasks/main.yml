@@ -7,7 +7,7 @@
   ansible.builtin.file:
     path: "{{ scraparr_dir }}/config.yaml"
     state: absent
-  when: config_stat.stat.isdir | default(false)
+  when: scraparr_config_stat.stat.isdir | default(false)
 
 - name: Deploy Scraparr YAML config
   ansible.builtin.template:
