@@ -35,6 +35,9 @@ service_tcp_ports:
 service_udp_ports:
   - 6881 # qBittorrent UDP
 
+scraparr_dir: /opt/scraparr
+scraparr_port: 7100
+
 # Set your timezone
 time_zone: "Asia/Riyadh"
 
