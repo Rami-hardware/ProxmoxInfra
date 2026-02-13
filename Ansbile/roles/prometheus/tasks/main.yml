@@ -57,7 +57,7 @@
             - targets:
                 - 192.168.1.203:9113
 
-        - job_name: 'sonarr_exporter'
+        - job_name: 'scraparr_exporter'
           static_configs:
             - targets:
-                - 192.168.1.201:9707
+                - 192.168.1.201:7100

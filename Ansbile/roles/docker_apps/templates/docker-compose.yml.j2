@@ -573,60 +573,15 @@ services:
       - --nginx.scrape-uri=http://192.168.1.200:8181/status  # Define the scrape URI for NGINX status
 {% endif %}
 
-{% if 'sonarr-exporter' in docker_apps_enabled %}
-  sonarr-exporter:
-      image: ghcr.io/onedr0p/exportarr:v2.0
-      container_name: sonarr-exporter
-      command: ["sonarr"]
-      environment:
-        PORT: 9707
-        URL: "http://192.168.1.201:8989" 
-        APIKEY:  "{{ sonarr_api_key }}" 
-      ports:
-        - "9707:9707"
-      restart: unless-stopped
-{% endif %}
 
-{% if 'radarr-exporter' in docker_apps_enabled %}
-  radarr-exporter:
-    image: ghcr.io/onedr0p/exportarr:v2.0
-    container_name: radarr-exporter
-    command: ["radarr"]
-    environment:
-      PORT: 9708
-      URL: "http://192.168.1.201:7878"
-      APIKEY: "${{ secrets.RADARR_API_KEY }}"
+{% if 'scraparr' in docker_apps_enabled %}
+  scraparr:
+    image: ghcr.io/thecfu/scraparr
+    container_name: scraparr
     ports:
-      - "9708:9708"
-    restart: unless-stopped
-{% endif %}
-
-{% if 'prowlarr-exporter' in docker_apps_enabled %}
-  prowlarr-exporter:
-    image: ghcr.io/onedr0p/exportarr:v2.0
-    container_name: prowlarr-exporter
-    command: ["prowlarr"]
-    environment:
-      PORT: 9710
-      URL: "http://192.168.1.201:9696"  
-      APIKEY: "${{ secrets.PROWLARR_API_KEY }}" 
-    ports:
-      - "9710:9710"
-    restart: unless-stopped
-{% endif %}
-
-{% if 'bazarr-exporter' in docker_apps_enabled %}
-  bazarr-exporter:
-      image: ghcr.io/onedr0p/exportarr:v2.0
-      container_name: bazarr-exporter
-      command: ["bazarr"]
-      environment:
-        PORT: 9712
-        URL: "http://192.168.1.201:6767" # or; http://bazarr:6767
-        APIKEY: "${{ secrets.BAZARR_API_KEY }}" 
-      ports:
-        - "9712:9712"
-      restart: unless-stopped
+      - "7100:7100"
+    volumes:
+      - ./config.yaml:/scraparr/config/config.yaml # For v1 Release use /scraparr/config.cnf and an ini File
 {% endif %}
 
 {% if 'node-exporter' in docker_apps_enabled %}

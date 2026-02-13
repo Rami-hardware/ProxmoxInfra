@@ -15,7 +15,7 @@ docker_apps_enabled:
   #  - subsyncer
   #  - qbittorrent-exporter
   #  - docker_exporter
-  - sonarr-exporter
+  - scraparr
 
 service_tcp_ports:
   - 8096 # Jellyfin HTTP
@@ -31,8 +31,6 @@ service_tcp_ports:
   - 32400 # Plex web & DLNA
   - 8081
   - 8282
-
-sonarr_api_key: "{{ lookup('env', 'SONARR_API_KEY') }}"
 
 service_udp_ports:
   - 6881 # qBittorrent UDP

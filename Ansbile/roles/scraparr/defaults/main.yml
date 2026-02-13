@@ -1,0 +1,5 @@
+scraparr_dir: /opt/scraparr
+scraparr_port: 7100
+
+sonarr:
+  url: http://192.168.1.201:8989
