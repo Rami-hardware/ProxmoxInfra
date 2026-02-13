@@ -11,7 +11,7 @@
 
 - name: Remove old config.yaml if it is a directory
   ansible.builtin.file:
-    path: "{{ scraparr_dir }}/config.yaml"
+    path: "{{ scraparr_dir }}"
     state: absent
   when: scraparr_config_stat.stat.isdir | default(false)
 
