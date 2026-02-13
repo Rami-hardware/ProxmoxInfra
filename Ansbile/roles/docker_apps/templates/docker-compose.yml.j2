@@ -562,15 +562,17 @@ services:
     restart: unless-stopped
 {% endif %}
 
-{% if 'node-exporter' in docker_apps_enabled %}
+{% if 'nginx-exporter' in docker_apps_enabled %}
   nginx-exporter:
     image: nginx/nginx-prometheus-exporter:latest
     container_name: nginx-exporter
     hostname: nginx-exporter
     ports:
       - "9113:9113"  # Expose the exporter on port 9113
-    command: -nginx.scrape-uri=http://192.168.1.200:8181/status  # Define the scrape URI for Nginx status
+    command:
+      - --nginx.scrape-uri=http://192.168.1.200:8181/status  # Define the scrape URI for NGINX status
 {% endif %}
+
 
 
 {% if 'node-exporter' in docker_apps_enabled %}
