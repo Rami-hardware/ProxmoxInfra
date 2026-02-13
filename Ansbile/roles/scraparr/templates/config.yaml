@@ -17,3 +17,8 @@ radarr:
   url: "{{ scraparr_radarr.url }}"
   api_key: "{{ radarr_api_key }}"
   api_version: v3
+
+overseerr:
+  url: "{{ scraparr_overseerr.url }}"
+  api_key: "{{ overseerr_api_key }}"
+  api_version: v3

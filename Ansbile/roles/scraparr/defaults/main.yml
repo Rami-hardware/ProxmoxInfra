@@ -12,3 +12,6 @@ scraparr_prowlarr:
 
 scraparr_radarr:
   url: http://192.168.1.201:7878
+
+scraparr_overseerr:
+  url: http://192.168.1.201:5055
