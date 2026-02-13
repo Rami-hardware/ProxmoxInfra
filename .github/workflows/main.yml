@@ -193,4 +193,4 @@ jobs:
           BAZARR_API_KEY: ${{ secrets.SONARR_API_KEY }}
         run: |
           source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml 
