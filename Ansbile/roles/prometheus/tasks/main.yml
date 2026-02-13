@@ -55,4 +55,4 @@
         - job_name: 'nginx_prometheus_exporter'
           static_configs:
             - targets:
-                - 192.168.1.200:9113
+                - 192.168.1.203:9113

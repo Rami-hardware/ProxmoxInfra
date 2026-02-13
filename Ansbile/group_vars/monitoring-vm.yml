@@ -3,7 +3,7 @@ docker_apps_enabled:
   - loki
   - grafana
   - alertmanager
-  - nginx/nginx-p
+  - nginx-exporter
   - node-exporter
   - graphite
 
