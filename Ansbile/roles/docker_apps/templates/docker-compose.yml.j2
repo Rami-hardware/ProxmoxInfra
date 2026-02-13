@@ -581,7 +581,7 @@ services:
       environment:
         PORT: 9707
         URL: "http://192.168.1.201:8989" 
-        APIKEY: "${{ secrets.SONARR_API_KEY }}"
+        APIKEY:  "{{ bazarr_api_key }}" 
       ports:
         - "9707:9707"
       restart: unless-stopped

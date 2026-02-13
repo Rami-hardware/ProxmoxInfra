@@ -32,6 +32,8 @@ service_tcp_ports:
   - 8081
   - 8282
 
+sonarr_api_key: "{{ lookup('env', 'SONARR_API_KEY') }}"
+
 service_udp_ports:
   - 6881 # qBittorrent UDP
 
