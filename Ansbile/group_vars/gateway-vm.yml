@@ -61,6 +61,7 @@ crowdsec_online_api_secret: K6yiJt6KCOfj0AeXbeWQ4BptCGhEYfdCwrNwrr3NoStJ3BOGyoov
 nginx_ports:
   - "80:80"
   - "443:443"
+  - "8181:8181"
 
 nginx_volumes:
   - /opt/nginx/conf/nginx.conf:/etc/nginx/nginx.conf:ro
