@@ -581,7 +581,7 @@ services:
     ports:
       - "{{ scraparr_port }}:7100"
     volumes:
-      - {{ scraparr_dir }}/config.yaml:/scraparr/config/config.yaml:ro
+      - /opt/scraparr/config.yaml:/scraparr/config/config.yaml:ro
     restart: unless-stopped
 {% endif %}
 

@@ -7,8 +7,8 @@
 
 - name: Deploy Scraparr YAML config
   ansible.builtin.template:
-    src: config.yaml.j2        # matches the file name exactly
-    dest: "{{ scraparr_dir }}/config.yaml"
+    src: config.yaml.j2          # Jinja template
+    dest: "{{ scraparr_dir }}/config.yaml"  # plain YAML file
     owner: root
     group: root
     mode: '0600'
