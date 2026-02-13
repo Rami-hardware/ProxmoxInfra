@@ -579,9 +579,10 @@ services:
     image: ghcr.io/thecfu/scraparr
     container_name: scraparr
     ports:
-      - "7100:7100"
+      - "{{ scraparr_port }}:7100"
     volumes:
-      - ./config.yaml:/scraparr/config/config.yaml # For v1 Release use /scraparr/config.cnf and an ini File
+      - {{ scraparr_dir }}/config.yaml:/scraparr/config/config.yaml:ro
+    restart: unless-stopped
 {% endif %}
 
 {% if 'node-exporter' in docker_apps_enabled %}
