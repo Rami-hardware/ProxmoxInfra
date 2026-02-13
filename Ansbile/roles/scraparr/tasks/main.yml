@@ -1,7 +1,7 @@
 - name: Check if config.yaml exists and is a directory
   ansible.builtin.stat:
     path: "{{ scraparr_dir }}/config.yaml"
-  register: config_stat
+  register: scraparr_config_stat
 
 - name: Remove old config.yaml if it is a directory
   ansible.builtin.file:
