@@ -2,3 +2,18 @@ sonarr:
   url: "{{ scraparr_sonarr.url }}"
   api_key: "{{ sonarr_api_key }}"
   api_version: v3
+
+bazarr:
+  url: "{{ scraparr_bazarr.url }}"
+  api_key: "{{ bazarr_api_key }}"
+  api_version: v3
+
+prowlarr:
+  url: "{{ scraparr_prowlarr.url }}"
+  api_key: "{{ prowlarr_api_key }}"
+  api_version: v3
+
+radarr:
+  url: "{{ scraparr_radarr.url }}"
+  api_key: "{{ radarr_api_key }}"
+  api_version: v3
