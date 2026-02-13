@@ -6,5 +6,6 @@
   # - DNS
   # - docker_setup
   #  - promtail
+    - scraparr
     - docker_apps
   # - ufw
