@@ -197,4 +197,4 @@ jobs:
           OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
         run: |
           source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml
