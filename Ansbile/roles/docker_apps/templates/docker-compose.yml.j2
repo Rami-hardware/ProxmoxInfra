@@ -586,6 +586,21 @@ services:
 {% endif %}
 
 
+
+{% if 'intel-gpu-exporter' in docker_apps_enabled %}
+  intel-gpu-exporter:
+    image: ghcr.io/onedr0p/intel-gpu-exporter:rolling
+    container_name: intel-gpu-exporter
+    restart: unless-stopped
+    privileged: true
+    pid: host
+    ports:
+      - 8080:8080
+    volumes:
+      - /dev/dri/:/dev/dri/
+{% endif %}
+
+
 {% if 'node-exporter' in docker_apps_enabled %}
   node-exporter:
     image: prom/node-exporter:latest

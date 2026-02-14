@@ -19,7 +19,7 @@ bazarr:
 prowlarr:
   url: "{{ scraparr_prowlarr.url }}"
   api_key: "{{ prowlarr_api_key }}"
-  api_version: "v3"
+  api_version: "v1"
 {% endif %}
 
 {% if (radarr_api_key | default('')) | length > 0 %}
