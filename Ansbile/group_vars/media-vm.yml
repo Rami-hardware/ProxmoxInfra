@@ -9,14 +9,14 @@ docker_apps_enabled:
   #  - overseer
   #  - flaresolverr
   #  - jellyfin
-  #  - promtail
+  - promtail
   #  - cadvisor
   #  - node-exporter
   #  - subsyncer
   #  - qbittorrent-exporter
   #  - docker_exporter
   #  - scraparr
-  - intel-gpu-exporter
+  #  - intel-gpu-exporter
 
 service_tcp_ports:
   - 8096 # Jellyfin HTTP
