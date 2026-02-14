@@ -15,9 +15,3 @@ scraparr_radarr:
 
 scraparr_overseerr:
   url: "http://192.168.1.201:5055"
-
-scraparr_osonarr_api_key: ""
-scraparr_obazarr_api_key: ""
-scraparr_oprowlarr_api_key: ""
-scraparr_oradarr_api_key: ""
-scraparr_ooverseerr_api_key: ""

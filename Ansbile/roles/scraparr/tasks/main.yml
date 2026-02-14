@@ -21,6 +21,15 @@
     state: absent
   when: scraparr_config_stat.stat.isdir | default(false)
 
+- name: Debug Scraparr API keys presence
+  ansible.builtin.debug:
+    msg:
+      sonarr: "{{ sonarr_api_key | length }}"
+      bazarr: "{{ bazarr_api_key | length }}"
+      prowlarr: "{{ prowlarr_api_key | length }}"
+      radarr: "{{ radarr_api_key | length }}"
+      overseerr: "{{ overseerr_api_key | length }}"
+
 - name: Deploy Scraparr YAML config
   ansible.builtin.template:
     src: config.yaml.j2
