@@ -66,3 +66,8 @@
           static_configs:
             - targets:
                 - 192.168.1.201:8082
+
+        - job_name: 'promtail'
+          static_configs:
+            - targets:
+                - 192.168.1.201:9080
