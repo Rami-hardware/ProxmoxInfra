@@ -38,6 +38,12 @@ service_udp_ports:
 scraparr_dir: /opt/scraparr
 scraparr_port: 7100
 
+sonarr_api_key: "{{ lookup('env', 'SONARR_API_KEY') | default('', true) }}"
+bazarr_api_key: "{{ lookup('env', 'BAZARR_API_KEY') | default('', true) }}"
+prowlarr_api_key: "{{ lookup('env', 'PROWLARR_API_KEY') | default('', true) }}"
+radarr_api_key: "{{ lookup('env', 'RADARR_API_KEY') | default('', true) }}"
+overseerr_api_key: "{{ lookup('env', 'OVERSEERR_API_KEY') | default('', true) }}"
+
 # Set your timezone
 time_zone: "Asia/Riyadh"
 

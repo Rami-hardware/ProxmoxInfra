@@ -3,25 +3,21 @@ scraparr_port: 7100
 
 scraparr_sonarr:
   url: "http://192.168.1.201:8989"
-  api_key: "{{ scraparr_sonarr_api_key | default('') }}"
-  api_version: "v3"
 
 scraparr_bazarr:
   url: "http://192.168.1.201:6767"
-  api_key: "{{ scraparr_bazarr_api_key | default('') }}"
-  api_version: "v3"
 
 scraparr_prowlarr:
   url: "http://192.168.1.201:9696"
-  api_key: "{{ scraparr_prowlarr_api_key | default('') }}"
-  api_version: "v3"
 
 scraparr_radarr:
   url: "http://192.168.1.201:7878"
-  api_key: "{{ scraparr_radarr_api_key | default('') }}"
-  api_version: "v3"
 
 scraparr_overseerr:
   url: "http://192.168.1.201:5055"
-  api_key: "{{ scraparr_overseerr_api_key | default('') }}"
-  api_version: "v3"
+
+scraparr_osonarr_api_key: ""
+scraparr_obazarr_api_key: ""
+scraparr_oprowlarr_api_key: ""
+scraparr_oradarr_api_key: ""
+scraparr_ooverseerr_api_key: ""
