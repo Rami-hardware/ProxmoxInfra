@@ -1,17 +1,23 @@
-- name: Ensure scraparr dir exists
+- name: Ensure scraparr main directory exists
   ansible.builtin.file:
     path: "{{ scraparr_dir }}"
     state: directory
     mode: '0755'
 
+- name: Ensure scraparr config subdirectory exists
+  ansible.builtin.file:
+    path: "{{ scraparr_dir }}/config"
+    state: directory
+    mode: '0755'
+
 - name: Check if config.yaml exists and is a directory
   ansible.builtin.stat:
-    path: "{{ scraparr_dir }}"
+    path: "{{ scraparr_dir }}/config/config.yaml"
   register: scraparr_config_stat
 
 - name: Remove old config.yaml if it is a directory
   ansible.builtin.file:
-    path: "{{ scraparr_dir }}"
+    path: "{{ scraparr_dir }}/config/config.yaml"
     state: absent
   when: scraparr_config_stat.stat.isdir | default(false)
 
