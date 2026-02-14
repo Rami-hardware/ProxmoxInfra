@@ -588,17 +588,15 @@ services:
 
 
 {% if 'intel-gpu-exporter' in docker_apps_enabled %}
-  intel-gpu-exporter:
-    image: ghcr.io/onedr0p/intel-gpu-exporter:rolling
-    container_name: intel-gpu-exporter
-    restart: unless-stopped
-    privileged: true
-    pid: host
-    ports:
-      - 8282:8282
-    volumes:
-      - /dev/dri/:/dev/dri/
-    entrypoint: ["/bin/sh", "-c", "intel_gpu_top -J -s 1000"]
+    intel-gpu-exporter:
+        devices:
+            - '/dev/dri:/dev/dri'
+        privileged: true
+        ports:
+            - '9100:9100'
+        restart: always
+        container_name: intel-gpu-exporter
+        image: andrewgolikov55/intel-gpu-exporter
 {% endif %}
 
 
