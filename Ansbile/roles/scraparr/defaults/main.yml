@@ -24,5 +24,4 @@ scraparr_radarr:
 scraparr_overseerr:
   url: "http://192.168.1.201:5055"
   api_key: "{{ scraparr_overseerr_api_key | default('') }}"
-  api_version: "v3" 
-
+  api_version: "v3"
