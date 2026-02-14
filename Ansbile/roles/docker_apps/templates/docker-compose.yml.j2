@@ -57,11 +57,14 @@ services:
   promtail:
     image: grafana/promtail:latest
     container_name: promtail
+    user: root
+    ports:
+      - "9080:9080"
     volumes:
       - "/var/log:/var/log"
       - "/opt/services/promtail:/etc/promtail"
     env_file:
-      - /opt/services/promtail/.env   # <-- loads HOSTNAME
+      - /opt/services/promtail/.env
     command: -config.file=/etc/promtail/config.yml -config.expand-env=true
     restart: unless-stopped
 {% endif %}
