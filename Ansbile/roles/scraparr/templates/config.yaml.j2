@@ -1,24 +1,24 @@
 sonarr:
   url: "{{ scraparr_sonarr.url | default('') }}"
-  api_key: "{{ scraparr_sonarr.api_key | default('') }}"
+  api_key: "{{ sonarr_api_key | default('') }}"
   api_version: "{{ scraparr_sonarr.api_version | default('v3') }}"
 
 bazarr:
   url: "{{ scraparr_bazarr.url | default('') }}"
-  api_key: "{{ scraparr_bazarr.api_key | default('') }}"
+  api_key: "{{ bazarr_api_key | default('') }}"
   api_version: "{{ scraparr_bazarr.api_version | default('v3') }}"
 
 prowlarr:
   url: "{{ scraparr_prowlarr.url | default('') }}"
-  api_key: "{{ scraparr_prowlarr.api_key | default('') }}"
+  api_key: "{{ prowlarr_api_key | default('') }}"
   api_version: "{{ scraparr_prowlarr.api_version | default('v3') }}"
 
 radarr:
   url: "{{ scraparr_radarr.url | default('') }}"
-  api_key: "{{ scraparr_radarr.api_key | default('') }}"
+  api_key: "{{ radarr_api_key | default('') }}"
   api_version: "{{ scraparr_radarr.api_version | default('v3') }}"
 
 overseerr:
   url: "{{ scraparr_overseerr.url | default('') }}"
-  api_key: "{{ scraparr_overseerr.api_key | default('') }}"
+  api_key: "{{ overseerr_api_key | default('') }}"
   api_version: "{{ scraparr_overseerr.api_version | default('v3') }}"
