@@ -1,4 +1,4 @@
-{% if sonarr_api_version  | length > 0 %}
+{% if sonarr_api_key | length > 0 %}
 sonarr:
   url: "{{ scraparr_sonarr.url }}"
   api_key: "{{ sonarr_api_key  }}"
