@@ -73,5 +73,7 @@
                 - 192.168.1.201:9080
 
         - job_name: 'speedtest-exporter'
+          scrape_interval: 1h
+          scrape_timeout: 1m
           static_configs:
             - targets: ['192.168.1.203:9798']
