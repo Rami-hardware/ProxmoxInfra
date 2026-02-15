@@ -1,11 +1,12 @@
 docker_apps_enabled:
-  - promtail
-  - loki
-  - grafana
-  - alertmanager
-  - nginx-exporter
-  - node-exporter
-  - graphite
+  #  - promtail
+  #  - loki
+  #  - grafana
+  #  - alertmanager
+  #  - nginx-exporter
+  #  - node-exporter
+  #  - graphite
+  - speedtest-exporter
 
 app_dir: /opt/alert-forwarder
 
