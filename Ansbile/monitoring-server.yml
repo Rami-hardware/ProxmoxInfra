@@ -3,12 +3,12 @@
   become: true
 
   roles:
-    - DNS
-    - docker_setup
-    - promtail
+  #  - DNS
+  #  - docker_setup
+  #  - promtail
     - prometheus
-    - alertmanager
-    - grafana
-    - loki
-    - middleware
+  #  - alertmanager
+  #  - grafana
+  #  - loki
+  #  - middleware
     - docker_apps
