@@ -38,9 +38,12 @@
                 host: ${HOSTNAME}
                 __path__: /var/log/samba/*.log
 
-        - job_name: docker-logs
+        - job_name: docker
+          pipeline_stages:
+            - docker: {}
           static_configs:
-            - targets: ['localhost']
+            - targets:
+                - localhost
               labels:
                 job: docker
                 host: ${HOSTNAME}
