@@ -3,13 +3,12 @@
     path: "{{ prometheus_config_dir }}"
     state: directory
     mode: '0755'
-
 - name: Copy Prometheus main config file
   ansible.builtin.copy:
     dest: "{{ prometheus_config_file }}"
     mode: '0644'
     force: true
-    content: |
+    content: |-
       global:
         scrape_interval: 15s
 
@@ -77,3 +76,7 @@
           scrape_timeout: 1m
           static_configs:
             - targets: ['192.168.1.203:9798']
+        - job_name: cloudflare
+          static_configs:
+            - targets:
+                - 192.168.1.203:8080
