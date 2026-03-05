@@ -55,7 +55,7 @@ services:
 
 {% if 'cloudflare-exporter' in docker_apps_enabled %}
   cloudflare-exporter:
-    image: ghcr.io/cyb3r-jak3/cloudflare_exporter:latest
+    image: teralytics/prometheus-cloudflare-exporter:latest
     container_name: cloudflare-exporter
     environment:
       - CLOUDFLARE_API_TOKEN=${CF_API_TOKEN}
