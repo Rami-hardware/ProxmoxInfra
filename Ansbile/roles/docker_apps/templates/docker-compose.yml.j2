@@ -53,6 +53,16 @@ services:
     restart: unless-stopped
 {% endif %}
 
+{% if 'cloudflare-exporter' in docker_apps_enabled %}
+  cloudflare-exporter:
+    image: lablabs/cloudflare-exporter:latest
+    container_name: cloudflare-exporter
+    environment:
+      - CLOUDFLARE_API_TOKEN=${CF_API_TOKEN}
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+{% endif %}
 {% if 'promtail' in docker_apps_enabled %}
   promtail:
     image: grafana/promtail:latest
