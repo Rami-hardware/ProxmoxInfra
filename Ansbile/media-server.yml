@@ -6,6 +6,5 @@
     # - docker_setup
     #- promtail
     - docker_apps
-
-#  - scraparr
-# - ufw
+    #  - scraparr
+    # - ufw
