@@ -16,7 +16,8 @@ docker_apps_enabled:
 #  - docker_exporter
 #  - scraparr
 #  - intel-gpu-exporter
-- subsyncer
+#  - subsyncer
+- subtitleedit
 service_tcp_ports:
 - 8096 # Jellyfin HTTP
 - 8920 # Jellyfin HTTPS

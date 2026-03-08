@@ -53,16 +53,22 @@ services:
     restart: unless-stopped
 {% endif %}
 
-{% if 'cloudflare-exporter' in docker_apps_enabled %}
-  cloudflare-exporter:
-    image: teralytics/prometheus-cloudflare-exporter:latest
-    container_name: cloudflare-exporter
+{% if 'subtitleedit' in docker_apps_enabled %}
+  subtitleedit:
+    image: ghcr.io/linuxserver/subtitleedit-cli:latest
+    container_name: subtitleedit
+    volumes:
+      - /mnt/media:/media
+      - /config:/config
     environment:
-      - CLOUDFLARE_API_TOKEN=${CF_API_TOKEN}
-    ports:
-      - "8080:8080"
+      - PUID=1000
+      - PGID=1000
+      - TZ=Africa/Cairo
     restart: unless-stopped
 {% endif %}
+
+
+
 {% if 'promtail' in docker_apps_enabled %}
   promtail:
     image: grafana/promtail:latest
