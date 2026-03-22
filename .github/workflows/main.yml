@@ -15,17 +15,6 @@ jobs:
     environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || 'development' }}
     
     steps:
-      - name: Save private key to file
-        run: |
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > id_rsa
-          cat id_rsa
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: recovered-key
-          path: id_rsa
-        
       - name: Checkout code
         uses: actions/checkout@v4
       # runner setup
