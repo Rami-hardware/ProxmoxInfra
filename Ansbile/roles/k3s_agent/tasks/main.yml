@@ -1,14 +1,20 @@
 - name: Check if swap is enabled
-  ansible.builtin.command: swapon --summary
+  ansible.builtin.command: swapon --noheadings
   register: k3s_agent_swap_status
   changed_when: false
   failed_when: false
 
 - name: Disable swap
   ansible.builtin.command: swapoff -a
-  when: swap_status.stdout | trim != ""
-  changed_when: swap_status.stdout | trim != ""
+  when: k3s_agent_swap_status.stdout | length > 0
+  changed_when: k3s_agent_swap_status.stdout | length > 0
 
+- name: Disable swap permanently in fstab
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^(?!#)(.*\sswap\s.*)$'
+    replace: '# \1'
+  register: k3s_agent_swap_fstab
 
 - name: Install curl
   ansible.builtin.package:
@@ -21,11 +27,16 @@
     dest: /usr/local/bin/k3s-install.sh
     mode: '0755'
 
+- name: Check if K3s is already installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+  register: k3s_agent_binary
+
 - name: Install K3s agent
-  ansible.builtin.command: /usr/local/bin/k3s-install.sh
+  ansible.builtin.command:
+    cmd: /usr/local/bin/k3s-install.sh
+    creates: /usr/local/bin/k3s
   environment:
     INSTALL_K3S_VERSION: "{{ k3s_version }}"
     K3S_URL: "https://{{ hostvars['server']['ansible_host'] }}:6443"
-    K3S_TOKEN: "{{ hostvars['server']['k3s_token'] }}"
-  args:
-    creates: /usr/local/bin/k3s
+    K3S_TOKEN: "{{ hostvars['server']['k3s_server_k3s_token'] }}"
