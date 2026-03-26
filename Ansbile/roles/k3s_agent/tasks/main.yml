@@ -30,13 +30,13 @@
 - name: Check if K3s is already installed
   ansible.builtin.stat:
     path: /usr/local/bin/k3s
-  register: k3s_agent_binary
+  register: zk3s_agent_binary
 
 - name: Install K3s agent
   ansible.builtin.command:
     cmd: /usr/local/bin/k3s-install.sh
     creates: /usr/local/bin/k3s
   environment:
-    INSTALL_K3S_VERSION: "{{ k3s_server_version }}"
+    INSTALL_K3S_VERSION: "{{ k3s_agent_version }}"
     K3S_URL: "https://{{ hostvars['server']['ansible_host'] }}:6443"
     K3S_TOKEN: "{{ hostvars['server']['k3s_server_k3s_token'] }}"
