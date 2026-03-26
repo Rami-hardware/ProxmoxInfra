@@ -4,7 +4,7 @@
   roles:
     # - DNS
     # - docker_setup
-    #- promtail
+    # - promtail
     - docker_apps
     #  - scraparr
     # - ufw
