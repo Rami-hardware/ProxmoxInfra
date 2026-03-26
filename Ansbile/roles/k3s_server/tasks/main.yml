@@ -17,13 +17,19 @@
     success_msg: "K3s install script was downloaded successfully"
     fail_msg: "Failed to download K3s install script"
 
+
+- name: Check if K3s is installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+  register: k3s_server_k3s_installation_status
+  ignore_errors: true
+
 - name: Install K3s server if not already installed
   ansible.builtin.command: /usr/local/bin/k3s-install.sh
-  args:
-    creates: /usr/local/bin/k3s
   environment:
     INSTALL_K3S_VERSION: "{{ k3s_server_version }}"
-  when: not ansible_local.k3s.exists
+  when: k3s_installation_status.stat.exists == false
+
 
 - name: Read K3s node token
   ansible.builtin.slurp:
