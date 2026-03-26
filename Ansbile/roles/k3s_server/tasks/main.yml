@@ -1,16 +1,14 @@
+# Ansbile/roles/k3s_server/tasks/main.yml
+
 - name: Check if swap is enabled
   ansible.builtin.command: swapon --noheadings
-  register: k3s_server_swap_status
-  changed_when: false
-  failed_when: false
+  register: k3s_swap_status
   ignore_errors: true
 
 - name: Disable swap if any swap is enabled
   ansible.builtin.command: swapoff -a
   become: true
-  changed_when: swap_status.stdout != ""
-  when: swap_status is defined and swap_status.stdout != ""
-
+  when: k3s_swap_status.stdout != ""
 
 - name: Install curl
   ansible.builtin.package:
@@ -33,8 +31,8 @@
 - name: Read K3s node token
   ansible.builtin.slurp:
     src: /var/lib/rancher/k3s/server/node-token
-  register: k3s_server_k3s_token_raw
+  register: k3s_k3s_token_raw
 
 - name: Set K3s token fact
   ansible.builtin.set_fact:
-    k3s_server_k3s_token: "{{ k3s_token_raw.content | b64decode | trim }}"
+    k3s_server_k3s_token: "{{ k3s_k3s_token_raw.content | b64decode | trim }}"
