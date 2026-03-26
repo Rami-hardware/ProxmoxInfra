@@ -1,14 +1,4 @@
-- name: Check if swap is enabled
-  ansible.builtin.command: swapon --noheadings
-  register: k3s_server_swap_status
-  ignore_errors: true
-
-- name: Disable swap if any swap is enabled
-  ansible.builtin.command: swapoff -a
-  become: true
-  when: k3s_server_swap_status.stdout != ""
-
-- name: Install curl
+- name: Ensure curl is installed
   ansible.builtin.package:
     name: curl
     state: present
@@ -18,19 +8,24 @@
     url: https://get.k3s.io
     dest: /usr/local/bin/k3s-install.sh
     mode: '0755'
+  register: k3s_install_script_download
+  changed_when: "'already exists' not in k3s_install_script_download.stderr"
 
-- name: Install K3s server
+- name: Install K3s server if not already installed
   ansible.builtin.command: /usr/local/bin/k3s-install.sh
-  environment:
-    INSTALL_K3S_VERSION: "{{ k3s_server_version }}"
   args:
     creates: /usr/local/bin/k3s
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_server_version }}"
+  when: not ansible_local.k3s.exists
 
 - name: Read K3s node token
   ansible.builtin.slurp:
     src: /var/lib/rancher/k3s/server/node-token
   register: k3s_server_k3s_token_raw
+  when: ansible_local.k3s | default(false)
 
 - name: Set K3s token fact
   ansible.builtin.set_fact:
     k3s_server_k3s_token: "{{ k3s_server_k3s_token_raw.content | b64decode | trim }}"
+  when: ansible_local.k3s | default(false)
