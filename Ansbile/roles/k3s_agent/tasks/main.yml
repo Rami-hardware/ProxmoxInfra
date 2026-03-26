@@ -36,15 +36,12 @@
   ansible.builtin.slurp:
     src: /var/lib/rancher/k3s/server/node-token
   delegate_to: github-server
+  become: true
   register: k3s_agent_server_token_raw
-  run_once: true
 
-- name: Read K3s token from server
-  ansible.builtin.slurp:
-    src: /var/lib/rancher/k3s/server/node-token
-  delegate_to: github-server
-  register: k3s_agent_server_token_raw
-  run_once: true
+- name: Set token fact for agent
+  ansible.builtin.set_fact:
+    k3s_agent_token: "{{ k3s_agent_server_token_raw.content | b64decode | trim }}"
 
 - name: Install K3s agent
   ansible.builtin.command:
