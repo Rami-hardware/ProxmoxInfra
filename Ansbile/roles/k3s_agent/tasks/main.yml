@@ -30,7 +30,7 @@
 - name: Check if K3s is already installed
   ansible.builtin.stat:
     path: /usr/local/bin/k3s
-  register: zk3s_agent_binary
+  register: k3s_agent_binary
 
 - name: Install K3s agent
   ansible.builtin.command:
