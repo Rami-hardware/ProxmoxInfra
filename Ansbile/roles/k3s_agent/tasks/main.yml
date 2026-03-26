@@ -38,5 +38,5 @@
     creates: /usr/local/bin/k3s
   environment:
     INSTALL_K3S_VERSION: "{{ k3s_agent_version }}"
-    K3S_URL: "https://{{ hostvars['server']['ansible_host'] }}:6443"
-    K3S_TOKEN: "{{ hostvars['server']['k3s_server_k3s_token'] }}"
+    K3S_URL: "https://{{ hostvars['github-server']['ansible_host'] }}:6443"
+    K3S_TOKEN: "{{ hostvars['github-server']['k3s_server_k3s_token'] }}"
