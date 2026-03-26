@@ -1,43 +1,14 @@
-- name: Ensure curl is installed
-  ansible.builtin.package:
-    name: curl
-    state: present
-
-- name: Download K3s install script
-  ansible.builtin.get_url:
-    url: https://get.k3s.io
-    dest: /usr/local/bin/k3s-install.sh
-    mode: '0755'
-  register: k3s_server_k3s_install_script_download
-
-- name: Ensure K3s install script was downloaded successfully
-  ansible.builtin.assert:
-    that:
-      - k3s_server_k3s_install_script_download is succeeded
-    success_msg: "K3s install script was downloaded successfully"
-    fail_msg: "Failed to download K3s install script"
-
-
-- name: Check if K3s is installed
+- name: Check if K3S is installed
   ansible.builtin.stat:
     path: /usr/local/bin/k3s
-  register: k3s_server_k3s_installation_status
+  register: k3s_installation_status
   ignore_errors: true
 
-- name: Install K3s server if not already installed
-  ansible.builtin.command: /usr/local/bin/k3s-install.sh
-  environment:
-    INSTALL_K3S_VERSION: "{{ k3s_server_version }}"
-  when: k3s_installation_status.stat.exists == false
-
-
-- name: Read K3s node token
-  ansible.builtin.slurp:
-    src: /var/lib/rancher/k3s/server/node-token
-  register: k3s_server_k3s_token_raw
-  when: ansible_local.k3s | default(false)
-
-- name: Set K3s token fact
-  ansible.builtin.set_fact:
-    k3s_server_k3s_token: "{{ k3s_server_k3s_token_raw.content | b64decode | trim }}"
-  when: ansible_local.k3s | default(false)
+- name: Install K3S server
+  ansible.builtin.unarchive:
+    src: https://github.com/k3s-io/k3s/releases/download/v1.20.4+k3s1/k3s
+    dest: /usr/local/bin
+    remote_src: true
+  args:
+    creates: /usr/local/bin/k3s
+  when: not k3s_installation_status.stat.exists or "'No such file or directory' not in stderr"
