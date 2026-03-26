@@ -581,6 +581,18 @@ services:
     restart: unless-stopped
 {% endif %}
 
+{% if 'cloudflare_exporter' in docker_apps_enabled %}
+  cloudflare_exporter:
+    image: labbs/cloudflare-exporter:latest
+    container_name: cloudflare_exporter
+    ports:
+      - "9199:8080"
+    environment:
+      - CF_API_TOKEN=YOUR_NEW_API_TOKEN
+    restart: unless-stopped
+{% endif %}
+
+
 {% if 'nginx-exporter' in docker_apps_enabled %}
   nginx-exporter:
     image: nginx/nginx-prometheus-exporter:latest
