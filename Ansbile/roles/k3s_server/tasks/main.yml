@@ -9,7 +9,7 @@
     dest: /usr/local/bin/k3s-install.sh
     mode: '0755'
   register: k3s_install_script_download
-  changed_when: "'already exists' not in k3s_install_script_download.stderr"
+  changed_when: "'already exists' not in k3s_server_k3s_install_script_download.stderr"
 
 - name: Install K3s server if not already installed
   ansible.builtin.command: /usr/local/bin/k3s-install.sh
