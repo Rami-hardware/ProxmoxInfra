@@ -13,10 +13,9 @@
 - name: Ensure K3s install script was downloaded successfully
   ansible.builtin.assert:
     that:
-      - k3s_install_script_download is succeeded
+      - k3s_server_k3s_install_script_download is succeeded
     success_msg: "K3s install script was downloaded successfully"
     fail_msg: "Failed to download K3s install script"
-
 
 - name: Install K3s server if not already installed
   ansible.builtin.command: /usr/local/bin/k3s-install.sh
