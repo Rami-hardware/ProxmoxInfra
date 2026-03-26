@@ -5,10 +5,7 @@
   ignore_errors: true
 
 - name: Install K3S server
-  ansible.builtin.unarchive:
-    src: https://github.com/k3s-io/k3s/releases/download/v1.20.4+k3s1/k3s
-    dest: /usr/local/bin
-    remote_src: true
+  ansible.builtin.command: /usr/local/bin/k3s-install.sh
   args:
     creates: /usr/local/bin/k3s
-  when: not k3s_installation_status.stat.exists or "'No such file or directory' not in stderr"
+  when: k3s_installation_status.stat.exists == false or "'No such file or directory' not in stderr"
