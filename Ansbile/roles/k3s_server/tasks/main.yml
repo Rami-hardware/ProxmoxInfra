@@ -17,8 +17,7 @@
     path: /etc/fstab
     regexp: '^(?!#)(.*\sswap\s.*)$'
     replace: '# \1'
-  register: swap_fstab
-  changed_when: swap_fstab.changed
+  register: k3s_server_swap_fstab
 
 - name: Ensure curl is installed
   ansible.builtin.package:
@@ -34,29 +33,28 @@
 - name: Check if K3s is already installed
   ansible.builtin.stat:
     path: /usr/local/bin/k3s
-  register: k3s_binary
+  register: k3s_server_binary
 
 - name: Install K3s server if not already installed
   ansible.builtin.command:
     cmd: /usr/local/bin/k3s-install.sh
+    creates: /usr/local/bin/k3s
   environment:
     INSTALL_K3S_VERSION: "{{ k3s_server_version }}"
-  when: not k3s_binary.stat.exists
-  changed_when: not k3s_binary.stat.exists
 
 - name: Check if node token exists
   ansible.builtin.stat:
     path: /var/lib/rancher/k3s/server/node-token
-  register: k3s_token_file
+  register: k3s_server_token_file
 
 - name: Read K3s node token
   ansible.builtin.slurp:
     src: /var/lib/rancher/k3s/server/node-token
   register: k3s_server_k3s_token_raw
-  when: k3s_token_file.stat.exists
+  when: k3s_server_token_file.stat.exists
   changed_when: false
 
 - name: Set K3s token fact
   ansible.builtin.set_fact:
     k3s_server_k3s_token: "{{ k3s_server_k3s_token_raw.content | b64decode | trim }}"
-  when: k3s_token_file.stat.exists
+  when: k3s_server_token_file.stat.exists
