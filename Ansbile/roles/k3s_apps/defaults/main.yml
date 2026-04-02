@@ -14,4 +14,4 @@ k3s_apps_manifest_dir: /opt/k3s/manifests
 #   env          - list of { name, value } environment variables
 #   memory_request / memory_limit
 #   cpu_request  / cpu_limit
-k3s_apps: []
+k3s_apps_list: []

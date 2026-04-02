@@ -1,5 +1,5 @@
 ---
-k3s_apps:
+k3s_apps_list:
   - name: overseerr
     namespace: overseerr
     image: sctx/overseerr:latest
