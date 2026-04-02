@@ -1,0 +1,35 @@
+---
+- name: Ensure K3s manifests directory exists
+  ansible.builtin.file:
+    path: "{{ k3s_apps_manifest_dir }}"
+    state: directory
+    mode: '0755'
+
+# Runs on each app's target node (e.g. media-server) via delegate_to
+- name: Ensure app config directories exist on target nodes
+  ansible.builtin.file:
+    path: "{{ item.config_path }}"
+    state: directory
+    mode: '0755'
+  delegate_to: "{{ item.target_node }}"
+  loop: "{{ k3s_apps }}"
+
+# Single template for all apps — item.* variables drive the output
+- name: Template app manifests
+  ansible.builtin.template:
+    src: app.yml.j2
+    dest: "{{ k3s_apps_manifest_dir }}/{{ item.name }}.yml"
+    mode: '0644'
+  loop: "{{ k3s_apps }}"
+
+- name: Apply all K3s app manifests
+  ansible.builtin.command:
+    cmd: "k3s kubectl apply -f {{ k3s_apps_manifest_dir }}"
+  changed_when: true
+  when: k3s_apps | length > 0
+
+- name: Wait for app deployments to be ready
+  ansible.builtin.command:
+    cmd: "k3s kubectl rollout status deployment/{{ item.name }} -n {{ item.namespace }} --timeout=120s"
+  changed_when: false
+  loop: "{{ k3s_apps }}"

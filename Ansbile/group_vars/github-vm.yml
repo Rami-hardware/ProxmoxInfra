@@ -1,0 +1,16 @@
+---
+k3s_apps:
+  - name: overseerr
+    namespace: overseerr
+    image: sctx/overseerr:latest
+    port: 5055
+    node_port: 30055
+    target_node: media-server
+    config_path: /opt/k3s/overseerr/config
+    config_mount: /app/config
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+    memory_request: "128Mi"
+    memory_limit: "512Mi"
+    cpu_request: "100m"
+    cpu_limit: "500m"
