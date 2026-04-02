@@ -72,12 +72,13 @@ services:
 {% if 'promtail' in docker_apps_enabled %}
   promtail:
     image: grafana/promtail:latest
-    container_name: 
+    container_name: promtail
     user: root
     ports:
       - "9080:9080"
     volumes:
       - "/var/log:/var/log"
+      - "/var/lib/docker/containers:/var/lib/docker/containers:ro"
       - "/opt/services/promtail:/etc/promtail"
     env_file:
       - /opt/services/promtail/.env

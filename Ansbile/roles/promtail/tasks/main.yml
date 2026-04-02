@@ -11,7 +11,7 @@
 - name: Create .env file for Docker Compose
   ansible.builtin.copy:
     dest: /opt/services/promtail/.env
-    content: "HOSTNAME={{ promtail_hostname }}\n"
+    content: "HOST_HOSTNAME={{ promtail_hostname }}\n"
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
     mode: '0644'
@@ -35,7 +35,7 @@
             - targets: ['localhost']
               labels:
                 job: samba
-                host: ${HOSTNAME}
+                host: ${HOST_HOSTNAME}
                 __path__: /var/log/samba/*.log
 
         - job_name: docker
@@ -46,7 +46,7 @@
                 - localhost
               labels:
                 job: docker
-                host: ${HOSTNAME}
+                host: ${HOST_HOSTNAME}
                 __path__: /var/lib/docker/containers/*/*-json.log
 
         - job_name: system
@@ -54,7 +54,7 @@
             - targets: ['localhost']
               labels:
                 job: varlogs
-                host: ${HOSTNAME}
+                host: ${HOST_HOSTNAME}
                 __path__: /var/log/{syslog,*.log}
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"

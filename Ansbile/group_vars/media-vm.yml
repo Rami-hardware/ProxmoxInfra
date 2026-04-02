@@ -10,7 +10,7 @@ docker_apps_enabled:
   #  - overseer
   #  - flaresolverr
   #  - jellyfin
-  #  - promtail
+  - promtail
   #  - cadvisor
   #  - node-exporter
   #  - qbittorrent-exporter
