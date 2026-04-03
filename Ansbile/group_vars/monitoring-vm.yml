@@ -16,12 +16,11 @@ prometheus_scrape_interval: 15s
 prometheus_scrape_jobs:
   - name: prometheus
     targets: ["localhost:9090"]
-  - name: gateway_node
-    targets: ["{{ hostvars['gateway-server']['ansible_host'] }}:9100"]
-  - name: media_node
-    targets: ["{{ hostvars['media-server']['ansible_host'] }}:9100"]
-  - name: monitoring_node
-    targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:9100"]
+  - name: node
+    targets:
+      - "{{ hostvars['gateway-server']['ansible_host'] }}:9100"
+      - "{{ hostvars['media-server']['ansible_host'] }}:9100"
+      - "{{ hostvars['monitoring-server']['ansible_host'] }}:9100"
   - name: loki
     targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:3100"]
   - name: qbittorrent
@@ -30,8 +29,6 @@ prometheus_scrape_jobs:
     targets: ["{{ hostvars['media-server']['ansible_host'] }}:8081"]
   - name: docker_exporter
     targets: ["{{ hostvars['media-server']['ansible_host'] }}:9417"]
-  - name: nginx_prometheus_exporter
-    targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:9113"]
   - name: scraparr
     targets: ["{{ hostvars['media-server']['ansible_host'] }}:7100"]
   - name: intel_gpu
