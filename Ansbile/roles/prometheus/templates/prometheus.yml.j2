@@ -1,5 +1,15 @@
 global:
   scrape_interval: {{ prometheus_scrape_interval }}
+  evaluation_interval: {{ prometheus_evaluation_interval }}
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - '{{ prometheus_alertmanager_host }}:{{ prometheus_alertmanager_port }}'
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
 
 scrape_configs:
 {% for job in prometheus_scrape_jobs %}

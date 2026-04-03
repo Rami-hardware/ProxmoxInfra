@@ -562,8 +562,10 @@ services:
     container_name: prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time={{ prometheus_retention_time }}'
+      - '--web.enable-lifecycle'
     volumes:
-      - "/opt/docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro"
+      - "{{ prometheus_config_dir }}:/etc/prometheus:ro"
     ports:
       - "9090:9090"
     restart: unless-stopped

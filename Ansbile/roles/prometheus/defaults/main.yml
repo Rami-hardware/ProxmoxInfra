@@ -2,6 +2,16 @@
 prometheus_config_dir: /opt/docker/prometheus
 prometheus_config_file: "{{ prometheus_config_dir }}/prometheus.yml"
 prometheus_scrape_interval: 15s
+prometheus_evaluation_interval: 15s
+prometheus_retention_time: 30d
+
+prometheus_alertmanager_host: localhost
+prometheus_alertmanager_port: 9093
+
+# Alert thresholds
+prometheus_alert_cpu_threshold: 85
+prometheus_alert_memory_threshold: 85
+prometheus_alert_disk_threshold: 80
 
 # List of scrape jobs. Each entry:
 #   name            - job_name

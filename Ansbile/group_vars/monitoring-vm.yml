@@ -17,33 +17,29 @@ prometheus_scrape_jobs:
   - name: prometheus
     targets: ["localhost:9090"]
   - name: gateway_node
-    targets: ["192.168.1.200:9100"]
+    targets: ["{{ hostvars['gateway-server']['ansible_host'] }}:9100"]
   - name: media_node
-    targets: ["192.168.1.201:9100"]
+    targets: ["{{ hostvars['media-server']['ansible_host'] }}:9100"]
   - name: monitoring_node
-    targets: ["192.168.1.203:9100"]
-  - name: host_node
-    targets: ["192.168.1.250:9100"]
+    targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:9100"]
   - name: loki
-    targets: ["192.168.1.203:3100"]
+    targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:3100"]
   - name: qbittorrent
-    targets: ["192.168.1.201:17871"]
+    targets: ["{{ hostvars['media-server']['ansible_host'] }}:17871"]
   - name: cadvisor
-    targets: ["192.168.1.201:8081"]
+    targets: ["{{ hostvars['media-server']['ansible_host'] }}:8081"]
   - name: docker_exporter
-    targets: ["192.168.1.201:9417"]
+    targets: ["{{ hostvars['media-server']['ansible_host'] }}:9417"]
   - name: nginx_prometheus_exporter
-    targets: ["192.168.1.203:9113"]
+    targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:9113"]
   - name: scraparr
-    targets: ["192.168.1.201:7100"]
+    targets: ["{{ hostvars['media-server']['ansible_host'] }}:7100"]
   - name: intel_gpu
-    targets: ["192.168.1.201:8082"]
+    targets: ["{{ hostvars['media-server']['ansible_host'] }}:8082"]
   - name: promtail
-    targets: ["192.168.1.201:9080"]
-  - name: cloudflare
-    targets: ["192.168.1.203:9199"]
+    targets: ["{{ hostvars['media-server']['ansible_host'] }}:9080"]
   - name: speedtest
-    targets: ["192.168.1.203:9798"]
+    targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:9798"]
     scrape_interval: 1h
     scrape_timeout: 1m
 
