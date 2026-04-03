@@ -1,6 +1,5 @@
 docker_apps_enabled:
   #  - plex
-
   #  - radarr
   #  - sonarr
   #  - bazarr
@@ -10,14 +9,14 @@ docker_apps_enabled:
   #  - overseer
   #  - flaresolverr
   #  - jellyfin
-  - promtail
+  #  - promtail
   #  - cadvisor
-  #  - node-exporter
+  - node-exporter
   #  - qbittorrent-exporter
   #  - docker_exporter
   #  - scraparr
   #  - intel-gpu-exporter
-  - subsyncer
+  #  - subsyncer
 
 service_tcp_ports:
   - 8096 # Jellyfin HTTP
