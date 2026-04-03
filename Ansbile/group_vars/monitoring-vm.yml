@@ -7,7 +7,6 @@ docker_apps_enabled:
   - prometheus
   - node-exporter
   - speedtest-exporter
-  - cloudflare_exporter
 
 # ── Prometheus ────────────────────────────────────────────────────────────────
 prometheus_config_dir: /opt/docker/prometheus
