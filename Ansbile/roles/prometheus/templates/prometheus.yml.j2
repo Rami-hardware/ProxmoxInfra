@@ -8,9 +8,6 @@ alerting:
         - targets:
             - '{{ prometheus_alertmanager_host }}:{{ prometheus_alertmanager_port }}'
 
-rule_files:
-  - /etc/prometheus/rules/*.yml
-
 scrape_configs:
 {% for job in prometheus_scrape_jobs %}
   - job_name: '{{ job.name }}'
