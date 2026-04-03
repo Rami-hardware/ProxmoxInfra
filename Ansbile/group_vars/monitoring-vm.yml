@@ -16,11 +16,13 @@ prometheus_scrape_interval: 15s
 prometheus_scrape_jobs:
   - name: prometheus
     targets: ["localhost:9090"]
-  - name: node
+  - name: VM's
     targets:
       - "{{ hostvars['gateway-server']['ansible_host'] }}:9100"
       - "{{ hostvars['media-server']['ansible_host'] }}:9100"
       - "{{ hostvars['monitoring-server']['ansible_host'] }}:9100"
+  - name: host_node
+    targets: ["{{ hostvars['host-node']['ansible_host'] }}:9100"]
   - name: loki
     targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:3100"]
   - name: qbittorrent
