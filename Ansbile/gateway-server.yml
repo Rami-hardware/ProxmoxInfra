@@ -3,11 +3,11 @@
   become: true
 
   roles:
-    - DNS
-    - docker_setup
-    - promtail
+    # - DNS
+    # - docker_setup
+    # - promtail
     - docker_apps
-    - nginx_config
-    - adguard
-    - crowdsec
-    - ufw
+    # - nginx_config
+    # - adguard
+    # - crowdsec
+    # - ufw
