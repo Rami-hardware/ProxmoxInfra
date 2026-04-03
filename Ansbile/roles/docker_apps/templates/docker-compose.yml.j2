@@ -649,6 +649,7 @@ services:
         keep-file: "true"
         mode: "non-blocking"
     container_name: node-exporter
+    hostname: "{{ ansible_hostname }}"
     command:
       - '--path.rootfs=/host'
     volumes:
