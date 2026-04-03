@@ -71,10 +71,11 @@ prometheus_scrape_jobs:
       instance: media-server
   - name: speedtest
     targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:9798"]
-    labels:
-      instance: monitoring-server
     scrape_interval: 1h
     scrape_timeout: 1m
+    relabel_configs:
+      - target_label: instance
+        replacement: monitoring-server
 
 # ── Loki ──────────────────────────────────────────────────────────────────────
 loki_config_dir: /opt/docker/loki

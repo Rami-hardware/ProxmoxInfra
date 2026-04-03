@@ -31,9 +31,11 @@ scrape_configs:
 {% if job.relabel_configs is defined %}
     relabel_configs:
 {% for rule in job.relabel_configs %}
-      - source_labels: [{{ rule.source_labels | join(', ') }}]
+      - target_label: {{ rule.target_label }}
+{% if rule.source_labels is defined %}
+        source_labels: [{{ rule.source_labels | join(', ') }}]
         regex: '{{ rule.regex }}'
-        target_label: {{ rule.target_label }}
+{% endif %}
         replacement: "{{ rule.replacement }}"
 {% endfor %}
 {% endif %}
