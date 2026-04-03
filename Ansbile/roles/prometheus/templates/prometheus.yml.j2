@@ -10,7 +10,7 @@ alerting:
 
 scrape_configs:
 {% for job in prometheus_scrape_jobs %}
-  - job_name: '{{ job.name }}'
+  - job_name: "{{ job.name }}"
 {% if job.scrape_interval is defined %}
     scrape_interval: {{ job.scrape_interval }}
 {% endif %}
