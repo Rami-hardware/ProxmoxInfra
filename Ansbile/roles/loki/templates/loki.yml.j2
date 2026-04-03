@@ -30,3 +30,5 @@ schema_config:
 
 limits_config:
   allow_structured_metadata: false
+  reject_old_samples: {{ loki_reject_old_samples | lower }}
+  reject_old_samples_max_age: {{ loki_reject_old_samples_max_age }}
