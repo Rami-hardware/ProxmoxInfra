@@ -43,35 +43,47 @@ prometheus_scrape_jobs:
         replacement: "host-node"
   - name: loki
     targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:3100"]
-    labels:
-      instance: monitoring-server
+    relabel_configs:
+      - target_label: instance
+        replacement: monitoring-server
   - name: qbittorrent
     targets: ["{{ hostvars['media-server']['ansible_host'] }}:17871"]
-    labels:
-      instance: media-server
+    relabel_configs:
+      - target_label: instance
+        replacement: media-server
   - name: cadvisor
     targets: ["{{ hostvars['media-server']['ansible_host'] }}:8081"]
-    labels:
-      instance: media-server
+    relabel_configs:
+      - target_label: instance
+        replacement: media-server
   - name: docker_exporter
     targets: ["{{ hostvars['media-server']['ansible_host'] }}:9417"]
-    labels:
-      instance: media-server
+    relabel_configs:
+      - target_label: instance
+        replacement: media-server
   - name: scraparr
     targets: ["{{ hostvars['media-server']['ansible_host'] }}:7100"]
-    labels:
-      instance: media-server
+    relabel_configs:
+      - target_label: instance
+        replacement: media-server
   - name: intel_gpu
     targets: ["{{ hostvars['media-server']['ansible_host'] }}:8082"]
-    labels:
-      instance: media-server
+    relabel_configs:
+      - target_label: instance
+        replacement: media-server
   - name: promtail
     targets: ["{{ hostvars['media-server']['ansible_host'] }}:9080"]
-    labels:
-      instance: media-server
+    relabel_configs:
+      - target_label: instance
+        replacement: media-server
+  - name: zfs_exporter
+    targets: ["{{ hostvars['host-node']['ansible_host'] }}:9134"]
+    relabel_configs:
+      - target_label: instance
+        replacement: host-node
   - name: speedtest
     targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:9798"]
-    scrape_interval: 1h
+    scrape_interval: 10m
     scrape_timeout: 1m
     relabel_configs:
       - target_label: instance
