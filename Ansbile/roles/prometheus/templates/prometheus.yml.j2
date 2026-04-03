@@ -22,4 +22,19 @@ scrape_configs:
 {% for target in job.targets %}
           - '{{ target }}'
 {% endfor %}
+{% if job.labels is defined %}
+        labels:
+{% for key, value in job.labels.items() %}
+          {{ key }}: "{{ value }}"
+{% endfor %}
+{% endif %}
+{% if job.relabel_configs is defined %}
+    relabel_configs:
+{% for rule in job.relabel_configs %}
+      - source_labels: [{{ rule.source_labels | join(', ') }}]
+        regex: '{{ rule.regex }}'
+        target_label: {{ rule.target_label }}
+        replacement: "{{ rule.replacement }}"
+{% endfor %}
+{% endif %}
 {% endfor %}

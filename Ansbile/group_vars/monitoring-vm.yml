@@ -16,13 +16,31 @@ prometheus_scrape_interval: 15s
 prometheus_scrape_jobs:
   - name: prometheus
     targets: ["localhost:9090"]
-  - name: VM's
+  - name: nodes
     targets:
       - "{{ hostvars['gateway-server']['ansible_host'] }}:9100"
       - "{{ hostvars['media-server']['ansible_host'] }}:9100"
       - "{{ hostvars['monitoring-server']['ansible_host'] }}:9100"
-  - name: host_node
-    targets: ["{{ hostvars['host-node']['ansible_host'] }}:9100"]
+      - "{{ hostvars['host-node']['ansible_host'] }}:9100"
+    labels:
+      os: linux
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: "{{ hostvars['gateway-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "gateway-server"
+      - source_labels: [__address__]
+        regex: "{{ hostvars['media-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "media-server"
+      - source_labels: [__address__]
+        regex: "{{ hostvars['monitoring-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "monitoring-server"
+      - source_labels: [__address__]
+        regex: "{{ hostvars['host-node']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "host-node"
   - name: loki
     targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:3100"]
   - name: qbittorrent
