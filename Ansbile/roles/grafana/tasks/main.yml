@@ -1,18 +1,25 @@
+---
 - name: Ensure Grafana data directory exists
   ansible.builtin.file:
-    path: /opt/docker/grafana
+    path: "{{ grafana_data_dir }}"
     state: directory
     mode: '0755'
 
-- name: Set ownership of Grafana data directory to UID 472 (grafana user)
+- name: Ensure Grafana provisioning datasources directory exists
   ansible.builtin.file:
-    path: /opt/docker/grafana
+    path: "{{ grafana_provisioning_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Template Grafana datasources provisioning
+  ansible.builtin.template:
+    src: datasources.yml.j2
+    dest: "{{ grafana_provisioning_dir }}/datasources.yml"
+    mode: '0644'
+
+- name: Set ownership of Grafana data directory to UID 472
+  ansible.builtin.file:
+    path: "{{ grafana_data_dir }}"
     owner: 472
     group: 472
-    recurse: true
-
-- name: Set permissions for Grafana data directory
-  ansible.builtin.file:
-    path: /opt/docker/grafana
-    mode: '0755'
     recurse: true

@@ -519,6 +519,7 @@ services:
       - "3000:3000"
     volumes:
       - /opt/docker/grafana:/opt/docker/grafana
+      - /opt/docker/grafana/provisioning:/etc/grafana/provisioning
     environment:
       - GF_PATHS_DATA=/opt/docker/grafana
     restart: unless-stopped

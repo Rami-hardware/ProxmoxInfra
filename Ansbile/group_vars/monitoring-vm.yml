@@ -1,19 +1,78 @@
+---
 docker_apps_enabled:
-  #  - promtail
-  #  - loki
-  #  - grafana
-  #  - alertmanager
-  #  - nginx-exporter
-  #  - node-exporter
-  #  - graphite
-  #  - speedtest-exporter
-  - cloudflare-exporter
+  - promtail
+  - loki
+  - grafana
+  - alertmanager
+  - prometheus
+  - node-exporter
+  - speedtest-exporter
   - cloudflare_exporter
 
-app_dir: /opt/alert-forwarder
-promtail_var_path: "/var/log:/var/log"
-promtail_config_path: "{{ docker_compose_dir }}/promtail-config.yml:/etc/promtail/config.yml"
-telegraf_home: /home/telegraf
-telegraf_config_path: /etc/telegraf/telegraf.d/speedtest.conf
+# ── Prometheus ────────────────────────────────────────────────────────────────
 prometheus_config_dir: /opt/docker/prometheus
 prometheus_config_file: "{{ prometheus_config_dir }}/prometheus.yml"
+prometheus_scrape_interval: 15s
+
+prometheus_scrape_jobs:
+  - name: prometheus
+    targets: ["localhost:9090"]
+  - name: gateway_node
+    targets: ["192.168.1.200:9100"]
+  - name: media_node
+    targets: ["192.168.1.201:9100"]
+  - name: monitoring_node
+    targets: ["192.168.1.203:9100"]
+  - name: host_node
+    targets: ["192.168.1.250:9100"]
+  - name: loki
+    targets: ["192.168.1.203:3100"]
+  - name: qbittorrent
+    targets: ["192.168.1.201:17871"]
+  - name: cadvisor
+    targets: ["192.168.1.201:8081"]
+  - name: docker_exporter
+    targets: ["192.168.1.201:9417"]
+  - name: nginx_prometheus_exporter
+    targets: ["192.168.1.203:9113"]
+  - name: scraparr
+    targets: ["192.168.1.201:7100"]
+  - name: intel_gpu
+    targets: ["192.168.1.201:8082"]
+  - name: promtail
+    targets: ["192.168.1.201:9080"]
+  - name: cloudflare
+    targets: ["192.168.1.203:9199"]
+  - name: speedtest
+    targets: ["192.168.1.203:9798"]
+    scrape_interval: 1h
+    scrape_timeout: 1m
+
+# ── Loki ──────────────────────────────────────────────────────────────────────
+loki_config_dir: /opt/docker/loki
+loki_http_port: 3100
+
+# ── Alertmanager ──────────────────────────────────────────────────────────────
+alertmanager_config_dir: /opt/docker/alertmanager
+alertmanager_webhook_url: "http://192.168.1.203:3002/Alertmanager"
+alertmanager_resolve_timeout: 5m
+alertmanager_group_wait: 30s
+alertmanager_group_interval: 5m
+alertmanager_repeat_interval: 3h
+
+# ── Grafana ───────────────────────────────────────────────────────────────────
+grafana_data_dir: /opt/docker/grafana
+grafana_provisioning_dir: /opt/docker/grafana/provisioning/datasources
+
+grafana_datasources:
+  - name: Prometheus
+    type: prometheus
+    url: http://192.168.1.203:9090
+    default: true
+  - name: Loki
+    type: loki
+    url: http://192.168.1.203:3100
+    default: false
+
+# ── Promtail ──────────────────────────────────────────────────────────────────
+promtail_config_dir: /opt/services/promtail

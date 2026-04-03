@@ -1,0 +1,18 @@
+global:
+  scrape_interval: {{ prometheus_scrape_interval }}
+
+scrape_configs:
+{% for job in prometheus_scrape_jobs %}
+  - job_name: '{{ job.name }}'
+{% if job.scrape_interval is defined %}
+    scrape_interval: {{ job.scrape_interval }}
+{% endif %}
+{% if job.scrape_timeout is defined %}
+    scrape_timeout: {{ job.scrape_timeout }}
+{% endif %}
+    static_configs:
+      - targets:
+{% for target in job.targets %}
+          - '{{ target }}'
+{% endfor %}
+{% endfor %}

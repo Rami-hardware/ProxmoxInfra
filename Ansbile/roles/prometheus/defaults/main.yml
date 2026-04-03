@@ -1,0 +1,11 @@
+---
+prometheus_config_dir: /opt/docker/prometheus
+prometheus_config_file: "{{ prometheus_config_dir }}/prometheus.yml"
+prometheus_scrape_interval: 15s
+
+# List of scrape jobs. Each entry:
+#   name            - job_name
+#   targets         - list of host:port strings
+#   scrape_interval - (optional) override global interval
+#   scrape_timeout  - (optional) override global timeout
+prometheus_scrape_jobs: []

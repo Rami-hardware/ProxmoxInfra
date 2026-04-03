@@ -1,0 +1,9 @@
+---
+loki_config_dir: /opt/docker/loki
+loki_http_port: 3100
+loki_data_dirs:
+  - /loki/index
+  - /loki/boltdb-cache
+  - /loki/chunks
+  - /loki/compactor
+  - /loki/wal

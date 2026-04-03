@@ -1,82 +1,12 @@
+---
 - name: Ensure Prometheus config directory exists
   ansible.builtin.file:
     path: "{{ prometheus_config_dir }}"
     state: directory
     mode: '0755'
-- name: Copy Prometheus main config file
-  ansible.builtin.copy:
+
+- name: Template Prometheus config
+  ansible.builtin.template:
+    src: prometheus.yml.j2
     dest: "{{ prometheus_config_file }}"
     mode: '0644'
-    force: true
-    content: |-
-      global:
-        scrape_interval: 15s
-
-      scrape_configs:
-        - job_name: 'prometheus'
-          static_configs:
-            - targets: ['localhost:9090']
-
-        - job_name: 'gateway_node'
-          static_configs:
-            - targets: ['192.168.1.200:9100']
-
-        - job_name: 'media_node'
-          static_configs:
-            - targets: ['192.168.1.201:9100']
-
-        - job_name: 'monitoring_node'
-          static_configs:
-            - targets: ['192.168.1.203:9100']
-
-        - job_name: 'host_node'
-          static_configs:
-            - targets: ['192.168.1.250:9100']
-
-        - job_name: 'Loki'
-          static_configs:
-            - targets: ['192.168.1.203:3100']
-
-        - job_name: 'qbittorrent'
-          static_configs:
-            - targets: ['192.168.1.201:17871']
-
-        - job_name: 'cAdvisor'
-          static_configs:
-            - targets:
-                - 192.168.1.201:8081
-
-        - job_name: 'docker_exporter'
-          static_configs:
-            - targets:
-                - 192.168.1.201:9417
-
-        - job_name: 'nginx_prometheus_exporter'
-          static_configs:
-            - targets:
-                - 192.168.1.203:9113
-
-        - job_name: 'scraparr_exporter'
-          static_configs:
-            - targets:
-                - 192.168.1.201:7100
-
-        - job_name: 'intel-gpu-exporter'
-          static_configs:
-            - targets:
-                - 192.168.1.201:8082
-
-        - job_name: 'promtail'
-          static_configs:
-            - targets:
-                - 192.168.1.201:9080
-
-        - job_name: 'speedtest-exporter'
-          scrape_interval: 1h
-          scrape_timeout: 1m
-          static_configs:
-            - targets: ['192.168.1.203:9798']
-        - job_name: cloudflare
-          static_configs:
-            - targets:
-                - 192.168.1.203:8080
