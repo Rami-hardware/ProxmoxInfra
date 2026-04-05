@@ -22,20 +22,39 @@
     mode: '0644'
   loop: "{{ k3s_apps_list }}"
 
-- name: Delete existing PVC from all namespaces to allow PV path/namespace changes
-  ansible.builtin.shell:
-    cmd: |
-      for ns in $(k3s kubectl get namespaces -o jsonpath='{.items[*].metadata.name}'); do
-        k3s kubectl delete pvc {{ item.name }}-config-pvc -n "$ns" --ignore-not-found
-      done
+# Check current PV path — only delete if path changed (PV source is immutable)
+- name: Check current PV host path
+  ansible.builtin.command:
+    cmd: "k3s kubectl get pv {{ item.name }}-config-pv -o jsonpath={.spec.hostPath.path}"
+  register: k3s_apps_pv_check
+  failed_when: false
   changed_when: false
   loop: "{{ k3s_apps_list }}"
 
-- name: Delete existing PV to allow path changes
-  ansible.builtin.command:
-    cmd: "k3s kubectl delete pv {{ item.name }}-config-pv --ignore-not-found"
+- name: Delete PVC when PV path has changed
+  ansible.builtin.shell:
+    cmd: |
+      for ns in $(k3s kubectl get namespaces -o jsonpath='{.items[*].metadata.name}'); do
+        k3s kubectl delete pvc {{ item.item.name }}-config-pvc -n "$ns" --ignore-not-found
+      done
+  loop: "{{ k3s_apps_pv_check.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when:
+    - item.rc == 0
+    - item.stdout != item.item.config_path
   changed_when: false
-  loop: "{{ k3s_apps_list }}"
+
+- name: Delete PV when path has changed
+  ansible.builtin.command:
+    cmd: "k3s kubectl delete pv {{ item.item.name }}-config-pv --ignore-not-found"
+  loop: "{{ k3s_apps_pv_check.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when:
+    - item.rc == 0
+    - item.stdout != item.item.config_path
+  changed_when: false
 
 - name: Apply all K3s app manifests
   ansible.builtin.command:
