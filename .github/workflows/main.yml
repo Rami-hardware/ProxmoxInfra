@@ -116,26 +116,15 @@ jobs:
 
       - name: Fail if any VM would be destroyed
         working-directory: Terraform
-        env:
-          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-          TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
-          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         run: |
-          DESTROYS=$(terraform show -json tfplan | \
-            python3 -c "
-          import sys, json
-          plan = json.load(sys.stdin)
-          destroys = [
-            r['address'] for r in plan.get('resource_changes', [])
-            if 'delete' in r.get('change', {}).get('actions', [])
-          ]
-          if destroys:
-            print('DESTROY detected for: ' + ', '.join(destroys))
-            sys.exit(1)
-          else:
-            print('No destroys detected — safe to apply.')
-          ")
-          echo "$DESTROYS"
+          terraform show tfplan > plan_output.txt
+          cat plan_output.txt
+          if grep -qE "will be destroyed|must be replaced" plan_output.txt; then
+            echo "ERROR: Destroy or replace detected — blocking pipeline."
+            grep -E "will be destroyed|must be replaced" plan_output.txt
+            exit 1
+          fi
+          echo "No destroys detected — safe to proceed."
 
       # ── Ansible ──────────────────────────────────────────────────────────────
       - name: Install system dependencies
