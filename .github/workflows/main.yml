@@ -107,14 +107,30 @@ jobs:
           terraform import -lock=false 'module.proxmox_vms["dev"].proxmox_virtual_environment_vm.vm'        pve/223 || echo "dev already imported"
 
       - name: Terraform plan (compare code vs server)
+        id: plan
         working-directory: Terraform
         env:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
           TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-        run: terraform plan -input=false -no-color -out=tfplan
+        run: |
+          set +e
+          terraform plan -input=false -no-color -detailed-exitcode -out=tfplan
+          EXIT_CODE=$?
+          set -e
+          if [ $EXIT_CODE -eq 1 ]; then
+            echo "Terraform plan failed."
+            exit 1
+          elif [ $EXIT_CODE -eq 2 ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected — will apply."
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes — skipping apply."
+          fi
 
       - name: Fail if any VM would be destroyed
+        if: steps.plan.outputs.has_changes == 'true'
         working-directory: Terraform
         run: |
           terraform show tfplan > plan_output.txt
@@ -127,6 +143,7 @@ jobs:
           echo "No destroys detected — safe to proceed."
 
       - name: Terraform apply
+        if: steps.plan.outputs.has_changes == 'true'
         working-directory: Terraform
         env:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
@@ -174,19 +191,17 @@ jobs:
         env:
           ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
 
-      #- name: Run Ansible playbooks
-      #  env:
-      #    ANSIBLE_VAULT_PASSWORD_FILE: ~/.vault_pass
-      #    ANSIBLE_HOST_KEY_CHECKING: 'False'
-      #    DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-      #    SONARR_API_KEY: ${{ secrets.SONARR_API_KEY }}
-      #    BAZARR_API_KEY: ${{ secrets.BAZARR_API_KEY }}
-      #    PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
-      #    RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
-      #    OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
-      #    CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-      #  run: |
-      #    source venv/bin/activate
-      #    ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml
-      #    ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml
-      #    ansible-playbook -i Ansbile/inventory.ini Ansbile/github-server.yml
+      - name: Run Ansible playbooks
+        env:
+          ANSIBLE_VAULT_PASSWORD_FILE: ~/.vault_pass
+          ANSIBLE_HOST_KEY_CHECKING: 'False'
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          SONARR_API_KEY: ${{ secrets.SONARR_API_KEY }}
+          BAZARR_API_KEY: ${{ secrets.BAZARR_API_KEY }}
+          PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
+          RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
+          OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: |
+          source venv/bin/activate
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml

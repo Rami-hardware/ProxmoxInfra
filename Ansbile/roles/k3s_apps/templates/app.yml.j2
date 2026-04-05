@@ -38,7 +38,7 @@ metadata:
   name: {{ item.name }}
   namespace: {{ item.namespace }}
 spec:
-  replicas: 1
+  replicas: {{ item.replicas | default(1) }}
   selector:
     matchLabels:
       app: {{ item.name }}
