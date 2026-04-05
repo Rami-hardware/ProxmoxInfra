@@ -49,13 +49,13 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: {{ item.target_node }}
-{% if item.gpu | default(false) %}
-      securityContext:
-        privileged: true
-{% endif %}
       containers:
         - name: {{ item.name }}
           image: {{ item.image }}
+{% if item.gpu | default(false) %}
+          securityContext:
+            privileged: true
+{% endif %}
           ports:
             - containerPort: {{ item.port }}
           env:
