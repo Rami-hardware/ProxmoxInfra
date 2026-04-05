@@ -15,3 +15,30 @@ k3s_apps_list:
     memory_limit: "1Gi"
     cpu_request: "200m"
     cpu_limit: "1000m"
+
+  - name: jellyfin
+    namespace: media
+    image: jellyfin/jellyfin:latest
+    port: 8096
+    node_port: 8096
+    target_node: media-server
+    config_path: /opt/jellyfin
+    config_mount: /config
+    replicas: 2
+    gpu: true
+    extra_volumes:
+      - name: media
+        host_path: /mnt/media
+        mount_path: /media
+      - name: cache
+        host_path: /opt/jellyfin/cache
+        mount_path: /cache
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+      - { name: LIBVA_DRIVER_NAME, value: "iHD" }
+      - { name: VAAPI_DEVICE, value: "/dev/dri/renderD128" }
+      - { name: JELLYFIN_HWACCEL, value: "vaapi" }
+    memory_request: "512Mi"
+    memory_limit: "4Gi"
+    cpu_request: "500m"
+    cpu_limit: "3000m"
