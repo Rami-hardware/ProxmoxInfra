@@ -22,6 +22,18 @@
     mode: '0644'
   loop: "{{ k3s_apps_list }}"
 
+- name: Delete existing PVC to allow PV path changes
+  ansible.builtin.command:
+    cmd: "k3s kubectl delete pvc {{ item.name }}-config-pvc -n {{ item.namespace }} --ignore-not-found"
+  changed_when: false
+  loop: "{{ k3s_apps_list }}"
+
+- name: Delete existing PV to allow path changes
+  ansible.builtin.command:
+    cmd: "k3s kubectl delete pv {{ item.name }}-config-pv --ignore-not-found"
+  changed_when: false
+  loop: "{{ k3s_apps_list }}"
+
 - name: Apply all K3s app manifests
   ansible.builtin.command:
     cmd: "k3s kubectl apply --server-side --force-conflicts -f {{ k3s_apps_manifest_dir }}"
