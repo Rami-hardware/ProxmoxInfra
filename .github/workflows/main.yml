@@ -126,6 +126,14 @@ jobs:
           fi
           echo "No destroys detected — safe to proceed."
 
+      - name: Terraform apply
+        working-directory: Terraform
+        env:
+          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
+          TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
+          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+        run: terraform apply -auto-approve tfplan
+
       # ── Ansible ──────────────────────────────────────────────────────────────
       - name: Install system dependencies
         run: sudo apt update && sudo apt install -y ansible python3-venv python3-pip
