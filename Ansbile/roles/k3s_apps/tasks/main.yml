@@ -24,7 +24,7 @@
 
 - name: Apply all K3s app manifests
   ansible.builtin.command:
-    cmd: "k3s kubectl apply -f {{ k3s_apps_manifest_dir }}"
+    cmd: "k3s kubectl apply --server-side --force-conflicts -f {{ k3s_apps_manifest_dir }}"
   changed_when: true
   when: k3s_apps_list | length > 0
 
