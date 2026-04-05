@@ -137,6 +137,7 @@ jobs:
             -target='module.proxmox_vms["gateway"]' \
             -target='module.proxmox_vms["media"]' \
             -target='module.proxmox_vms["monitoring"]' \
+            -target='module.proxmox_vms["github"]' \
             -target='module.proxmox_vms["dev"]'
 
       # ── Ansible ──────────────────────────────────────────────────────────────

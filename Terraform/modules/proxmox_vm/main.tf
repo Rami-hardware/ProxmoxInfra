@@ -59,7 +59,8 @@ dynamic "hostpci" {
       disk,
       initialization,
       clone,
-      hostpci
+      hostpci,
+      cpu
     ]
   }
 
