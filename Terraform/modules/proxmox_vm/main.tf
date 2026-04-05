@@ -54,12 +54,12 @@ dynamic "hostpci" {
     bridge = "vmbr0"
   }
   lifecycle {
-  prevent_destroy = false
-  ignore_changes = [ 
-    "disk",
-    "initialization",
-    "clone"
-   ]
-}
+    prevent_destroy = false
+    ignore_changes = [
+      disk,
+      initialization,
+      clone
+    ]
+  }
 
 }
