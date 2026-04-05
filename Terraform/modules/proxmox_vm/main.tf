@@ -58,7 +58,8 @@ dynamic "hostpci" {
     ignore_changes = [
       disk,
       initialization,
-      clone
+      clone,
+      hostpci
     ]
   }
 
