@@ -14,6 +14,7 @@
         dest: /etc/rancher/k3s/config.yaml
         content: |
           service-node-port-range: "1024-65535"
+          resolv-conf: /run/systemd/resolve/resolv.conf
         mode: '0644'
       notify: Restart k3s
 
