@@ -58,10 +58,10 @@ jobs:
       - name: Ansible syntax check
         run: |
           source venv/bin/activate
-          ansible-playbook Ansbile/gateway-server.yml --syntax-check
-          ansible-playbook Ansbile/media-server.yml --syntax-check
-          ansible-playbook Ansbile/github-server.yml --syntax-check
-          ansible-playbook Ansbile/monitoring-server.yml --syntax-check
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --syntax-check
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml --syntax-check
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml --syntax-check
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml --syntax-check
 
       - name: Ansible lint
         run: |
