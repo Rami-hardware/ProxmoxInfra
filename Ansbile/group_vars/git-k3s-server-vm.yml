@@ -8,7 +8,7 @@ k3s_apps_list:
     target_node: media-server
     config_path: /opt/overseer
     config_mount: /app/config
-    replicas: 2
+    replicas: 1
     env:
       - { name: TZ, value: "Asia/Riyadh" }
     memory_request: "128Mi"
