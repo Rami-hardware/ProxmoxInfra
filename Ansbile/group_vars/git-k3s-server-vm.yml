@@ -1,7 +1,7 @@
 ---
 k3s_apps_list:
   - name: overseerr
-    namespace: overseerr
+    namespace: media
     image: sctx/overseerr:latest
     port: 5055
     node_port: 5055
