@@ -35,7 +35,7 @@
 - name: Read K3s token from server
   ansible.builtin.slurp:
     src: /var/lib/rancher/k3s/server/node-token
-  delegate_to: github-server
+  delegate_to: git-k3s-server
   become: true
   register: k3s_agent_server_token_raw
 
@@ -49,5 +49,5 @@
     creates: /usr/local/bin/k3s
   environment:
     INSTALL_K3S_VERSION: "{{ k3s_agent_version }}"
-    K3S_URL: "https://{{ hostvars['github-server']['ansible_host'] }}:6443"
+    K3S_URL: "https://{{ hostvars['git-k3s-server']['ansible_host'] }}:6443"
     K3S_TOKEN: "{{ k3s_agent_token }}"
