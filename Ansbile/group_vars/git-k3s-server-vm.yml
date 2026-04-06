@@ -67,3 +67,28 @@ k3s_apps_list:
     memory_limit: "1Gi"
     cpu_request: "200m"
     cpu_limit: "1000m"
+
+  - name: radarr
+    namespace: radarr
+    image: linuxserver/radarr:latest
+    port: 7878
+    node_port: 7878
+    target_node: media-server
+    config_path: /opt/radarr
+    config_mount: /config
+    replicas: 2
+    extra_volumes:
+      - name: movies
+        host_path: /mnt/media/movies
+        mount_path: /movies
+      - name: download
+        host_path: /mnt/media/download
+        mount_path: /download
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+      - { name: PUID, value: "1000" }
+      - { name: PGID, value: "1000" }
+    memory_request: "256Mi"
+    memory_limit: "1Gi"
+    cpu_request: "200m"
+    cpu_limit: "1000m"
