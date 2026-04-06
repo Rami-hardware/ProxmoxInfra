@@ -42,3 +42,28 @@ k3s_apps_list:
     memory_limit: "4Gi"
     cpu_request: "500m"
     cpu_limit: "3000m"
+
+  - name: bazarr
+    namespace: bazarr
+    image: linuxserver/bazarr:latest
+    port: 6767
+    node_port: 6767
+    target_node: media-server
+    config_path: /opt/bazarr
+    config_mount: /config
+    replicas: 2
+    extra_volumes:
+      - name: tv
+        host_path: /mnt/media/tv
+        mount_path: /tv
+      - name: movies
+        host_path: /mnt/media/movies
+        mount_path: /movies
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+      - { name: PUID, value: "1000" }
+      - { name: PGID, value: "1000" }
+    memory_request: "256Mi"
+    memory_limit: "1Gi"
+    cpu_request: "200m"
+    cpu_limit: "1000m"
