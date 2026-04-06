@@ -22,16 +22,18 @@
     mode: '0644'
   loop: "{{ k3s_apps_list }}"
 
-# Check current PV path — only delete if path changed (PV source is immutable)
-- name: Check current PV host path
+# Check current PV — delete if path changed OR namespace changed OR PV is Released
+- name: Check current PV state
   ansible.builtin.command:
-    cmd: "k3s kubectl get pv {{ item.name }}-config-pv -o jsonpath={.spec.hostPath.path}"
+    cmd: >
+      k3s kubectl get pv {{ item.name }}-config-pv
+      -o jsonpath={.spec.hostPath.path},{.spec.claimRef.namespace},{.status.phase}
   register: k3s_apps_pv_check
   failed_when: false
   changed_when: false
   loop: "{{ k3s_apps_list }}"
 
-- name: Delete PVC when PV path has changed
+- name: Delete PVC when PV needs to be recreated
   ansible.builtin.shell:
     cmd: |
       for ns in $(k3s kubectl get namespaces -o jsonpath='{.items[*].metadata.name}'); do
@@ -42,10 +44,13 @@
     label: "{{ item.item.name }}"
   when:
     - item.rc == 0
-    - item.stdout != item.item.config_path
+    - >
+      item.stdout.split(',')[0] != item.item.config_path or
+      item.stdout.split(',')[1] != item.item.namespace or
+      item.stdout.split(',')[2] == 'Released'
   changed_when: false
 
-- name: Delete PV when path has changed
+- name: Delete PV when PV needs to be recreated
   ansible.builtin.command:
     cmd: "k3s kubectl delete pv {{ item.item.name }}-config-pv --ignore-not-found"
   loop: "{{ k3s_apps_pv_check.results }}"
@@ -53,7 +58,10 @@
     label: "{{ item.item.name }}"
   when:
     - item.rc == 0
-    - item.stdout != item.item.config_path
+    - >
+      item.stdout.split(',')[0] != item.item.config_path or
+      item.stdout.split(',')[1] != item.item.namespace or
+      item.stdout.split(',')[2] == 'Released'
   changed_when: false
 
 - name: Apply all K3s app manifests
