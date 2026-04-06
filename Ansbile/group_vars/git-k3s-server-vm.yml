@@ -92,3 +92,28 @@ k3s_apps_list:
     memory_limit: "1Gi"
     cpu_request: "200m"
     cpu_limit: "1000m"
+
+  - name: sonarr
+    namespace: media
+    image: linuxserver/sonarr:latest
+    port: 8989
+    node_port: 8989
+    target_node: media-server
+    config_path: /opt/sonarr
+    config_mount: /config
+    replicas: 2
+    extra_volumes:
+      - name: tv
+        host_path: /mnt/media/tv
+        mount_path: /tv
+      - name: download
+        host_path: /mnt/media/download
+        mount_path: /downloads
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+      - { name: PUID, value: "1000" }
+      - { name: PGID, value: "1000" }
+    memory_request: "256Mi"
+    memory_limit: "1Gi"
+    cpu_request: "200m"
+    cpu_limit: "1000m"
