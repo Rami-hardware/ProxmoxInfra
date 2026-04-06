@@ -17,7 +17,7 @@ k3s_apps_list:
     cpu_limit: "1000m"
 
   - name: jellyfin
-    namespace: Jellyfin
+    namespace: jellyfin
     image: jellyfin/jellyfin:latest
     port: 8096
     node_port: 8096
