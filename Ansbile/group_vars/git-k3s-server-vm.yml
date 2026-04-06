@@ -1,7 +1,7 @@
 ---
 k3s_apps_list:
   - name: overseerr
-    namespace: overseerr
+    namespace: media
     image: sctx/overseerr:latest
     port: 5055
     node_port: 5055
@@ -44,7 +44,7 @@ k3s_apps_list:
     cpu_limit: "3000m"
 
   - name: bazarr
-    namespace: bazarr
+    namespace: media
     image: linuxserver/bazarr:latest
     port: 6767
     node_port: 6767
@@ -69,7 +69,7 @@ k3s_apps_list:
     cpu_limit: "1000m"
 
   - name: radarr
-    namespace: radarr
+    namespace: media
     image: linuxserver/radarr:latest
     port: 7878
     node_port: 7878
