@@ -1,7 +1,7 @@
 ---
 k3s_apps_list:
   - name: overseerr
-    namespace: media
+    namespace: overseerr
     image: sctx/overseerr:latest
     port: 5055
     node_port: 5055
@@ -17,14 +17,14 @@ k3s_apps_list:
     cpu_limit: "1000m"
 
   - name: jellyfin
-    namespace: media
+    namespace: Jellyfin
     image: jellyfin/jellyfin:latest
     port: 8096
     node_port: 8096
     target_node: media-server
     config_path: /opt/jellyfin
     config_mount: /config
-    replicas: 2
+    replicas: 1
     gpu: true
     extra_volumes:
       - name: media
