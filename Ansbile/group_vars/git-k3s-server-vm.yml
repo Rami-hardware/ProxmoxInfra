@@ -76,7 +76,7 @@ k3s_apps_list:
     target_node: media-server
     config_path: /opt/radarr
     config_mount: /config
-    replicas: 1
+    replicas: 2
     extra_volumes:
       - name: movies
         host_path: /mnt/media/movies
