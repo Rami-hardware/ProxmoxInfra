@@ -76,7 +76,7 @@ k3s_apps_list:
     target_node: media-server
     config_path: /opt/radarr
     config_mount: /config
-    replicas: 2
+    replicas: 1
     extra_volumes:
       - name: movies
         host_path: /mnt/media/movies
@@ -101,7 +101,7 @@ k3s_apps_list:
     target_node: media-server
     config_path: /opt/sonarr
     config_mount: /config
-    replicas: 2
+    replicas: 1
     extra_volumes:
       - name: tv
         host_path: /mnt/media/tv
