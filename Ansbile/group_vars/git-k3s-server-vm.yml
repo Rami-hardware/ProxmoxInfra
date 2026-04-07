@@ -194,35 +194,6 @@ k3s_apps_list:
     cpu_request: "100m"
     cpu_limit: "500m"
 
-  - name: cadvisor
-    namespace: monitoring
-    image: gcr.io/cadvisor/cadvisor:latest
-    port: 8080
-    node_port: 8081
-    target_node: git-k3s-server
-    skip_pv: true
-    privileged: true
-    replicas: 1
-    extra_volumes:
-      - name: rootfs
-        host_path: /
-        mount_path: /rootfs
-      - name: var-run
-        host_path: /var/run
-        mount_path: /var/run
-      - name: sys
-        host_path: /sys
-        mount_path: /sys
-      - name: docker
-        host_path: /var/lib/docker
-        mount_path: /var/lib/docker
-    env:
-      - { name: TZ, value: "Asia/Riyadh" }
-    memory_request: "256Mi"
-    memory_limit: "1Gi"
-    cpu_request: "100m"
-    cpu_limit: "500m"
-
   - name: intel-gpu-exporter
     namespace: monitoring
     image: ghcr.io/onedr0p/intel-gpu-exporter:rolling

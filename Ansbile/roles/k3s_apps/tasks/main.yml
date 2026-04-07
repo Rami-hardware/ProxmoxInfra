@@ -14,6 +14,13 @@
   delegate_to: "{{ item.target_node }}"
   loop: "{{ k3s_apps_list | selectattr('config_path', 'defined') | list }}"
 
+# cadvisor runs as a DaemonSet with RBAC — deployed via its own manifest
+- name: Template cadvisor DaemonSet manifest
+  ansible.builtin.template:
+    src: cadvisor-daemonset.yml.j2
+    dest: "{{ k3s_apps_manifest_dir }}/cadvisor.yml"
+    mode: '0644'
+
 # Deploy promtail config if promtail is in the app list
 - name: Deploy promtail config
   ansible.builtin.template:
@@ -34,7 +41,9 @@
   ansible.builtin.command:
     cmd: "k3s kubectl delete -f {{ item.path }} --ignore-not-found"
   loop: "{{ k3s_apps_existing_manifests.files }}"
-  when: (item.path | basename | splitext)[0] not in (k3s_apps_list | map(attribute='name') | list)
+  when: >
+    (item.path | basename | splitext)[0] not in
+    (k3s_apps_list | map(attribute='name') | list) + ['cadvisor']
   changed_when: true
 
 - name: Remove stale manifest files
@@ -42,7 +51,9 @@
     path: "{{ item.path }}"
     state: absent
   loop: "{{ k3s_apps_existing_manifests.files }}"
-  when: (item.path | basename | splitext)[0] not in (k3s_apps_list | map(attribute='name') | list)
+  when: >
+    (item.path | basename | splitext)[0] not in
+    (k3s_apps_list | map(attribute='name') | list) + ['cadvisor']
 
 # Single template for all apps — item.* variables drive the output
 - name: Template app manifests
