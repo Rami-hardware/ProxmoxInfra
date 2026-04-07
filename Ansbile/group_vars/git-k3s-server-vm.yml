@@ -199,7 +199,7 @@ k3s_apps_list:
     image: gcr.io/cadvisor/cadvisor:latest
     port: 8080
     node_port: 8081
-    target_node: media-server
+    target_node: git-k3s-server
     skip_pv: true
     privileged: true
     replicas: 1
