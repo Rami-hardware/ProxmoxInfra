@@ -360,6 +360,8 @@ k3s_apps_list:
     config_path: /opt/docker/loki
     config_mount: /etc/loki
     replicas: 1
+    args:
+      - "-config.file=/etc/loki/config.yml"
     memory_request: "256Mi"
     memory_limit: "1Gi"
     cpu_request: "200m"
