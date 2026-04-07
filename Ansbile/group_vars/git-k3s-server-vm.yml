@@ -1,7 +1,4 @@
 ---
-qbittorrent_exporter_username: "{{ docker_apps_qbittorrent_exporter_username }}"
-qbittorrent_exporter_password: "{{ docker_apps_qbittorrent_exporter_password }}"
-
 k3s_apps_list:
   - name: overseerr
     namespace: media
@@ -260,7 +257,7 @@ k3s_apps_list:
       - name: QBITTORRENT_PASSWORD
         value: "{{ qbittorrent_exporter_password }}"
       - name: QBITTORRENT_BASE_URL
-        value: "http://{{ hostvars['media-server']['ansible_host'] }}:8080"
+        value: "{{ qbittorrent_exporter_base_url }}"
     memory_request: "64Mi"
     memory_limit: "256Mi"
     cpu_request: "50m"
