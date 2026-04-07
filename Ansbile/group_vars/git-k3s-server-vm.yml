@@ -168,7 +168,7 @@ k3s_apps_list:
       - { name: TZ, value: "Asia/Riyadh" }
       - { name: PUID, value: "1000" }
       - { name: PGID, value: "1000" }
-      - { name: SCAN_PATHS, value: /movies, /tv }
+      - { name: SCAN_PATHS, value: "/movies,/tv" }
       - { name: MAX_CONCURRENT_SYNC_TASKS, value: 1 }
       - { name: INCLUDE_ENGINES, value: ffsubsync }
       - { name: DOWNLOAD_SUBS, value: false }

@@ -78,8 +78,10 @@ spec:
             - "{{ arg }}"
 {% endfor %}
 {% endif %}
+{% if item.port is defined %}
           ports:
             - containerPort: {{ item.port }}
+{% endif %}
 {% if item.env | default([]) | length > 0 %}
           env:
 {% for env_var in item.env %}
