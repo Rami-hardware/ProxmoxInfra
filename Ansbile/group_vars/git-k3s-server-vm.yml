@@ -252,9 +252,12 @@ k3s_apps_list:
     skip_pv: true
     replicas: 1
     env:
-      - { name: QBITTORRENT_USERNAME, value: "{{ qbittorrent_exporter_username }}" }
-      - { name: QBITTORRENT_PASSWORD, value: "{{ qbittorrent_exporter_password }}" }
-      - { name: QBITTORRENT_BASE_URL, value: "http://{{ hostvars['media-server']['ansible_host'] }}:8080" }
+      - name: QBITTORRENT_USERNAME
+        value: "{{ qbittorrent_exporter_username }}"
+      - name: QBITTORRENT_PASSWORD
+        value: "{{ qbittorrent_exporter_password }}"
+      - name: QBITTORRENT_BASE_URL
+        value: "http://{{ hostvars['media-server']['ansible_host'] }}:8080"
     memory_request: "64Mi"
     memory_limit: "256Mi"
     cpu_request: "50m"
