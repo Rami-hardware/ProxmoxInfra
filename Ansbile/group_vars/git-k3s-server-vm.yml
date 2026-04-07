@@ -357,8 +357,8 @@ k3s_apps_list:
     port: 3100
     node_port: 3100
     target_node: monitoring-server
-    config_path: /opt/docker/loki/config.yml
-    config_mount: /etc/loki/config.yml
+    config_path: /opt/docker/loki
+    config_mount: /etc/loki
     replicas: 1
     memory_request: "256Mi"
     memory_limit: "1Gi"
