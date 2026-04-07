@@ -1,4 +1,7 @@
 ---
+qbittorrent_exporter_username: "{{ docker_apps_qbittorrent_exporter_username }}"
+qbittorrent_exporter_password: "{{ docker_apps_qbittorrent_exporter_password }}"
+
 k3s_apps_list:
   - name: overseerr
     namespace: media
