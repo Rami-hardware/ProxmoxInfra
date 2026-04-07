@@ -310,3 +310,23 @@ k3s_apps_list:
     memory_limit: "1Gi"
     cpu_request: "200m"
     cpu_limit: "1000m"
+
+  - name: grafana
+    namespace: monitoring
+    image: grafana/grafana:latest
+    port: 3000
+    node_port: 3000
+    target_node: monitoring-server
+    config_path: /opt/docker/grafana
+    config_mount: /opt/docker/grafana
+    replicas: 1
+    extra_volumes:
+      - name: tv
+        host_path: /opt/docker/grafana/provisioning
+        mount_path: /etc/grafana/provisioning
+    env:
+      - { name: GF_PATHS_DATA, value: /opt/docker/grafana }
+    memory_request: "256Mi"
+    memory_limit: "1Gi"
+    cpu_request: "200m"
+    cpu_limit: "1000m"
