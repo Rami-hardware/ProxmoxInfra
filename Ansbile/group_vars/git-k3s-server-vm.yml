@@ -321,7 +321,7 @@ k3s_apps_list:
     config_mount: /opt/docker/grafana
     replicas: 1
     extra_volumes:
-      - name: tv
+      - name: provisioning
         host_path: /opt/docker/grafana/provisioning
         mount_path: /etc/grafana/provisioning
     env:
