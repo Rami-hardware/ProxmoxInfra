@@ -16,6 +16,15 @@
   loop: "{{ k3s_apps_list }}"
   when: not (item.skip_pv | default(false))
 
+# Deploy promtail config if promtail is in the app list
+- name: Deploy promtail config
+  ansible.builtin.template:
+    src: promtail-config.yml.j2
+    dest: /opt/promtail/config.yml
+    mode: '0644'
+  delegate_to: media-server
+  when: k3s_apps_list | selectattr('name', 'equalto', 'promtail') | list | length > 0
+
 # Remove manifests for apps that were deleted from k3s_apps_list
 - name: Find existing app manifests on disk
   ansible.builtin.find:

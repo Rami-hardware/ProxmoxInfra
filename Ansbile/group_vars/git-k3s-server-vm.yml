@@ -286,6 +286,9 @@ k3s_apps_list:
       - name: docker-containers
         host_path: /var/lib/docker/containers
         mount_path: /var/lib/docker/containers
+      - name: pods
+        host_path: /var/log/pods
+        mount_path: /var/log/pods
     env:
       - { name: TZ, value: "Asia/Riyadh" }
     memory_request: "128Mi"
