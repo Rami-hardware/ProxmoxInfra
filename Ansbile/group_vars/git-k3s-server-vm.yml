@@ -350,3 +350,17 @@ k3s_apps_list:
     memory_limit: "1Gi"
     cpu_request: "200m"
     cpu_limit: "1000m"
+
+  - name: loki
+    namespace: monitoring
+    image: grafana/loki:latest
+    port: 3100
+    node_port: 3100
+    target_node: monitoring-server
+    config_path: /opt/docker/loki/config.yml
+    config_mount: /etc/loki/config.yml
+    replicas: 1
+    memory_request: "256Mi"
+    memory_limit: "1Gi"
+    cpu_request: "200m"
+    cpu_limit: "1000m"
