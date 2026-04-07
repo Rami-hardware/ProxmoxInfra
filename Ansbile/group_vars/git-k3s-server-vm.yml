@@ -8,7 +8,7 @@ k3s_apps_list:
     target_node: media-server
     config_path: /opt/overseer
     config_mount: /app/config
-    replicas: 2
+    replicas: 1
     env:
       - { name: TZ, value: "Asia/Riyadh" }
     memory_request: "256Mi"
@@ -92,6 +92,205 @@ k3s_apps_list:
     memory_limit: "1Gi"
     cpu_request: "200m"
     cpu_limit: "1000m"
+
+  - name: prowlarr
+    namespace: media
+    image: linuxserver/prowlarr:latest
+    port: 9696
+    node_port: 9696
+    target_node: media-server
+    config_path: /opt/prowlarr
+    config_mount: /config
+    replicas: 1
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+      - { name: PUID, value: "1000" }
+      - { name: PGID, value: "1000" }
+    memory_request: "128Mi"
+    memory_limit: "512Mi"
+    cpu_request: "100m"
+    cpu_limit: "500m"
+
+  - name: qbittorrent
+    namespace: media
+    image: linuxserver/qbittorrent:latest
+    port: 8080
+    node_port: 8080
+    target_node: media-server
+    config_path: /opt/qbittorrent
+    config_mount: /config
+    replicas: 1
+    extra_volumes:
+      - name: downloads
+        host_path: /mnt/media/download
+        mount_path: /downloads
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+      - { name: PUID, value: "1000" }
+      - { name: PGID, value: "1000" }
+      - { name: WEBUI_PORT, value: "8080" }
+    memory_request: "256Mi"
+    memory_limit: "2Gi"
+    cpu_request: "200m"
+    cpu_limit: "2000m"
+
+  - name: flaresolverr
+    namespace: media
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    port: 8191
+    node_port: 8191
+    target_node: media-server
+    skip_pv: true
+    replicas: 1
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+      - { name: LOG_LEVEL, value: "info" }
+    memory_request: "512Mi"
+    memory_limit: "2Gi"
+    cpu_request: "200m"
+    cpu_limit: "1000m"
+
+  - name: subsyncarr
+    namespace: media
+    image: vansmak/subsyncarr:latest
+    port: 8000
+    node_port: 8000
+    target_node: media-server
+    config_path: /opt/subsyncarr
+    config_mount: /config
+    replicas: 1
+    extra_volumes:
+      - name: media
+        host_path: /mnt/media
+        mount_path: /media
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+      - { name: PUID, value: "1000" }
+      - { name: PGID, value: "1000" }
+    memory_request: "128Mi"
+    memory_limit: "512Mi"
+    cpu_request: "100m"
+    cpu_limit: "500m"
+
+  - name: scraparr
+    namespace: media
+    image: scraparr/scraparr:latest
+    port: 9090
+    node_port: 9090
+    target_node: media-server
+    config_path: /opt/scraparr
+    config_mount: /config
+    replicas: 1
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+    memory_request: "128Mi"
+    memory_limit: "512Mi"
+    cpu_request: "100m"
+    cpu_limit: "500m"
+
+  - name: cadvisor
+    namespace: monitoring
+    image: gcr.io/cadvisor/cadvisor:latest
+    port: 8080
+    node_port: 9091
+    target_node: media-server
+    skip_pv: true
+    privileged: true
+    replicas: 1
+    extra_volumes:
+      - name: rootfs
+        host_path: /
+        mount_path: /rootfs
+      - name: var-run
+        host_path: /var/run
+        mount_path: /var/run
+      - name: sys
+        host_path: /sys
+        mount_path: /sys
+      - name: docker
+        host_path: /var/lib/docker
+        mount_path: /var/lib/docker
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+    memory_request: "256Mi"
+    memory_limit: "1Gi"
+    cpu_request: "100m"
+    cpu_limit: "500m"
+
+  - name: intel-gpu-exporter
+    namespace: monitoring
+    image: ghcr.io/onedr0p/intel-gpu-exporter:rolling
+    port: 8080
+    node_port: 9092
+    target_node: media-server
+    skip_pv: true
+    privileged: true
+    replicas: 1
+    extra_volumes:
+      - name: dri
+        host_path: /dev/dri
+        mount_path: /dev/dri
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+    memory_request: "64Mi"
+    memory_limit: "256Mi"
+    cpu_request: "50m"
+    cpu_limit: "200m"
+
+  - name: promtail
+    namespace: monitoring
+    image: grafana/promtail:latest
+    port: 9080
+    node_port: 9080
+    target_node: media-server
+    config_path: /opt/promtail
+    config_mount: /etc/promtail
+    replicas: 1
+    args:
+      - "-config.file=/etc/promtail/promtail.yaml"
+    extra_volumes:
+      - name: varlog
+        host_path: /var/log
+        mount_path: /var/log
+      - name: pods
+        host_path: /var/lib/rancher/k3s/agent/containerd
+        mount_path: /run/containerd
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+    memory_request: "128Mi"
+    memory_limit: "512Mi"
+    cpu_request: "100m"
+    cpu_limit: "500m"
+
+  - name: node-exporter
+    namespace: monitoring
+    image: prom/node-exporter:latest
+    port: 9100
+    node_port: 9100
+    target_node: media-server
+    skip_pv: true
+    privileged: true
+    replicas: 1
+    args:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/host"
+    extra_volumes:
+      - name: proc
+        host_path: /proc
+        mount_path: /host/proc
+      - name: sys
+        host_path: /sys
+        mount_path: /host/sys
+      - name: rootfs
+        host_path: /
+        mount_path: /host
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+    memory_request: "64Mi"
+    memory_limit: "256Mi"
+    cpu_request: "50m"
+    cpu_limit: "200m"
 
   - name: sonarr
     namespace: media

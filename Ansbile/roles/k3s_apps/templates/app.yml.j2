@@ -3,10 +3,16 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: {{ item.namespace }}
-{% if k3s_apps_list | selectattr('namespace', 'equalto', item.namespace) | selectattr('gpu', 'defined') | selectattr('gpu') | list | length > 0 %}
+{% set ns_needs_privileged = (
+    k3s_apps_list | selectattr('namespace', 'equalto', item.namespace) | selectattr('gpu', 'defined') | selectattr('gpu') | list | length > 0
+  ) or (
+    k3s_apps_list | selectattr('namespace', 'equalto', item.namespace) | selectattr('privileged', 'defined') | selectattr('privileged') | list | length > 0
+  ) %}
+{% if ns_needs_privileged %}
   labels:
     pod-security.kubernetes.io/enforce: privileged
 {% endif %}
+{% if not (item.skip_pv | default(false)) %}
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -35,6 +41,7 @@ spec:
       storage: 1Gi
   volumeName: {{ item.name }}-config-pv
   storageClassName: ""
+{% endif %}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -61,20 +68,32 @@ spec:
       containers:
         - name: {{ item.name }}
           image: {{ item.image }}
-{% if item.gpu | default(false) %}
+{% if item.gpu | default(false) or item.privileged | default(false) %}
           securityContext:
             privileged: true
 {% endif %}
+{% if item.args | default([]) | length > 0 %}
+          args:
+{% for arg in item.args %}
+            - "{{ arg }}"
+{% endfor %}
+{% endif %}
           ports:
             - containerPort: {{ item.port }}
+{% if item.env | default([]) | length > 0 %}
           env:
 {% for env_var in item.env %}
             - name: {{ env_var.name }}
               value: "{{ env_var.value }}"
 {% endfor %}
+{% endif %}
+{% set has_mounts = (not (item.skip_pv | default(false))) or (item.extra_volumes | default([]) | length > 0) or (item.gpu | default(false)) %}
+{% if has_mounts %}
           volumeMounts:
+{% if not (item.skip_pv | default(false)) %}
             - name: config
               mountPath: {{ item.config_mount }}
+{% endif %}
 {% for vol in item.extra_volumes | default([]) %}
             - name: {{ vol.name }}
               mountPath: {{ vol.mount_path }}
@@ -83,6 +102,7 @@ spec:
             - name: dri
               mountPath: /dev/dri
 {% endif %}
+{% endif %}
           resources:
             requests:
               memory: "{{ item.memory_request }}"
@@ -90,10 +110,13 @@ spec:
             limits:
               memory: "{{ item.memory_limit }}"
               cpu: "{{ item.cpu_limit }}"
+{% if has_mounts %}
       volumes:
+{% if not (item.skip_pv | default(false)) %}
         - name: config
           persistentVolumeClaim:
             claimName: {{ item.name }}-config-pvc
+{% endif %}
 {% for vol in item.extra_volumes | default([]) %}
         - name: {{ vol.name }}
           hostPath:
@@ -103,6 +126,7 @@ spec:
         - name: dri
           hostPath:
             path: /dev/dri
+{% endif %}
 {% endif %}
 ---
 apiVersion: v1
