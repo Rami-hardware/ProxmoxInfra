@@ -6,13 +6,17 @@
     mode: '0755'
 
 # Runs on each app's target node — only apps with a config_path (i.e. not skip_pv)
+# loop_control loop_var avoids Ansible resolving delegate_to before item is bound
 - name: Ensure app config directories exist on target nodes
   ansible.builtin.file:
-    path: "{{ item.config_path }}"
+    path: "{{ app.config_path }}"
     state: directory
     mode: '0755'
-  delegate_to: "{{ item.target_node }}"
+  delegate_to: "{{ app.target_node }}"
   loop: "{{ k3s_apps_list | selectattr('config_path', 'defined') | list }}"
+  loop_control:
+    loop_var: app
+    label: "{{ app.name }}"
 
 # cadvisor runs as a DaemonSet with RBAC — deployed via its own manifest
 - name: Template cadvisor DaemonSet manifest
