@@ -128,6 +128,7 @@ spec:
             path: /dev/dri
 {% endif %}
 {% endif %}
+{% if item.port is defined %}
 ---
 apiVersion: v1
 kind: Service
@@ -142,3 +143,4 @@ spec:
     - port: {{ item.port }}
       targetPort: {{ item.port }}
       nodePort: {{ item.node_port }}
+{% endif %}
