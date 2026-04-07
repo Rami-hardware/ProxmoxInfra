@@ -330,3 +330,21 @@ k3s_apps_list:
     memory_limit: "1Gi"
     cpu_request: "200m"
     cpu_limit: "1000m"
+
+  - name: prometheus
+    namespace: monitoring
+    image: prom/prometheus:latest
+    port: 9090
+    node_port: 9090
+    target_node: monitoring-server
+    config_path: /opt/docker/prometheus
+    config_mount: /etc/prometheus
+    replicas: 1
+    args:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time={{ prometheus_retention_time }}"
+      - "--web.enable-lifecycle"
+    memory_request: "256Mi"
+    memory_limit: "1Gi"
+    cpu_request: "200m"
+    cpu_limit: "1000m"
