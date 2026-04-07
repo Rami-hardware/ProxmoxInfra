@@ -16,6 +16,27 @@
   loop: "{{ k3s_apps_list }}"
   when: not (item.skip_pv | default(false))
 
+# Remove manifests for apps that were deleted from k3s_apps_list
+- name: Find existing app manifests on disk
+  ansible.builtin.find:
+    paths: "{{ k3s_apps_manifest_dir }}"
+    patterns: "*.yml"
+  register: k3s_apps_existing_manifests
+
+- name: Delete resources and manifest for removed apps
+  ansible.builtin.command:
+    cmd: "k3s kubectl delete -f {{ item.path }} --ignore-not-found"
+  loop: "{{ k3s_apps_existing_manifests.files }}"
+  when: (item.path | basename | splitext)[0] not in (k3s_apps_list | map(attribute='name') | list)
+  changed_when: true
+
+- name: Remove stale manifest files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ k3s_apps_existing_manifests.files }}"
+  when: (item.path | basename | splitext)[0] not in (k3s_apps_list | map(attribute='name') | list)
+
 # Single template for all apps — item.* variables drive the output
 - name: Template app manifests
   ansible.builtin.template:
