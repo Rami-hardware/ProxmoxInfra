@@ -236,29 +236,6 @@ k3s_apps_list:
     cpu_request: "50m"
     cpu_limit: "200m"
 
-  - name: node-exporter
-    namespace: monitoring
-    image: prom/node-exporter:latest
-    port: 9100
-    node_port: 9100
-    target_node: media-server
-    skip_pv: true
-    privileged: true
-    host_pid: true
-    replicas: 1
-    args:
-      - "--path.rootfs=/host"
-    extra_volumes:
-      - name: rootfs
-        host_path: /
-        mount_path: /host
-    env:
-      - { name: TZ, value: "Asia/Riyadh" }
-    memory_request: "64Mi"
-    memory_limit: "256Mi"
-    cpu_request: "50m"
-    cpu_limit: "200m"
-
   - name: promtail
     namespace: monitoring
     image: grafana/promtail:latest

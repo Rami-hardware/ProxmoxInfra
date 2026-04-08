@@ -25,6 +25,13 @@
     dest: "{{ k3s_apps_manifest_dir }}/cadvisor.yml"
     mode: '0644'
 
+# node-exporter runs as a DaemonSet on all nodes (media, monitoring, git-k3s-server)
+- name: Template node-exporter DaemonSet manifest
+  ansible.builtin.template:
+    src: node-exporter-daemonset.yml.j2
+    dest: "{{ k3s_apps_manifest_dir }}/node-exporter.yml"
+    mode: '0644'
+
 # Deploy promtail config if promtail is in the app list
 - name: Deploy promtail config
   ansible.builtin.template:
@@ -47,7 +54,7 @@
   loop: "{{ k3s_apps_existing_manifests.files }}"
   when: >
     (item.path | basename | splitext)[0] not in
-    (k3s_apps_list | map(attribute='name') | list) + ['cadvisor']
+    (k3s_apps_list | map(attribute='name') | list) + ['cadvisor', 'node-exporter']
   changed_when: true
 
 - name: Remove stale manifest files
@@ -57,7 +64,7 @@
   loop: "{{ k3s_apps_existing_manifests.files }}"
   when: >
     (item.path | basename | splitext)[0] not in
-    (k3s_apps_list | map(attribute='name') | list) + ['cadvisor']
+    (k3s_apps_list | map(attribute='name') | list) + ['cadvisor', 'node-exporter']
 
 # Single template for all apps — item.* variables drive the output
 - name: Template app manifests
