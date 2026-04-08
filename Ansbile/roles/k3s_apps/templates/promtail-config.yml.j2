@@ -14,7 +14,7 @@ scrape_configs:
       - targets:
           - localhost
         labels:
-          host: media-server
+          host: ${NODE_NAME}
           __path__: /var/log/pods/*/*/*.log
     pipeline_stages:
       - cri: {}
@@ -24,7 +24,7 @@ scrape_configs:
       - targets:
           - localhost
         labels:
-          host: media-server
+          host: ${NODE_NAME}
           __path__: /var/lib/docker/containers/*/*.log
     pipeline_stages:
       - json:
@@ -42,5 +42,5 @@ scrape_configs:
           - localhost
         labels:
           job: varlogs
-          host: media-server
+          host: ${NODE_NAME}
           __path__: /var/log/*.log

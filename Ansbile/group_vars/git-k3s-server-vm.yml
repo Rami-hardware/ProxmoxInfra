@@ -236,35 +236,6 @@ k3s_apps_list:
     cpu_request: "50m"
     cpu_limit: "200m"
 
-  - name: promtail
-    namespace: monitoring
-    image: grafana/promtail:latest
-    port: 9080
-    node_port: 9080
-    target_node: media-server
-    config_path: /opt/promtail
-    config_mount: /etc/promtail
-    replicas: 1
-    args:
-      - "-config.file=/etc/promtail/config.yml"
-      - "-config.expand-env=true"
-    extra_volumes:
-      - name: varlog
-        host_path: /var/log
-        mount_path: /var/log
-      - name: docker-containers
-        host_path: /var/lib/docker/containers
-        mount_path: /var/lib/docker/containers
-      - name: pods
-        host_path: /var/log/pods
-        mount_path: /var/log/pods
-    env:
-      - { name: TZ, value: "Asia/Riyadh" }
-    memory_request: "128Mi"
-    memory_limit: "512Mi"
-    cpu_request: "100m"
-    cpu_limit: "500m"
-
   - name: sonarr
     namespace: media
     image: linuxserver/sonarr:latest
