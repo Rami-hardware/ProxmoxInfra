@@ -366,3 +366,19 @@ k3s_apps_list:
     memory_limit: "1Gi"
     cpu_request: "200m"
     cpu_limit: "1000m"
+
+  - name: alertmanager
+    namespace: monitoring
+    image: prom/alertmanager:latest
+    port: 9093
+    node_port: 9093
+    target_node: monitoring-server
+    config_path: /opt/docker/alertmanager
+    config_mount: /etc/alertmanager
+    replicas: 1
+    args:
+      - "--config.file=/etc/alertmanager/config.yml"
+    memory_request: "256Mi"
+    memory_limit: "1Gi"
+    cpu_request: "200m"
+    cpu_limit: "1000m"
