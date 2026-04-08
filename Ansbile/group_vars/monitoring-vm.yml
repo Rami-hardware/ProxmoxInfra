@@ -58,15 +58,10 @@ prometheus_scrape_jobs:
         replacement: media-server
   - name: cadvisor
     targets:
-      - "{{ hostvars['git-k3s-server']['ansible_host'] }}:8080"
+      - "cadvisor.monitoring.svc.cluster.local:8080"
     relabel_configs:
       - target_label: instance
         replacement: "git-k3s-server"
-  - name: docker_exporter
-    targets: ["{{ hostvars['media-server']['ansible_host'] }}:9417"]
-    relabel_configs:
-      - target_label: instance
-        replacement: media-server
   - name: scraparr
     targets: ["{{ hostvars['media-server']['ansible_host'] }}:7100"]
     relabel_configs:

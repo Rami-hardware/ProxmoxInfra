@@ -330,3 +330,15 @@ k3s_apps_list:
     memory_limit: "256Mi"
     cpu_request: "25m"
     cpu_limit: "200m"
+
+  - name: speedtest-exporter
+    namespace: monitoring
+    image: miguelndecarvalho/speedtest-exporter
+    port: 9798
+    node_port: 9798
+    target_node: monitoring-server
+    replicas: 1
+    memory_request: "64Mi"
+    memory_limit: "256Mi"
+    cpu_request: "25m"
+    cpu_limit: "200m"
