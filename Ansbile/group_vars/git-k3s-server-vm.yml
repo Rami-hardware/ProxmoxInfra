@@ -276,10 +276,10 @@ k3s_apps_list:
         mount_path: /etc/grafana/provisioning
     env:
       - { name: GF_PATHS_DATA, value: /opt/docker/grafana }
-    memory_request: "256Mi"
-    memory_limit: "1Gi"
-    cpu_request: "200m"
-    cpu_limit: "1000m"
+    memory_request: "128Mi"
+    memory_limit: "512Mi"
+    cpu_request: "50m"
+    cpu_limit: "500m"
 
   - name: prometheus
     namespace: monitoring
@@ -296,7 +296,7 @@ k3s_apps_list:
       - "--web.enable-lifecycle"
     memory_request: "256Mi"
     memory_limit: "1Gi"
-    cpu_request: "200m"
+    cpu_request: "100m"
     cpu_limit: "1000m"
 
   - name: loki
@@ -310,10 +310,10 @@ k3s_apps_list:
     replicas: 1
     args:
       - "-config.file=/etc/loki/config.yml"
-    memory_request: "256Mi"
-    memory_limit: "1Gi"
-    cpu_request: "200m"
-    cpu_limit: "1000m"
+    memory_request: "128Mi"
+    memory_limit: "512Mi"
+    cpu_request: "50m"
+    cpu_limit: "500m"
 
   - name: alertmanager
     namespace: monitoring
@@ -326,7 +326,7 @@ k3s_apps_list:
     replicas: 1
     args:
       - "--config.file=/etc/alertmanager/config.yml"
-    memory_request: "256Mi"
-    memory_limit: "1Gi"
-    cpu_request: "200m"
-    cpu_limit: "1000m"
+    memory_request: "64Mi"
+    memory_limit: "256Mi"
+    cpu_request: "25m"
+    cpu_limit: "200m"
