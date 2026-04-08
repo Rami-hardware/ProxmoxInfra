@@ -58,21 +58,9 @@ prometheus_scrape_jobs:
         replacement: media-server
   - name: cadvisor
     targets:
-      - "{{ hostvars['media-server']['ansible_host'] }}:8080"
-      - "{{ hostvars['monitoring-server']['ansible_host'] }}:8080"
       - "{{ hostvars['git-k3s-server']['ansible_host'] }}:8080"
     relabel_configs:
-      - source_labels: [__address__]
-        regex: "{{ hostvars['media-server']['ansible_host'] }}:.*"
-        target_label: instance
-        replacement: "media-server"
-      - source_labels: [__address__]
-        regex: "{{ hostvars['monitoring-server']['ansible_host'] }}:.*"
-        target_label: instance
-        replacement: "monitoring-server"
-      - source_labels: [__address__]
-        regex: "{{ hostvars['git-k3s-server']['ansible_host'] }}:.*"
-        target_label: instance
+      - target_label: instance
         replacement: "git-k3s-server"
   - name: docker_exporter
     targets: ["{{ hostvars['media-server']['ansible_host'] }}:9417"]
