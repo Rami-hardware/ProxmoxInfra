@@ -26,6 +26,12 @@
     mode: '0644'
 
 # node-exporter runs as a DaemonSet on all nodes (media, monitoring, git-k3s-server)
+# Delete old Deployment if it exists — it was previously managed by the generic app template
+- name: Remove node-exporter Deployment if present (replaced by DaemonSet)
+  ansible.builtin.command:
+    cmd: k3s kubectl delete deployment node-exporter -n monitoring --ignore-not-found
+  changed_when: false
+
 - name: Template node-exporter DaemonSet manifest
   ansible.builtin.template:
     src: node-exporter-daemonset.yml.j2
