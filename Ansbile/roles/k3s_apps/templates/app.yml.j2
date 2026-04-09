@@ -65,7 +65,7 @@ spec:
     spec:
 {% if item.host_network | default(false) %}
       hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
+      dnsPolicy: Default
 {% endif %}
 {% if item.host_pid | default(false) %}
       hostPID: true
