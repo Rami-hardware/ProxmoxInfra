@@ -69,9 +69,9 @@ spec:
           securityContext:
             privileged: true
           args:
-            - "--port=8082"
+            - "--port=7676"
           ports:
-            - containerPort: 8082
+            - containerPort: 7676
               name: http
           volumeMounts:
             - name: rootfs
@@ -131,6 +131,6 @@ spec:
     app: cadvisor
   ports:
     - name: http
-      port: 8082
-      targetPort: 8082
+      port: 7676
+      targetPort: 7676
   type: ClusterIP

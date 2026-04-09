@@ -58,7 +58,7 @@ prometheus_scrape_jobs:
         replacement: media-server
   - name: cadvisor
     targets:
-      - "{{ hostvars['git-k3s-server']['ansible_host'] }}:8082"
+      - "{{ hostvars['git-k3s-server']['ansible_host'] }}:7676"
     relabel_configs:
       - target_label: instance
         replacement: "git-k3s-server"
@@ -68,7 +68,7 @@ prometheus_scrape_jobs:
       - target_label: instance
         replacement: media-server
   - name: intel_gpu
-    targets: ["{{ hostvars['media-server']['ansible_host'] }}:8082"]
+    targets: ["{{ hostvars['media-server']['ansible_host'] }}:7676"]
     relabel_configs:
       - target_label: instance
         replacement: media-server
