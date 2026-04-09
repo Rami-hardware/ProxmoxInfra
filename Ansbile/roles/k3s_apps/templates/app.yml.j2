@@ -66,6 +66,15 @@ spec:
 {% if item.host_network | default(false) %}
       hostNetwork: true
       dnsPolicy: Default
+{% elif item.dns_policy is defined %}
+      dnsPolicy: {{ item.dns_policy }}
+{% if item.dns_nameservers is defined %}
+      dnsConfig:
+        nameservers:
+{% for ns in item.dns_nameservers %}
+          - "{{ ns }}"
+{% endfor %}
+{% endif %}
 {% endif %}
 {% if item.host_pid | default(false) %}
       hostPID: true

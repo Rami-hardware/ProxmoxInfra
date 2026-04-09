@@ -338,7 +338,10 @@ k3s_apps_list:
     node_port: 9798
     target_node: monitoring-server
     skip_pv: true
-    host_network: true
+    dns_policy: None
+    dns_nameservers:
+      - "8.8.8.8"
+      - "8.8.4.4"
     replicas: 1
     memory_request: "64Mi"
     memory_limit: "256Mi"
