@@ -68,8 +68,10 @@ spec:
           image: gcr.io/cadvisor/cadvisor:v0.49.1
           securityContext:
             privileged: true
+          args:
+            - "--port=8082"
           ports:
-            - containerPort: 8080
+            - containerPort: 8082
               name: http
           volumeMounts:
             - name: rootfs
@@ -129,6 +131,6 @@ spec:
     app: cadvisor
   ports:
     - name: http
-      port: 8080
-      targetPort: 8080
+      port: 8082
+      targetPort: 8082
   type: ClusterIP
