@@ -25,6 +25,13 @@
     dest: "{{ k3s_apps_manifest_dir }}/cadvisor.yml"
     mode: '0644'
 
+# kube-state-metrics — enriches cAdvisor metrics with K8s labels (namespace, pod, container)
+- name: Template kube-state-metrics manifest
+  ansible.builtin.template:
+    src: kube-state-metrics.yml.j2
+    dest: "{{ k3s_apps_manifest_dir }}/kube-state-metrics.yml"
+    mode: '0644'
+
 # node-exporter runs as a DaemonSet on all nodes (media, monitoring, git-k3s-server)
 # Delete old Deployment if it exists — it was previously managed by the generic app template
 - name: Remove node-exporter Deployment if present (replaced by DaemonSet)
@@ -89,7 +96,7 @@
   loop: "{{ k3s_apps_existing_manifests.files }}"
   when: >
     (item.path | basename | splitext)[0] not in
-    (k3s_apps_list | map(attribute='name') | list) + ['cadvisor', 'node-exporter', 'promtail']
+    (k3s_apps_list | map(attribute='name') | list) + ['cadvisor', 'node-exporter', 'promtail', 'kube-state-metrics']
   changed_when: true
 
 - name: Remove stale manifest files
@@ -99,7 +106,7 @@
   loop: "{{ k3s_apps_existing_manifests.files }}"
   when: >
     (item.path | basename | splitext)[0] not in
-    (k3s_apps_list | map(attribute='name') | list) + ['cadvisor', 'node-exporter', 'promtail']
+    (k3s_apps_list | map(attribute='name') | list) + ['cadvisor', 'node-exporter', 'promtail', 'kube-state-metrics']
 
 # Single template for all apps — item.* variables drive the output
 - name: Template app manifests
