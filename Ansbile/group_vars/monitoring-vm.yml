@@ -56,25 +56,18 @@ prometheus_scrape_jobs:
     relabel_configs:
       - target_label: instance
         replacement: media-server
-  - job_name: "cadvisor"
-    static_configs:
-      - targets:
-          - "192.168.1.204:7676"
-          - "192.168.1.201:7676"
-          - "192.168.1.203:7676"
+  - name: cadvisor
+    targets:
+      - "{{ hostvars['monitoring-server']['ansible_host'] }}:7676"
+      - "{{ hostvars['git-k3s-server']['ansible_host'] }}:7676"
+      - "{{ hostvars['media-server']['ansible_host'] }}:7676"
     relabel_configs:
       - target_label: instance
-        source_labels: [__address__]
-        regex: "192.168.1.204:.*"
+        replacement: "monitoring-server"
+      - target_label: instance
         replacement: "git-k3s-server"
       - target_label: instance
-        source_labels: [__address__]
-        regex: "192.168.1.201:.*"
         replacement: "media-server"
-      - target_label: instance
-        source_labels: [__address__]
-        regex: "192.168.1.203:.*"
-        replacement: "monitoring-server"
   - name: scraparr
     targets: ["{{ hostvars['media-server']['ansible_host'] }}:7100"]
     relabel_configs:
