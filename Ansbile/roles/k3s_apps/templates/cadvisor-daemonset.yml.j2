@@ -58,10 +58,10 @@ spec:
       hostNetwork: true
       hostPID: true
       serviceAccountName: cadvisor
-      nodeSelector:
-        kubernetes.io/hostname: git-k3s-server
       tolerations:
         - key: node-role.kubernetes.io/control-plane
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
           effect: NoSchedule
       containers:
         - name: cadvisor
