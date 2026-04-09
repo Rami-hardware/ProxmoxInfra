@@ -17,6 +17,21 @@ scrape_configs:
 {% if job.scrape_timeout is defined %}
     scrape_timeout: {{ job.scrape_timeout }}
 {% endif %}
+{% if job.scheme is defined %}
+    scheme: {{ job.scheme }}
+{% endif %}
+{% if job.metrics_path is defined %}
+    metrics_path: {{ job.metrics_path }}
+{% endif %}
+{% if job.bearer_token_file is defined %}
+    bearer_token_file: {{ job.bearer_token_file }}
+{% endif %}
+{% if job.tls_config is defined %}
+    tls_config:
+{% if job.tls_config.insecure_skip_verify is defined %}
+      insecure_skip_verify: {{ job.tls_config.insecure_skip_verify | lower }}
+{% endif %}
+{% endif %}
     static_configs:
       - targets:
 {% for target in job.targets %}

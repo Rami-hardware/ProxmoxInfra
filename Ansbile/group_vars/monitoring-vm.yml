@@ -61,27 +61,29 @@ prometheus_scrape_jobs:
     relabel_configs:
       - target_label: instance
         replacement: git-k3s-server
-  - name: cadvisor
+  - name: kubelet-cadvisor
+    scheme: https
+    metrics_path: /metrics/cadvisor
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tls_config:
+      insecure_skip_verify: true
     targets:
-      - "{{ hostvars['monitoring-server']['ansible_host'] }}:7676"
-      - "{{ hostvars['git-k3s-server']['ansible_host'] }}:7676"
-      - "{{ hostvars['media-server']['ansible_host'] }}:7676"
+      - "{{ hostvars['git-k3s-server']['ansible_host'] }}:10250"
+      - "{{ hostvars['media-server']['ansible_host'] }}:10250"
+      - "{{ hostvars['monitoring-server']['ansible_host'] }}:10250"
     relabel_configs:
-      - source_labels: [__address__]
-        regex: "{{ hostvars['monitoring-server']['ansible_host'] }}:.*"
-        target_label: instance
-        replacement: "monitoring-server"
-        action: replace
       - source_labels: [__address__]
         regex: "{{ hostvars['git-k3s-server']['ansible_host'] }}:.*"
         target_label: instance
         replacement: "git-k3s-server"
-        action: replace
       - source_labels: [__address__]
         regex: "{{ hostvars['media-server']['ansible_host'] }}:.*"
         target_label: instance
         replacement: "media-server"
-        action: replace
+      - source_labels: [__address__]
+        regex: "{{ hostvars['monitoring-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "monitoring-server"
   - name: scraparr
     targets: ["{{ hostvars['media-server']['ansible_host'] }}:7100"]
     relabel_configs:
