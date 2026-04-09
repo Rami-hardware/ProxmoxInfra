@@ -338,6 +338,7 @@ k3s_apps_list:
     node_port: 9798
     target_node: monitoring-server
     skip_pv: true
+    host_network: true
     replicas: 1
     memory_request: "64Mi"
     memory_limit: "256Mi"

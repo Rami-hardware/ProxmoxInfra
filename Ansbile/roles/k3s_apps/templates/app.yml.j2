@@ -63,6 +63,10 @@ spec:
       labels:
         app: {{ item.name }}
     spec:
+{% if item.host_network | default(false) %}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+{% endif %}
 {% if item.host_pid | default(false) %}
       hostPID: true
 {% endif %}
