@@ -287,6 +287,7 @@ k3s_apps_list:
     port: 9090
     node_port: 9090
     target_node: monitoring-server
+    service_account: prometheus
     config_path: /opt/docker/prometheus
     config_mount: /etc/prometheus
     replicas: 1
