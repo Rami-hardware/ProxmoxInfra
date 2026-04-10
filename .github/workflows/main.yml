@@ -1,6 +1,5 @@
 name: Homelab CI/CD
 
-
 on:
   push:
     branches:
@@ -13,72 +12,64 @@ jobs:
     name: Testing Infrastructure Code
     runs-on: self-hosted
     environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || 'development' }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      # runner setup
-      - name: Install Node.js
+
+      - name: Install system dependencies
         run: |
           sudo apt update
-          sudo apt install -y unzip curl git
-          curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-          sudo apt install -y nodejs
-          
+          sudo apt install -y unzip curl git ansible python3-venv python3-pip
+
       - name: Verify installations
         run: |
-          node -v
-          npm -v
           unzip -v
           git --version
           curl --version
 
-      # Terraform setup
+      # ── Terraform ────────────────────────────────────────────────────────────
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.0
-      # Terraform validation (safe)
+
       - name: Terraform init (no backend)
+        working-directory: Terraform
         run: terraform init -backend=false
-      # Terraform validate
+
       - name: Terraform validate
+        working-directory: Terraform
         run: terraform validate
-      # Terraform tflint
-      #- name: Install tflint
-       # uses: terraform-linters/setup-tflint@v1
-      # Terraform lint
-      #- name: Terraform lint
-       # run: tflint
-      # Install Ansible
-      - name: Install Ansible
-        run: sudo apt update && sudo apt install -y ansible
-      # Install Ansible and ansible-lint in virtualenv
-      - name: Install Ansible and ansible-lint in virtualenv
+
+      # ── Ansible ──────────────────────────────────────────────────────────────
+      - name: Install Ansible lint in virtualenv
         run: |
-          sudo apt update
-          sudo apt install -y ansible python3-venv python3-pip
           python3 -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
           pip install ansible-lint
-      
+
       - name: Install Ansible collections
         run: |
           source venv/bin/activate
-          ansible-galaxy collection install community.docker
           ansible-galaxy collection install -r Ansbile/requirements.yml
 
-      - name: Verify collections installed
+      - name: Create Ansible Vault password file
         run: |
-          ansible-galaxy collection list
+          echo "${ANSIBLE_VAULT_PASSWORD}" > ~/.vault_pass
+          chmod 600 ~/.vault_pass
+        env:
+          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
 
-      # Ansible syntax check
       - name: Ansible syntax check
         run: |
           source venv/bin/activate
-          ansible-playbook  Ansbile/gateway-server.yml --syntax-check
-      # Ansible lint
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --syntax-check --vault-password-file ~/.vault_pass
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml --syntax-check --vault-password-file ~/.vault_pass
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml --syntax-check --vault-password-file ~/.vault_pass
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml --syntax-check --vault-password-file ~/.vault_pass
+
       - name: Ansible lint
         run: |
           source venv/bin/activate
@@ -87,17 +78,18 @@ jobs:
   Deploy:
     name: Deploy Infrastructure Code
     runs-on: self-hosted
-    needs: testing   
+    needs: testing
     environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || 'development' }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
+      # ── Terraform ────────────────────────────────────────────────────────────
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.6.0   
+          terraform_version: 1.6.0
 
       - name: Terraform init
         working-directory: Terraform
@@ -105,55 +97,74 @@ jobs:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
           TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-        run: terraform init -upgrade
+        run: terraform init
 
-      - name: Migrate Proxmox provider in state
-        working-directory: Terraform
-        env:
-          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-          TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
-        run: |
-          terraform init -upgrade
-          terraform state replace-provider \
-            "registry.terraform.io/telmate/proxmox" \
-            "registry.terraform.io/bpg/proxmox"
-        
-
-      - name: Terraform Plan
-        working-directory: Terraform
-        env:
-          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-          TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
-          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-        run: terraform plan -input=false -no-color
-
-      - name: Terraform import existing VMs
+      - name: Import existing VMs into Terraform state
         working-directory: Terraform
         env:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
           TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         run: |
-          echo "Importing existing VMs into Terraform state..."
-          
-          terraform import -lock=false 'module.proxmox_vms["gateway"].proxmox_virtual_environment_vm.vm' pve/505 || echo "VM 505 not found or already imported"
-          terraform import -lock=false 'module.proxmox_vms["media"].proxmox_virtual_environment_vm.vm' pve/911 || echo "VM 911 not found or already imported"
-          terraform import -lock=false 'module.proxmox_vms["game"].proxmox_virtual_environment_vm.vm' pve/619 || echo "VM 619 not found or already imported"
-          terraform import -lock=false 'module.proxmox_vms["monitoring"].proxmox_virtual_environment_vm.vm' pve/511 || echo "VM 511 not found or already imported"
-          terraform import -lock=false 'module.proxmox_vms["github"].proxmox_virtual_environment_vm.vm' pve/115 || echo "VM 115 not found or already imported"
-          terraform import -lock=false 'module.proxmox_vms["dev"].proxmox_virtual_environment_vm.vm' pve/223 || echo "VM 223 not found or already imported"
-          
-          echo "Import complete. Terraform can now manage all existing VMs."
-          
+          terraform import -lock=false 'module.proxmox_vms["gateway"].proxmox_virtual_environment_vm.vm'    pve/505 || echo "gateway already imported"
+          terraform import -lock=false 'module.proxmox_vms["media"].proxmox_virtual_environment_vm.vm'      pve/911 || echo "media already imported"
+          terraform import -lock=false 'module.proxmox_vms["game"].proxmox_virtual_environment_vm.vm'       pve/619 || echo "game already imported"
+          terraform import -lock=false 'module.proxmox_vms["monitoring"].proxmox_virtual_environment_vm.vm' pve/511 || echo "monitoring already imported"
+          terraform import -lock=false 'module.proxmox_vms["github"].proxmox_virtual_environment_vm.vm'     pve/115 || echo "github already imported"
+          terraform import -lock=false 'module.proxmox_vms["dev"].proxmox_virtual_environment_vm.vm'        pve/223 || echo "dev already imported"
 
-    #  - name: Terraform Apply
-    #    working-directory: Terraform
-    #    env:
-    #      TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-    #     TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
-    #      TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-    #    run: terraform apply -auto-approve -target="module.proxmox_vms[\"monitoring\"]"
+      - name: Terraform plan (compare code vs server)
+        id: plan
+        working-directory: Terraform
+        env:
+          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
+          TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
+          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+        run: |
+          set +e
+          terraform plan -input=false -no-color -detailed-exitcode -out=tfplan
+          EXIT_CODE=$?
+          set -e
+          if [ $EXIT_CODE -eq 1 ]; then
+            echo "Terraform plan failed."
+            exit 1
+          elif [ $EXIT_CODE -eq 2 ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected — will apply."
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes — skipping apply."
+          fi
 
+      - name: Fail if any VM would be destroyed
+        if: steps.plan.outputs.has_changes == 'true'
+        working-directory: Terraform
+        run: |
+          terraform show tfplan > plan_output.txt
+          cat plan_output.txt
+          if grep -qE "will be destroyed|must be replaced" plan_output.txt; then
+            echo "ERROR: Destroy or replace detected — blocking pipeline."
+            grep -E "will be destroyed|must be replaced" plan_output.txt
+            exit 1
+          fi
+          echo "No destroys detected — safe to proceed."
+
+      - name: Terraform apply
+        if: steps.plan.outputs.has_changes == 'true'
+        working-directory: Terraform
+        env:
+          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
+          TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
+          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+        run: |
+          terraform apply -auto-approve -parallelism=1 \
+            -target='module.proxmox_vms["gateway"]' \
+            -target='module.proxmox_vms["media"]' \
+            -target='module.proxmox_vms["monitoring"]' \
+            -target='module.proxmox_vms["github"]' \
+            -target='module.proxmox_vms["dev"]'
+
+      # ── Ansible ──────────────────────────────────────────────────────────────
       - name: Install system dependencies
         run: sudo apt update && sudo apt install -y ansible python3-venv python3-pip
 
@@ -162,20 +173,22 @@ jobs:
           python3 -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
-          pip install ansible ansible-lint
+          pip install ansible
 
       - name: Install Ansible collections
         run: |
           source venv/bin/activate
-          ansible-galaxy collection install community.docker
           ansible-galaxy collection install -r Ansbile/requirements.yml
 
-      - name: Setup SSH for Ansible
+      - name: Setup SSH
         shell: bash
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 192.168.1.200 >> ~/.ssh/known_hosts || true
+          ssh-keyscan -H 192.168.1.201 >> ~/.ssh/known_hosts || true
+          ssh-keyscan -H 192.168.1.203 >> ~/.ssh/known_hosts || true
           ssh-keyscan -H 192.168.1.204 >> ~/.ssh/known_hosts || true
 
       - name: Create Ansible Vault password file
@@ -185,11 +198,18 @@ jobs:
         env:
           ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
 
-      - name: Run Ansible Playbook
+      - name: Run Ansible playbooks
         env:
           ANSIBLE_VAULT_PASSWORD_FILE: ~/.vault_pass
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           ANSIBLE_HOST_KEY_CHECKING: 'False'
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          SONARR_API_KEY: ${{ secrets.SONARR_API_KEY }}
+          BAZARR_API_KEY: ${{ secrets.BAZARR_API_KEY }}
+          PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
+          RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
+          OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         run: |
           source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml

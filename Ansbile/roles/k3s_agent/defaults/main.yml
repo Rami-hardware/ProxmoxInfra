@@ -1,2 +1,1 @@
----
-k3s_agent_k3s_version: "latest"
+k3s_agent_version: "v1.34.3+k3s3"

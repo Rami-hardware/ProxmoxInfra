@@ -1,0 +1,39 @@
+- name: Ensure scraparr main directory exists
+  ansible.builtin.file:
+    path: "{{ scraparr_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Ensure scraparr config subdirectory exists
+  ansible.builtin.file:
+    path: "{{ scraparr_dir }}/config"
+    state: directory
+    mode: '0755'
+
+- name: Check if config.yaml exists and is a directory
+  ansible.builtin.stat:
+    path: "{{ scraparr_dir }}/config/config.yaml"
+  register: scraparr_config_stat
+
+- name: Remove old config.yaml if it is a directory
+  ansible.builtin.file:
+    path: "{{ scraparr_dir }}/config/config.yaml"
+    state: absent
+  when: scraparr_config_stat.stat.isdir | default(false)
+
+- name: Debug Scraparr API keys presence
+  ansible.builtin.debug:
+    msg:
+      sonarr: "{{ sonarr_api_key | length }}"
+      bazarr: "{{ bazarr_api_key | length }}"
+      prowlarr: "{{ prowlarr_api_key | length }}"
+      radarr: "{{ radarr_api_key | length }}"
+      overseerr: "{{ overseerr_api_key | length }}"
+
+- name: Deploy Scraparr YAML config
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: "{{ scraparr_dir }}/config/config.yaml"
+    owner: root
+    group: root
+    mode: '0600'

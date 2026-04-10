@@ -1,0 +1,172 @@
+---
+- name: Ensure K3s manifests directory exists
+  ansible.builtin.file:
+    path: "{{ k3s_apps_manifest_dir }}"
+    state: directory
+    mode: '0755'
+
+# Runs on each app's target node — only apps with a config_path (i.e. not skip_pv)
+# loop_control loop_var avoids Ansible resolving delegate_to before item is bound
+- name: Ensure app config directories exist on target nodes
+  ansible.builtin.file:
+    path: "{{ app.config_path }}"
+    state: directory
+    mode: '0755'
+  delegate_to: "{{ app.target_node }}"
+  loop: "{{ k3s_apps_list | selectattr('config_path', 'defined') | list }}"
+  loop_control:
+    loop_var: app
+    label: "{{ app.name }}"
+
+# Prometheus RBAC — allows scraping kubelet /metrics/cadvisor
+- name: Template Prometheus RBAC manifest
+  ansible.builtin.template:
+    src: prometheus-rbac.yml.j2
+    dest: "{{ k3s_apps_manifest_dir }}/prometheus-rbac.yml"
+    mode: '0644'
+
+# kube-state-metrics — enriches cAdvisor metrics with K8s labels (namespace, pod, container)
+- name: Template kube-state-metrics manifest
+  ansible.builtin.template:
+    src: kube-state-metrics.yml.j2
+    dest: "{{ k3s_apps_manifest_dir }}/kube-state-metrics.yml"
+    mode: '0644'
+
+# node-exporter runs as a DaemonSet on all nodes (media, monitoring, git-k3s-server)
+# Delete old Deployment if it exists — it was previously managed by the generic app template
+- name: Remove node-exporter Deployment if present (replaced by DaemonSet)
+  ansible.builtin.command:
+    cmd: k3s kubectl delete deployment node-exporter -n monitoring --ignore-not-found
+  changed_when: false
+
+- name: Template node-exporter DaemonSet manifest
+  ansible.builtin.template:
+    src: node-exporter-daemonset.yml.j2
+    dest: "{{ k3s_apps_manifest_dir }}/node-exporter.yml"
+    mode: '0644'
+
+# promtail runs as a DaemonSet — deploy config to all K3s nodes and ensure /opt/promtail exists
+- name: Ensure promtail config directory exists on K3s nodes
+  ansible.builtin.file:
+    path: /opt/promtail
+    state: directory
+    mode: '0755'
+  delegate_to: "{{ k3s_node }}"
+  loop:
+    - media-server
+    - monitoring-server
+    - git-k3s-server
+  loop_control:
+    loop_var: k3s_node
+
+- name: Deploy promtail config to all K3s nodes
+  ansible.builtin.template:
+    src: promtail-config.yml.j2
+    dest: /opt/promtail/config.yml
+    mode: '0644'
+  delegate_to: "{{ k3s_node }}"
+  loop:
+    - media-server
+    - monitoring-server
+    - git-k3s-server
+  loop_control:
+    loop_var: k3s_node
+
+- name: Remove promtail Deployment if present (replaced by DaemonSet)
+  ansible.builtin.command:
+    cmd: k3s kubectl delete deployment promtail -n monitoring --ignore-not-found
+  changed_when: false
+
+- name: Template promtail DaemonSet manifest
+  ansible.builtin.template:
+    src: promtail-daemonset.yml.j2
+    dest: "{{ k3s_apps_manifest_dir }}/promtail.yml"
+    mode: '0644'
+
+# Remove manifests for apps that were deleted from k3s_apps_list
+- name: Find existing app manifests on disk
+  ansible.builtin.find:
+    paths: "{{ k3s_apps_manifest_dir }}"
+    patterns: "*.yml"
+  register: k3s_apps_existing_manifests
+
+- name: Delete resources and manifest for removed apps
+  ansible.builtin.command:
+    cmd: "k3s kubectl delete -f {{ item.path }} --ignore-not-found"
+  loop: "{{ k3s_apps_existing_manifests.files }}"
+  when: >
+    (item.path | basename | splitext)[0] not in
+    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac']
+  changed_when: true
+
+- name: Remove stale manifest files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ k3s_apps_existing_manifests.files }}"
+  when: >
+    (item.path | basename | splitext)[0] not in
+    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac']
+
+# Single template for all apps — item.* variables drive the output
+- name: Template app manifests
+  ansible.builtin.template:
+    src: app.yml.j2
+    dest: "{{ k3s_apps_manifest_dir }}/{{ item.name }}.yml"
+    mode: '0644'
+  loop: "{{ k3s_apps_list }}"
+
+# Check current PV — delete if path changed OR namespace changed OR PV is Released
+# Only apps with a config_path have a PV to check
+- name: Check current PV state
+  ansible.builtin.command:
+    cmd: >
+      k3s kubectl get pv {{ item.name }}-config-pv
+      -o jsonpath={.spec.hostPath.path},{.spec.claimRef.namespace},{.status.phase}
+  register: k3s_apps_pv_check
+  failed_when: false
+  changed_when: false
+  loop: "{{ k3s_apps_list | selectattr('config_path', 'defined') | list }}"
+
+- name: Delete PVC when PV needs to be recreated
+  ansible.builtin.shell:
+    cmd: |
+      for ns in $(k3s kubectl get namespaces -o jsonpath='{.items[*].metadata.name}'); do
+        k3s kubectl delete pvc {{ item.item.name }}-config-pvc -n "$ns" --ignore-not-found
+      done
+  loop: "{{ k3s_apps_pv_check.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when:
+    - item.rc is defined and item.rc == 0
+    - >
+      item.stdout.split(',')[0] != item.item.config_path or
+      item.stdout.split(',')[1] != item.item.namespace or
+      item.stdout.split(',')[2] == 'Released'
+  changed_when: false
+
+- name: Delete PV when PV needs to be recreated
+  ansible.builtin.command:
+    cmd: "k3s kubectl delete pv {{ item.item.name }}-config-pv --ignore-not-found"
+  loop: "{{ k3s_apps_pv_check.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when:
+    - item.rc is defined and item.rc == 0
+    - >
+      item.stdout.split(',')[0] != item.item.config_path or
+      item.stdout.split(',')[1] != item.item.namespace or
+      item.stdout.split(',')[2] == 'Released'
+  changed_when: false
+
+- name: Apply all K3s app manifests
+  ansible.builtin.command:
+    cmd: "k3s kubectl apply --server-side --force-conflicts -f {{ k3s_apps_manifest_dir }}"
+  changed_when: true
+  when: k3s_apps_list | length > 0
+
+- name: Wait for app deployments to be ready
+  ansible.builtin.command:
+    cmd: "k3s kubectl rollout status deployment/{{ item.name }} -n {{ item.namespace }} --timeout=300s"
+  changed_when: false
+  loop: "{{ k3s_apps_list }}"

@@ -1,0 +1,17 @@
+---
+k3s_apps_manifest_dir: /opt/k3s/manifests
+
+# k3s_apps is a list of app dicts defined in group_vars/github-vm.yml.
+# Each dict must have:
+#   name         - used as Deployment name, Namespace, and manifest filename
+#   namespace    - Kubernetes namespace
+#   image        - full image reference (e.g. sctx/overseerr:latest)
+#   port         - container port
+#   node_port    - NodePort to expose on the host (30000-32767)
+#   target_node  - inventory hostname of the K3s worker to schedule on
+#   config_path  - hostPath on target_node for persistent config
+#   config_mount - mountPath inside the container
+#   env          - list of { name, value } environment variables
+#   memory_request / memory_limit
+#   cpu_request  / cpu_limit
+k3s_apps_list: []

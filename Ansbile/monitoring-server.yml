@@ -1,14 +1,11 @@
+---
 - name: Deploy monitoring Server Configuration
   hosts: monitoring-server
   become: true
-
   roles:
-    - DNS
-    - docker_setup
-    - promtail
+    - loki
     - prometheus
     - alertmanager
     - grafana
-    - loki
-    - middleware
-    - docker_apps
+    - promtail
+    # - k3s_agent

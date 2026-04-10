@@ -1,0 +1,9 @@
+---
+- name: Configure K3s server and deploy apps
+  hosts: git-k3s-server
+  become: true
+  vars_files:
+    - group_vars/vault.yml
+  roles:
+    - k3s_server
+    - k3s_apps

@@ -1,0 +1,11 @@
+apiVersion: 1
+
+datasources:
+{% for ds in grafana_datasources %}
+  - name: {{ ds.name }}
+    type: {{ ds.type }}
+    url: {{ ds.url }}
+    access: proxy
+    isDefault: {{ ds.default | default(false) | lower }}
+    editable: false
+{% endfor %}

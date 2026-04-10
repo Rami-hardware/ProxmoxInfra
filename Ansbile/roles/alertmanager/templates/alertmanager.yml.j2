@@ -1,0 +1,21 @@
+global:
+  resolve_timeout: {{ alertmanager_resolve_timeout }}
+
+route:
+  receiver: 'webhook'
+  group_wait: {{ alertmanager_group_wait }}
+  group_interval: {{ alertmanager_group_interval }}
+  repeat_interval: {{ alertmanager_repeat_interval }}
+
+receivers:
+  - name: 'webhook'
+    webhook_configs:
+      - url: '{{ alertmanager_webhook_url }}'
+        send_resolved: true
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'dev', 'instance']

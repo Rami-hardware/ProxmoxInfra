@@ -53,15 +53,35 @@ services:
     restart: unless-stopped
 {% endif %}
 
+{% if 'subtitleedit' in docker_apps_enabled %}
+  subtitleedit:
+    image: ghcr.io/linuxserver/subtitleedit-cli:latest
+    container_name: subtitleedit
+    volumes:
+      - /mnt/media:/media
+      - /config:/config
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Africa/Cairo
+    restart: unless-stopped
+{% endif %}
+
+
+
 {% if 'promtail' in docker_apps_enabled %}
   promtail:
     image: grafana/promtail:latest
     container_name: promtail
+    user: root
+    ports:
+      - "9080:9080"
     volumes:
       - "/var/log:/var/log"
+      - "/var/lib/docker/containers:/var/lib/docker/containers:ro"
       - "/opt/services/promtail:/etc/promtail"
     env_file:
-      - /opt/services/promtail/.env   # <-- loads HOSTNAME
+      - /opt/services/promtail/.env
     command: -config.file=/etc/promtail/config.yml -config.expand-env=true
     restart: unless-stopped
 {% endif %}
@@ -484,7 +504,7 @@ services:
 
 {% if 'grafana' in docker_apps_enabled %}
   grafana:
-    image: grafana/grafana:latest
+    image: 
     logging:
       driver: loki
       options:
@@ -499,6 +519,7 @@ services:
       - "3000:3000"
     volumes:
       - /opt/docker/grafana:/opt/docker/grafana
+      - /opt/docker/grafana/provisioning:/etc/grafana/provisioning
     environment:
       - GF_PATHS_DATA=/opt/docker/grafana
     restart: unless-stopped
@@ -541,8 +562,10 @@ services:
     container_name: prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time={{ prometheus_retention_time }}'
+      - '--web.enable-lifecycle'
     volumes:
-      - "/opt/docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro"
+      - "{{ prometheus_config_dir }}:/etc/prometheus:ro"
     ports:
       - "9090:9090"
     restart: unless-stopped
@@ -562,14 +585,54 @@ services:
     restart: unless-stopped
 {% endif %}
 
-{% if 'node-exporter' in docker_apps_enabled %}
+{% if 'cloudflare_exporter' in docker_apps_enabled %}
+  cloudflare_exporter:
+    image: labbs/cloudflare-exporter:latest
+    container_name: cloudflare_exporter
+    ports:
+      - "9199:8080"
+    environment:
+      - CF_API_TOKEN=YOUR_NEW_API_TOKEN
+    restart: unless-stopped
+{% endif %}
+
+
+{% if 'nginx-exporter' in docker_apps_enabled %}
   nginx-exporter:
     image: nginx/nginx-prometheus-exporter:latest
     container_name: nginx-exporter
     hostname: nginx-exporter
     ports:
       - "9113:9113"  # Expose the exporter on port 9113
-    command: -nginx.scrape-uri=http://192.168.1.200/status  # Define the scrape URI for Nginx status
+    command:
+      - --nginx.scrape-uri=http://192.168.1.200:8181/status  # Define the scrape URI for NGINX status
+{% endif %}
+
+
+{% if 'scraparr' in docker_apps_enabled %}
+  scraparr:
+    image: ghcr.io/thecfu/scraparr
+    container_name: scraparr
+    ports:
+      - "{{ scraparr_port }}:7100"
+    volumes:
+      - "{{ scraparr_dir }}/config/config.yaml:/scraparr/config/config.yaml:ro"
+    restart: unless-stopped
+{% endif %}
+
+
+
+{% if 'intel-gpu-exporter' in docker_apps_enabled %}
+  intel-gpu-exporter:
+    image: ghcr.io/onedr0p/intel-gpu-exporter:rolling
+    container_name: intel-gpu-exporter
+    restart: unless-stopped
+    privileged: true
+    pid: host
+    ports:
+      - "8082:8080"
+    volumes:
+      - /dev/dri/:/dev/dri/
 {% endif %}
 
 
@@ -586,6 +649,7 @@ services:
         keep-file: "true"
         mode: "non-blocking"
     container_name: node-exporter
+    hostname: "{{ ansible_hostname }}"
     command:
       - '--path.rootfs=/host'
     volumes:
@@ -596,6 +660,14 @@ services:
     restart: unless-stopped
 {% endif %}
 
+{% if 'speedtest-exporter' in docker_apps_enabled %}
+  speedtest-exporter:
+    image: miguelndecarvalho/speedtest-exporter
+    container_name: speedtest-exporter
+    ports:
+      - 9798:9798
+    restart: unless-stopped
+{% endif %}
 
 {% if 'qbittorrent-exporter' in docker_apps_enabled %}
   qbittorrent-exporter:

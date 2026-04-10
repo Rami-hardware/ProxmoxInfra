@@ -1,0 +1,10 @@
+---
+grafana_data_dir: /opt/docker/grafana
+grafana_provisioning_dir: /opt/docker/grafana/provisioning/datasources
+
+# Datasources to auto-provision. Each entry:
+#   name    - display name in Grafana
+#   type    - prometheus | loki
+#   url     - full URL to the datasource
+#   default - (optional) true to set as default
+grafana_datasources: []

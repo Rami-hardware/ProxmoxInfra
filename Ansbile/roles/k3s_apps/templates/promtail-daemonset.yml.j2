@@ -1,0 +1,85 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: promtail
+  namespace: monitoring
+  labels:
+    app: promtail
+spec:
+  selector:
+    matchLabels:
+      app: promtail
+  template:
+    metadata:
+      labels:
+        app: promtail
+    spec:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          effect: NoSchedule
+      containers:
+        - name: promtail
+          image: grafana/promtail:latest
+          args:
+            - "-config.file=/etc/promtail/config.yml"
+            - "-config.expand-env=true"
+          env:
+            - name: TZ
+              value: "Asia/Riyadh"
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          ports:
+            - containerPort: 9080
+              name: http
+          volumeMounts:
+            - name: config
+              mountPath: /etc/promtail
+              readOnly: true
+            - name: varlog
+              mountPath: /var/log
+              readOnly: true
+            - name: docker-containers
+              mountPath: /var/lib/docker/containers
+              readOnly: true
+            - name: pods
+              mountPath: /var/log/pods
+              readOnly: true
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "10m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+      volumes:
+        - name: config
+          hostPath:
+            path: /opt/promtail
+        - name: varlog
+          hostPath:
+            path: /var/log
+        - name: docker-containers
+          hostPath:
+            path: /var/lib/docker/containers
+        - name: pods
+          hostPath:
+            path: /var/log/pods
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: promtail
+  namespace: monitoring
+  labels:
+    app: promtail
+spec:
+  selector:
+    app: promtail
+  ports:
+    - name: http
+      port: 9080
+      targetPort: 9080
+  type: ClusterIP

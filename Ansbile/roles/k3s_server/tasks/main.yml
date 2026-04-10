@@ -1,40 +1,109 @@
+---
+# ── K3s Configuration (runs before install so first-boot picks it up) ─────────
+- name: Ensure K3s config directory exists
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: '0755'
+
+- name: Write K3s DNS resolv.conf
+  ansible.builtin.copy:
+    dest: /etc/rancher/k3s/resolv.conf
+    content: |
+      nameserver {{ hostvars['gateway-server']['ansible_host'] }}
+      nameserver 8.8.8.8
+    mode: '0644'
+
+- name: Write K3s server config
+  ansible.builtin.copy:
+    dest: /etc/rancher/k3s/config.yaml
+    content: |
+      service-node-port-range: "1024-65535"
+      resolv-conf: /etc/rancher/k3s/resolv.conf
+    mode: '0644'
+  register: k3s_server_config_result
+  notify: Restart k3s
+
+# ── System Prerequisites ──────────────────────────────────────────────────────
+- name: Gather system facts
+  ansible.builtin.setup:
+
 - name: Check if swap is enabled
   ansible.builtin.command: swapon --noheadings
   register: k3s_server_swap_status
   changed_when: false
   failed_when: false
-  ignore_errors: true
 
-- name: Disable swap if any swap is enabled
+- name: Disable swap immediately if enabled
   ansible.builtin.command: swapoff -a
-  become: true
-  changed_when: swap_status.stdout != ""
-  when: swap_status is defined and swap_status.stdout != ""
+  when: k3s_server_swap_status.stdout != ""
+  changed_when: k3s_server_swap_status.stdout != ""
 
+- name: Disable swap permanently in fstab
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^(?!#)(.*\sswap\s.*)$'
+    replace: '# \1'
+  register: k3s_server_swap_fstab
 
-- name: Install curl
+- name: Ensure curl is installed
   ansible.builtin.package:
     name: curl
     state: present
 
+# ── K3s Install ───────────────────────────────────────────────────────────────
 - name: Download K3s install script
   ansible.builtin.get_url:
     url: https://get.k3s.io
     dest: /usr/local/bin/k3s-install.sh
     mode: '0755'
 
-- name: Install K3s server
-  ansible.builtin.command: /usr/local/bin/k3s-install.sh
-  environment:
-    INSTALL_K3S_VERSION: "{{ k3s_version }}"
-  args:
+- name: Install K3s server if not already installed
+  ansible.builtin.command:
+    cmd: /usr/local/bin/k3s-install.sh
     creates: /usr/local/bin/k3s
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_server_version }}"
+
+# Flush here so K3s restarts (if config changed) before we check CoreDNS
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+
+# ── Post-install: Ensure DNS is healthy before apps deploy ────────────────────
+- name: Wait for K3s API to be available
+  ansible.builtin.command:
+    cmd: k3s kubectl get nodes
+  register: k3s_server_api_check
+  until: k3s_server_api_check.rc == 0
+  retries: 30
+  delay: 5
+  changed_when: false
+
+- name: Restart CoreDNS to pick up new resolv.conf
+  ansible.builtin.command:
+    cmd: k3s kubectl rollout restart deployment/coredns -n kube-system
+  changed_when: true
+  when: k3s_server_config_result is defined and k3s_server_config_result.changed
+
+- name: Wait for CoreDNS to be ready
+  ansible.builtin.command:
+    cmd: k3s kubectl rollout status deployment/coredns -n kube-system --timeout=60s
+  changed_when: false
+
+# ── Token (used by k3s_agent role) ───────────────────────────────────────────
+- name: Check if node token exists
+  ansible.builtin.stat:
+    path: /var/lib/rancher/k3s/server/node-token
+  register: k3s_server_token_file
 
 - name: Read K3s node token
   ansible.builtin.slurp:
     src: /var/lib/rancher/k3s/server/node-token
   register: k3s_server_k3s_token_raw
+  when: k3s_server_token_file.stat.exists
+  changed_when: false
 
 - name: Set K3s token fact
   ansible.builtin.set_fact:
-    k3s_server_k3s_token: "{{ k3s_token_raw.content | b64decode | trim }}"
+    k3s_server_k3s_token: "{{ k3s_server_k3s_token_raw.content | b64decode | trim }}"
+  when: k3s_server_token_file.stat.exists

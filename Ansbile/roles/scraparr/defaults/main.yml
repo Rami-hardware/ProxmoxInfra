@@ -1,0 +1,17 @@
+scraparr_dir: /opt/scraparr
+scraparr_port: 7100
+
+scraparr_sonarr:
+  url: "http://192.168.1.201:8989"
+
+scraparr_bazarr:
+  url: "http://192.168.1.201:6767"
+
+scraparr_prowlarr:
+  url: "http://192.168.1.201:9696"
+
+scraparr_radarr:
+  url: "http://192.168.1.201:7878"
+
+scraparr_overseerr:
+  url: "http://192.168.1.201:5055"

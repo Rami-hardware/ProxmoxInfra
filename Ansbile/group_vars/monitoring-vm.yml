@@ -1,19 +1,137 @@
+---
 docker_apps_enabled:
   - promtail
   - loki
   - grafana
   - alertmanager
-  - nginx/nginx-p
+  - prometheus
   - node-exporter
-  - graphite
+  - speedtest-exporter
 
-app_dir: /opt/alert-forwarder
-
-promtail_var_path: "/var/log:/var/log"
-promtail_config_path: "{{ docker_compose_dir }}/promtail-config.yml:/etc/promtail/config.yml"
-
-telegraf_home: /home/telegraf
-telegraf_config_path: /etc/telegraf/telegraf.d/speedtest.conf
-
+# ── Prometheus ────────────────────────────────────────────────────────────────
 prometheus_config_dir: /opt/docker/prometheus
 prometheus_config_file: "{{ prometheus_config_dir }}/prometheus.yml"
+prometheus_scrape_interval: 15s
+
+prometheus_scrape_jobs:
+  - name: prometheus
+    targets: ["localhost:9090"]
+  - name: nodes
+    targets:
+      - "{{ hostvars['gateway-server']['ansible_host'] }}:9100"
+      - "{{ hostvars['media-server']['ansible_host'] }}:9100"
+      - "{{ hostvars['monitoring-server']['ansible_host'] }}:9100"
+      - "{{ hostvars['git-k3s-server']['ansible_host'] }}:9100"
+      - "{{ hostvars['host-node']['ansible_host'] }}:9100"
+    labels:
+      os: linux
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: "{{ hostvars['gateway-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "gateway-server"
+      - source_labels: [__address__]
+        regex: "{{ hostvars['media-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "media-server"
+      - source_labels: [__address__]
+        regex: "{{ hostvars['monitoring-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "monitoring-server"
+      - source_labels: [__address__]
+        regex: "{{ hostvars['git-k3s-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "git-k3s-server"
+      - source_labels: [__address__]
+        regex: "{{ hostvars['host-node']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "host-node"
+  - name: loki
+    targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:3100"]
+    relabel_configs:
+      - target_label: instance
+        replacement: monitoring-server
+  - name: qbittorrent
+    targets: ["{{ hostvars['media-server']['ansible_host'] }}:17871"]
+    relabel_configs:
+      - target_label: instance
+        replacement: media-server
+  - name: kube-state-metrics
+    targets: ["{{ hostvars['git-k3s-server']['ansible_host'] }}:8083"]
+    relabel_configs:
+      - target_label: instance
+        replacement: git-k3s-server
+  - name: kubelet-cadvisor
+    scheme: https
+    metrics_path: /metrics/cadvisor
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tls_config:
+      insecure_skip_verify: true
+    targets:
+      - "{{ hostvars['git-k3s-server']['ansible_host'] }}:10250"
+      - "{{ hostvars['media-server']['ansible_host'] }}:10250"
+      - "{{ hostvars['monitoring-server']['ansible_host'] }}:10250"
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: "{{ hostvars['git-k3s-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "git-k3s-server"
+      - source_labels: [__address__]
+        regex: "{{ hostvars['media-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "media-server"
+      - source_labels: [__address__]
+        regex: "{{ hostvars['monitoring-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "monitoring-server"
+  - name: scraparr
+    targets: ["{{ hostvars['media-server']['ansible_host'] }}:7100"]
+    relabel_configs:
+      - target_label: instance
+        replacement: media-server
+  - name: intel_gpu
+    targets: ["{{ hostvars['media-server']['ansible_host'] }}:8082"]
+    relabel_configs:
+      - target_label: instance
+        replacement: media-server
+  - name: zfs_exporter
+    targets: ["{{ hostvars['host-node']['ansible_host'] }}:9134"]
+    relabel_configs:
+      - target_label: instance
+        replacement: host-node
+  - name: speedtest
+    targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:9798"]
+    scrape_interval: 10m
+    scrape_timeout: 1m
+    relabel_configs:
+      - target_label: instance
+        replacement: monitoring-server
+
+# ── Loki ──────────────────────────────────────────────────────────────────────
+loki_config_dir: /opt/docker/loki
+loki_http_port: 3100
+
+# ── Alertmanager ──────────────────────────────────────────────────────────────
+alertmanager_config_dir: /opt/docker/alertmanager
+alertmanager_webhook_url: "http://192.168.1.203:3002/Alertmanager"
+alertmanager_resolve_timeout: 5m
+alertmanager_group_wait: 30s
+alertmanager_group_interval: 5m
+alertmanager_repeat_interval: 3h
+
+# ── Grafana ───────────────────────────────────────────────────────────────────
+grafana_data_dir: /opt/docker/grafana
+grafana_provisioning_dir: /opt/docker/grafana/provisioning/datasources
+
+grafana_datasources:
+  - name: Prometheus
+    type: prometheus
+    url: http://192.168.1.203:9090
+    default: true
+  - name: Loki
+    type: loki
+    url: http://192.168.1.203:3100
+    default: false
+
+# ── Promtail ──────────────────────────────────────────────────────────────────
+promtail_config_dir: /opt/services/promtail

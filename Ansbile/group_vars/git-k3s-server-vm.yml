@@ -1,0 +1,350 @@
+---
+prometheus_retention_time: 30d
+
+k3s_apps_list:
+  - name: overseerr
+    namespace: media
+    image: sctx/overseerr:latest
+    port: 5055
+    node_port: 5055
+    target_node: media-server
+    config_path: /opt/overseer
+    config_mount: /app/config
+    replicas: 1
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+    memory_request: "256Mi"
+    memory_limit: "1Gi"
+    cpu_request: "200m"
+    cpu_limit: "1000m"
+
+  - name: jellyfin
+    namespace: media
+    image: jellyfin/jellyfin:latest
+    port: 8096
+    node_port: 8096
+    target_node: media-server
+    config_path: /opt/jellyfin
+    config_mount: /config
+    replicas: 1
+    gpu: true
+    extra_volumes:
+      - name: media
+        host_path: /mnt/media
+        mount_path: /media
+      - name: cache
+        host_path: /opt/jellyfin/cache
+        mount_path: /cache
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+      - { name: LIBVA_DRIVER_NAME, value: "iHD" }
+      - { name: VAAPI_DEVICE, value: "/dev/dri/renderD128" }
+      - { name: JELLYFIN_HWACCEL, value: "vaapi" }
+    memory_request: "512Mi"
+    memory_limit: "4Gi"
+    cpu_request: "500m"
+    cpu_limit: "3000m"
+
+  - name: bazarr
+    namespace: media
+    image: linuxserver/bazarr:latest
+    port: 6767
+    node_port: 6767
+    target_node: media-server
+    config_path: /opt/bazarr
+    config_mount: /config
+    replicas: 1
+    extra_volumes:
+      - name: tv
+        host_path: /mnt/media/tv
+        mount_path: /tv
+      - name: movies
+        host_path: /mnt/media/movies
+        mount_path: /movies
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+      - { name: PUID, value: "1000" }
+      - { name: PGID, value: "1000" }
+    memory_request: "256Mi"
+    memory_limit: "1Gi"
+    cpu_request: "200m"
+    cpu_limit: "1000m"
+
+  - name: radarr
+    namespace: media
+    image: linuxserver/radarr:latest
+    port: 7878
+    node_port: 7878
+    target_node: media-server
+    config_path: /opt/radarr
+    config_mount: /config
+    replicas: 1
+    extra_volumes:
+      - name: movies
+        host_path: /mnt/media/movies
+        mount_path: /movies
+      - name: download
+        host_path: /mnt/media/download
+        mount_path: /downloads
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+      - { name: PUID, value: "1000" }
+      - { name: PGID, value: "1000" }
+    memory_request: "256Mi"
+    memory_limit: "1Gi"
+    cpu_request: "200m"
+    cpu_limit: "1000m"
+
+  - name: prowlarr
+    namespace: media
+    image: linuxserver/prowlarr:latest
+    port: 9696
+    node_port: 9696
+    target_node: media-server
+    config_path: /opt/prowlarr
+    config_mount: /config
+    replicas: 1
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+      - { name: PUID, value: "1000" }
+      - { name: PGID, value: "1000" }
+    memory_request: "128Mi"
+    memory_limit: "512Mi"
+    cpu_request: "100m"
+    cpu_limit: "500m"
+
+  - name: qbittorrent
+    namespace: media
+    image: linuxserver/qbittorrent:latest
+    port: 8080
+    node_port: 8080
+    target_node: media-server
+    config_path: /opt/qbittorrent
+    config_mount: /config
+    replicas: 1
+    extra_volumes:
+      - name: downloads
+        host_path: /mnt/media/download
+        mount_path: /downloads
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+      - { name: PUID, value: "1000" }
+      - { name: PGID, value: "1000" }
+      - { name: WEBUI_PORT, value: "8080" }
+    memory_request: "256Mi"
+    memory_limit: "2Gi"
+    cpu_request: "200m"
+    cpu_limit: "2000m"
+
+  - name: flaresolverr
+    namespace: media
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    port: 8191
+    node_port: 8191
+    target_node: media-server
+    skip_pv: true
+    replicas: 1
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+      - { name: LOG_LEVEL, value: "info" }
+    memory_request: "512Mi"
+    memory_limit: "2Gi"
+    cpu_request: "200m"
+    cpu_limit: "1000m"
+
+  - name: subsyncarr
+    namespace: media
+    image: mrorbitman/subsyncarr:latest
+    target_node: media-server
+    config_path: /opt/subsyncarr
+    config_mount: /config
+    replicas: 1
+    extra_volumes:
+      - name: movies
+        host_path: /mnt/media/movies
+        mount_path: /movies
+      - name: media
+        host_path: /mnt/media/tv
+        mount_path: /tv
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+      - { name: PUID, value: "1000" }
+      - { name: PGID, value: "1000" }
+      - { name: SCAN_PATHS, value: "/movies,/tv" }
+      - { name: MAX_CONCURRENT_SYNC_TASKS, value: 1 }
+      - { name: INCLUDE_ENGINES, value: ffsubsync }
+      - { name: DOWNLOAD_SUBS, value: false }
+      - { name: FFMPEG_HWACCEL, value: vaapi }
+    memory_request: "128Mi"
+    memory_limit: "512Mi"
+    cpu_request: "100m"
+    cpu_limit: "500m"
+
+  - name: scraparr
+    namespace: media
+    image: ghcr.io/thecfu/scraparr
+    port: 7100
+    node_port: 7100
+    target_node: media-server
+    config_path: /opt/scraparr/config
+    config_mount: /scraparr/config
+    replicas: 1
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+    memory_request: "128Mi"
+    memory_limit: "512Mi"
+    cpu_request: "100m"
+    cpu_limit: "500m"
+
+  - name: intel-gpu-exporter
+    namespace: monitoring
+    image: ghcr.io/onedr0p/intel-gpu-exporter:rolling
+    port: 8080
+    node_port: 8082
+    target_node: media-server
+    skip_pv: true
+    privileged: true
+    replicas: 1
+    extra_volumes:
+      - name: dri
+        host_path: /dev/dri
+        mount_path: /dev/dri
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+    memory_request: "64Mi"
+    memory_limit: "256Mi"
+    cpu_request: "50m"
+    cpu_limit: "200m"
+
+  - name: qbittorrent-exporter
+    namespace: monitoring
+    image: caseyscarborough/qbittorrent-exporter:latest
+    port: 17871
+    node_port: 17871
+    target_node: media-server
+    skip_pv: true
+    replicas: 1
+    env:
+      - name: QBITTORRENT_USERNAME
+        value: "{{ qbittorrent_exporter_username }}"
+      - name: QBITTORRENT_PASSWORD
+        value: "{{ qbittorrent_exporter_password }}"
+      - name: QBITTORRENT_BASE_URL
+        value: "{{ qbittorrent_exporter_base_url }}"
+    memory_request: "64Mi"
+    memory_limit: "256Mi"
+    cpu_request: "50m"
+    cpu_limit: "200m"
+
+  - name: sonarr
+    namespace: media
+    image: linuxserver/sonarr:latest
+    port: 8989
+    node_port: 8989
+    target_node: media-server
+    config_path: /opt/sonarr
+    config_mount: /config
+    replicas: 1
+    extra_volumes:
+      - name: tv
+        host_path: /mnt/media/tv
+        mount_path: /tv
+      - name: download
+        host_path: /mnt/media/download
+        mount_path: /downloads
+    env:
+      - { name: TZ, value: "Asia/Riyadh" }
+      - { name: PUID, value: "1000" }
+      - { name: PGID, value: "1000" }
+    memory_request: "256Mi"
+    memory_limit: "1Gi"
+    cpu_request: "200m"
+    cpu_limit: "1000m"
+
+  - name: grafana
+    namespace: monitoring
+    image: grafana/grafana:latest
+    port: 3000
+    node_port: 3000
+    target_node: monitoring-server
+    config_path: /opt/docker/grafana
+    config_mount: /opt/docker/grafana
+    replicas: 1
+    extra_volumes:
+      - name: provisioning
+        host_path: /opt/docker/grafana/provisioning
+        mount_path: /etc/grafana/provisioning
+    env:
+      - { name: GF_PATHS_DATA, value: /opt/docker/grafana }
+    memory_request: "128Mi"
+    memory_limit: "512Mi"
+    cpu_request: "50m"
+    cpu_limit: "500m"
+
+  - name: prometheus
+    namespace: monitoring
+    image: prom/prometheus:latest
+    port: 9090
+    node_port: 9090
+    target_node: monitoring-server
+    service_account: prometheus
+    config_path: /opt/docker/prometheus
+    config_mount: /etc/prometheus
+    replicas: 1
+    args:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time={{ prometheus_retention_time }}"
+      - "--web.enable-lifecycle"
+    memory_request: "256Mi"
+    memory_limit: "1Gi"
+    cpu_request: "100m"
+    cpu_limit: "1000m"
+
+  - name: loki
+    namespace: monitoring
+    image: grafana/loki:latest
+    port: 3100
+    node_port: 3100
+    target_node: monitoring-server
+    config_path: /opt/docker/loki
+    config_mount: /etc/loki
+    replicas: 1
+    args:
+      - "-config.file=/etc/loki/config.yml"
+    memory_request: "128Mi"
+    memory_limit: "512Mi"
+    cpu_request: "50m"
+    cpu_limit: "500m"
+
+  - name: alertmanager
+    namespace: monitoring
+    image: prom/alertmanager:latest
+    port: 9093
+    node_port: 9093
+    target_node: monitoring-server
+    config_path: /opt/docker/alertmanager
+    config_mount: /etc/alertmanager
+    replicas: 1
+    args:
+      - "--config.file=/etc/alertmanager/config.yml"
+    memory_request: "64Mi"
+    memory_limit: "256Mi"
+    cpu_request: "25m"
+    cpu_limit: "200m"
+
+  - name: speedtest-exporter
+    namespace: monitoring
+    image: miguelndecarvalho/speedtest-exporter
+    port: 9798
+    node_port: 9798
+    target_node: monitoring-server
+    skip_pv: true
+    dns_policy: None
+    dns_nameservers:
+      - "8.8.8.8"
+      - "8.8.4.4"
+    replicas: 1
+    memory_request: "64Mi"
+    memory_limit: "256Mi"
+    cpu_request: "25m"
+    cpu_limit: "200m"

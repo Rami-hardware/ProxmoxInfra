@@ -1,17 +1,18 @@
+---
 - name: Check if Loki config.yml exists and is a directory
   ansible.builtin.stat:
-    path: /opt/docker/loki/config.yml
+    path: "{{ loki_config_dir }}/config.yml"
   register: loki_config_stat
 
 - name: Remove Loki config.yml if it is a directory
   ansible.builtin.file:
-    path: /opt/docker/loki/config.yml
+    path: "{{ loki_config_dir }}/config.yml"
     state: absent
   when: loki_config_stat.stat.exists and loki_config_stat.stat.isdir
 
 - name: Ensure Loki config directory exists
   ansible.builtin.file:
-    path: /opt/docker/loki
+    path: "{{ loki_config_dir }}"
     state: directory
     mode: '0755'
 
@@ -20,48 +21,11 @@
     path: "{{ item }}"
     state: directory
     mode: '0755'
-  loop:
-    - /loki/index
-    - /loki/boltdb-cache
-    - /loki/chunks
-    - /loki/compactor
-    - /loki/wal
+  loop: "{{ loki_data_dirs }}"
 
-- name: Create Loki config.yml with valid configuration
-  ansible.builtin.copy:
-    dest: /opt/docker/loki/config.yml
+- name: Template Loki config
+  ansible.builtin.template:
+    src: loki.yml.j2
+    dest: "{{ loki_config_dir }}/config.yml"
     mode: '0644'
     force: true
-    content: |
-      auth_enabled: false
-
-      server:
-        http_listen_port: 3100
-
-      common:
-        path_prefix: /loki
-        replication_factor: 1
-        ring:
-          instance_addr: 127.0.0.1
-          kvstore:
-            store: inmemory
-
-      storage_config:
-        boltdb_shipper:
-          active_index_directory: /loki/index
-          cache_location: /loki/boltdb-cache
-        filesystem:
-          directory: /loki/chunks
-
-      schema_config:
-        configs:
-          - from: 2020-10-24
-            store: boltdb-shipper
-            object_store: filesystem
-            schema: v11
-            index:
-              prefix: index_
-              period: 24h
-
-      limits_config:
-        allow_structured_metadata: false

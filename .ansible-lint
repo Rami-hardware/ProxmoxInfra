@@ -1,0 +1,6 @@
+warn_list:
+  - yaml[indentation]
+
+skip_list:
+  - yaml[line-length]
+  - yaml[truthy]
