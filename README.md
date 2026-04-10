@@ -14,14 +14,13 @@ A fully automated homelab running on Proxmox, provisioned with Terraform, config
 
 ### Virtual Machines
 
-| VM                | Key        | IP            | Cores | RAM  | Role                                      |
-| :---------------- | :--------- | :------------ | :---- | :--- | :---------------------------------------- |
-| gateway-server    | gateway    | 192.168.1.200 | 1     | 2 GB | Reverse proxy, firewall, DNS              |
-| media-server      | media      | 192.168.1.201 | 3     | 8 GB | Media stack + K3s agent                   |
-| monitoring-server | monitoring | 192.168.1.203 | 1     | 2 GB | Observability stack                       |
-| git-k3s-server    | github     | 192.168.1.204 | 4     | 8 GB | GitHub Actions runner + K3s control plane |
-| dev-server        | dev        | 192.168.1.205 | 2     | 1 GB | Development                               |
-| game-server       | game       | 192.168.1.202 | 4     | 8 GB | Game server                               |
+| VM                | IP            | Cores | RAM  | Role                                      |
+| :---------------- | :------------ | :---- | :--- | :---------------------------------------- |
+| gateway-server    | 192.168.1.200 | 1     | 2 GB | Reverse proxy, firewall, DNS              |
+| media-server      | 192.168.1.201 | 3     | 8 GB | Media stack + K3s worker                  |
+| monitoring-server | 192.168.1.203 | 1     | 2 GB | Observability stack + K3s worker          |
+| git-k3s-server    | 192.168.1.204 | 4     | 8 GB | GitHub Actions runner + K3s control plane |
+| dev-server        | 192.168.1.205 | 2     | 1 GB | Development                               |
 
 ---
 
@@ -35,31 +34,44 @@ A fully automated homelab running on Proxmox, provisioned with Terraform, config
 - **Authelia** — SSO / 2FA authentication layer
 - **UFW** — host firewall
 
-### Media (192.168.1.201)
+### Media (192.168.1.201) — K3s worker
 
-- **Jellyfin** — media server with Intel Arc GPU transcoding
-- **Radarr / Sonarr / Bazarr** — movie, TV, subtitle automation
-- **qBittorrent** — torrent client
-- **Prowlarr / FlareSolverr** — indexer management
-- **Overseerr** — media request management (deployed via K3s)
-- **Samba** — network file share for `/mnt/media`
-- **Subsyncarr** — subtitle sync with hardware acceleration
+| App          | Port | Description                                         |
+| :----------- | :--- | :-------------------------------------------------- |
+| Jellyfin     | 8096 | Media server with Intel Arc GPU transcoding         |
+| Radarr       | 7878 | Movie automation                                    |
+| Sonarr       | 8989 | TV automation                                       |
+| Bazarr       | 6767 | Subtitle automation                                 |
+| Overseerr    | 5055 | Media request management                            |
+| qBittorrent  | 8080 | Torrent client                                      |
+| Prowlarr     | 9696 | Indexer management                                  |
+| FlareSolverr | 8191 | Cloudflare bypass (stateless)                       |
+| Subsyncarr   | —    | Subtitle sync with VAAPI hardware acceleration      |
+| Scraparr     | 7100 | Metrics exporter for arr apps                       |
 
-### Monitoring (192.168.1.203)
+### Monitoring (192.168.1.203) — K3s worker
 
-- **Prometheus** — metrics collection with relabel_configs for clean instance labels
-- **Grafana** — dashboards with auto-provisioned Prometheus + Loki datasources
-- **Loki** — log aggregation
-- **Alertmanager** — alert routing to webhook
-- **Promtail** — log shipping from all hosts
-- **node-exporter** — host metrics
-- **speedtest-exporter** — ISP bandwidth tracking (1h interval)
+| App                | Port | Description                           |
+| :----------------- | :--- | :------------------------------------ |
+| Prometheus         | 9090 | Metrics collection                    |
+| Grafana            | 3000 | Dashboards                            |
+| Loki               | 3100 | Log aggregation                       |
+| Alertmanager       | 9093 | Alert routing                         |
+| Speedtest Exporter | 9798 | ISP bandwidth tracking (10m interval) |
 
 ### Git / K3s (192.168.1.204)
 
 - **GitHub Actions self-hosted runner** — executes CI/CD pipeline
-- **K3s control plane** — Kubernetes API server
-- **K3s apps** — single Ansible role deploys any app via one generic manifest template
+- **K3s control plane** — Kubernetes API server, kube-state-metrics
+- **kube-state-metrics** — Kubernetes object metadata for dashboards
+
+### Observability (cluster-wide DaemonSets)
+
+| Component        | Nodes                             | Description                   |
+| :--------------- | :-------------------------------- | :---------------------------- |
+| node-exporter    | media, monitoring, git-k3s-server | Host-level metrics            |
+| Promtail         | media, monitoring, git-k3s-server | Log shipping to Loki          |
+| kubelet-cadvisor | media, monitoring, git-k3s-server | Container metrics via kubelet |
 
 ---
 
@@ -72,6 +84,7 @@ A fully automated homelab running on Proxmox, provisioned with Terraform, config
 - Module at `modules/proxmox_vm/` handles all VM resources
 - `lifecycle.ignore_changes` covers `disk`, `initialization`, `clone`, `hostpci`, `cpu`
 - State tracked per VMID — map keys must never be renamed (would destroy the VM)
+- `parallelism=1` required on self-hosted runner to avoid Proxmox API race conditions
 
 ### Ansible
 
@@ -83,18 +96,19 @@ A fully automated homelab running on Proxmox, provisioned with Terraform, config
 
 ### K3s App Pattern
 
-Adding a new K3s app requires only editing `group_vars/github-vm.yml`:
+One generic template (`app.yml.j2`) renders Namespace + PV + PVC + Deployment + NodePort Service. Adding a new app requires only a new entry in `group_vars/git-k3s-server-vm.yml`:
 
 ```yaml
 k3s_apps_list:
-  - name: overseerr
-    namespace: overseerr
-    image: sctx/overseerr:latest
-    port: 5055
-    node_port: 30055
+  - name: myapp
+    namespace: media
+    image: myrepo/myapp:latest
+    port: 8080
+    node_port: 8080
     target_node: media-server
-    config_path: /opt/k3s/overseerr/config
-    config_mount: /app/config
+    config_path: /opt/myapp         # omit + set skip_pv: true for stateless apps
+    config_mount: /config
+    replicas: 1
     env:
       - { name: TZ, value: "Asia/Riyadh" }
     memory_request: "128Mi"
@@ -103,7 +117,29 @@ k3s_apps_list:
     cpu_limit: "500m"
 ```
 
-One generic template (`app.yml.j2`) renders Namespace + PV + PVC + Deployment + NodePort Service for every app.
+**Supported flags:**
+
+| Flag             | Description                                              |
+| :--------------- | :------------------------------------------------------- |
+| `skip_pv`        | Skip PV/PVC creation for stateless apps                  |
+| `gpu`            | Mount `/dev/dri` + privileged for Intel GPU access       |
+| `privileged`     | Run container as privileged (no GPU mount)               |
+| `host_pid`       | Enable `hostPID: true`                                   |
+| `host_network`   | Enable `hostNetwork: true` with `dnsPolicy: Default`     |
+| `service_account`| Attach a named ServiceAccount to the pod                 |
+| `dns_policy`     | Override DNS policy (e.g. `None`)                        |
+| `dns_nameservers`| Custom nameservers when `dns_policy: None`               |
+| `args`           | Container CLI arguments                                  |
+| `extra_volumes`  | Additional hostPath volume mounts                        |
+
+**Special apps deployed as static manifests (not via generic template):**
+
+| Manifest                 | Type       | Description                            |
+| :----------------------- | :--------- | :------------------------------------- |
+| `node-exporter.yml`      | DaemonSet  | Runs on all K3s nodes                  |
+| `promtail.yml`           | DaemonSet  | Runs on all K3s nodes                  |
+| `kube-state-metrics.yml` | Deployment | K8s metadata metrics on control plane  |
+| `prometheus-rbac.yml`    | RBAC       | Allows Prometheus to scrape kubelet    |
 
 ---
 
@@ -111,10 +147,10 @@ One generic template (`app.yml.j2`) renders Namespace + PV + PVC + Deployment + 
 
 Triggered on push to `development`, `staging`, or `main`.
 
-```
+```text
 Testing job
 ├── Terraform validate
-├── Ansible syntax-check (all playbooks)
+├── Ansible syntax-check (all playbooks, with vault password)
 └── Ansible lint
 
 Deploy job
@@ -123,7 +159,7 @@ Deploy job
 ├── Terraform plan (saved to tfplan)
 ├── Destroy check — fails pipeline if any VM would be destroyed
 ├── Terraform apply -parallelism=1 (targeted per VM)
-└── Ansible playbooks (monitoring → media → github)
+└── Ansible playbooks (gateway → monitoring → media → git-k3s-server)
 ```
 
 The destroy guard parses the saved plan and blocks apply if `will be destroyed` or `must be replaced` is detected.
@@ -134,44 +170,41 @@ The destroy guard parses the saved plan and blocks apply if `will be destroyed` 
 
 ### Prometheus Scrape Design
 
-- All node exporters grouped into a single `nodes` job with `relabel_configs` — instance label shows hostname, not IP
-- Single-target jobs use `relabel_configs: target_label: instance` — reliable override vs `static_configs.labels`
-- Scrape targets reference `hostvars` for IPs — no duplication with inventory
+- `nodes` job groups all node-exporters with `relabel_configs` — instance label shows hostname, not IP
+- `kubelet-cadvisor` job scrapes `/metrics/cadvisor` from each kubelet over HTTPS with bearer token auth
+- `kube-state-metrics` provides Kubernetes object labels (namespace, pod, container) to enrich container metrics
+- Scrape targets reference `hostvars` IPs — no duplication with inventory
 
-### Loki
+### Loki + Promtail
 
-- `reject_old_samples: true` with `reject_old_samples_max_age: 168h` — prevents log drop on Promtail restart
-- BoltDB shipper with filesystem chunks storage
+- Promtail runs as a DaemonSet on all K3s nodes
+- `${NODE_NAME}` injected via downward API — each pod labels logs with its actual node name
+- Scrapes: K3s container logs, Docker container logs, system logs
 
 ### Grafana
 
-- Prometheus and Loki datasources auto-provisioned at `/etc/grafana/provisioning/datasources/` — no manual UI setup required
-
-### Promtail
-
-- Uses `HOST_HOSTNAME` env var (not `HOSTNAME` — Docker overrides that to the container ID)
-- Scrapes: system logs, Docker container logs, Samba logs
+- Prometheus and Loki datasources auto-provisioned at `/etc/grafana/provisioning/datasources/`
 
 ---
 
 ## Technologies
 
-| Category       | Tools                                              |
-| -------------- | -------------------------------------------------- |
-| Virtualization | Proxmox VE                                         |
-| IaC            | Terraform (bpg/proxmox provider)                   |
-| Configuration  | Ansible                                            |
-| Containers     | Docker, Docker Compose                             |
-| Orchestration  | K3s (Kubernetes)                                   |
-| CI/CD          | GitHub Actions (self-hosted runner)                |
-| Metrics        | Prometheus, node-exporter, various exporters       |
-| Visualization  | Grafana                                            |
-| Logging        | Loki, Promtail                                     |
-| Alerting       | Alertmanager                                       |
-| Reverse Proxy  | Nginx                                              |
-| Security       | CrowdSec, Authelia, UFW, Ansible Vault             |
-| DNS            | AdGuard Home                                       |
-| Media          | Jellyfin, Radarr, Sonarr, Bazarr, Overseerr        |
+| Category       | Tools                                                              |
+| :------------- | :----------------------------------------------------------------- |
+| Virtualization | Proxmox VE                                                         |
+| IaC            | Terraform (bpg/proxmox provider)                                   |
+| Configuration  | Ansible                                                            |
+| Containers     | Docker, Docker Compose                                             |
+| Orchestration  | K3s (Kubernetes)                                                   |
+| CI/CD          | GitHub Actions (self-hosted runner)                                |
+| Metrics        | Prometheus, node-exporter, kubelet-cadvisor, kube-state-metrics    |
+| Visualization  | Grafana                                                            |
+| Logging        | Loki, Promtail                                                     |
+| Alerting       | Alertmanager                                                       |
+| Reverse Proxy  | Nginx                                                              |
+| Security       | CrowdSec, Authelia, UFW, Ansible Vault                             |
+| DNS            | AdGuard Home                                                       |
+| Media          | Jellyfin, Radarr, Sonarr, Bazarr, Overseerr, qBittorrent           |
 
 ---
 
