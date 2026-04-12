@@ -105,7 +105,6 @@ jobs:
     name: Deploy Infrastructure Code
     runs-on: self-hosted
     needs: testing
-    if: github.ref_name == 'main'
     environment: production
 
     steps:
@@ -243,16 +242,3 @@ jobs:
         run: |
           rm -f ~/.vault_pass
           rm -f ~/.ssh/id_rsa
-
-      - name: Notify Discord on failure
-        if: failure()
-        run: |
-          curl -s -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "embeds": [{
-                "title": "Deploy Failed",
-                "description": "**Repo:** ${{ github.repository }}\n**Branch:** ${{ github.ref_name }}\n**Commit:** ${{ github.sha }}\n**Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-                "color": 15158332
-              }]
-            }'
