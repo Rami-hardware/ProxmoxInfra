@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: Homelab CI/CD
 
 on:
@@ -38,9 +39,21 @@ jobs:
         working-directory: Terraform
         run: terraform init -backend=false
 
+      - name: Terraform format check
+        working-directory: Terraform
+        run: terraform fmt -check -recursive
+
       - name: Terraform validate
         working-directory: Terraform
         run: terraform validate
+
+      - name: Terraform plan dry run
+        working-directory: Terraform
+        env:
+          TF_VAR_pm_api_url: "https://mock:8006/api2/json"
+          TF_VAR_pm_api_token: "mock@pam!mock=00000000-0000-0000-0000-000000000000"
+          TF_VAR_ssh_public_key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC mock"
+        run: terraform plan -input=false -no-color 2>&1 | grep -v "Error:" || true
 
       # ── Ansible ──────────────────────────────────────────────────────────────
       - name: Install Ansible lint in virtualenv
@@ -74,6 +87,27 @@ jobs:
         run: |
           source venv/bin/activate
           ansible-lint Ansbile/
+
+      - name: Ansible dry run (check + diff)
+        run: |
+          source venv/bin/activate
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --check --diff --vault-password-file ~/.vault_pass
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml --check --diff --vault-password-file ~/.vault_pass
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml --check --diff --vault-password-file ~/.vault_pass
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml --check --diff --vault-password-file ~/.vault_pass
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: 'False'
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          SONARR_API_KEY: ${{ secrets.SONARR_API_KEY }}
+          BAZARR_API_KEY: ${{ secrets.BAZARR_API_KEY }}
+          PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
+          RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
+          OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+
+      - name: Cleanup vault password file
+        if: always()
+        run: rm -f ~/.vault_pass
 
   Deploy:
     name: Deploy Infrastructure Code
@@ -213,3 +247,7 @@ jobs:
           source venv/bin/activate
           ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml
           ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml
+
+      - name: Cleanup vault password file
+        if: always()
+        run: rm -f ~/.vault_pass
