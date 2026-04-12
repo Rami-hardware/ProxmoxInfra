@@ -47,14 +47,6 @@ jobs:
         working-directory: Terraform
         run: terraform validate
 
-      - name: Terraform plan dry run
-        working-directory: Terraform
-        env:
-          TF_VAR_pm_api_url: "https://mock:8006/api2/json"
-          TF_VAR_pm_api_token: "mock@pam!mock=00000000-0000-0000-0000-000000000000"
-          TF_VAR_ssh_public_key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC mock"
-        run: terraform plan -input=false -no-color 2>&1 | grep -v "Error:" || true
-
       # ── Ansible ──────────────────────────────────────────────────────────────
       - name: Install Ansible lint in virtualenv
         run: |
@@ -113,7 +105,8 @@ jobs:
     name: Deploy Infrastructure Code
     runs-on: self-hosted
     needs: testing
-    environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || 'development' }}
+    if: github.ref_name == 'main'
+    environment: production
 
     steps:
       - name: Checkout code
@@ -214,7 +207,7 @@ jobs:
           source venv/bin/activate
           ansible-galaxy collection install -r Ansbile/requirements.yml
 
-      - name: Setup SSH
+      - name: Setup SSH and Vault
         shell: bash
         run: |
           mkdir -p ~/.ssh
@@ -224,9 +217,6 @@ jobs:
           ssh-keyscan -H 192.168.1.201 >> ~/.ssh/known_hosts || true
           ssh-keyscan -H 192.168.1.203 >> ~/.ssh/known_hosts || true
           ssh-keyscan -H 192.168.1.204 >> ~/.ssh/known_hosts || true
-
-      - name: Create Ansible Vault password file
-        run: |
           echo "${ANSIBLE_VAULT_PASSWORD}" > ~/.vault_pass
           chmod 600 ~/.vault_pass
         env:
@@ -248,6 +238,21 @@ jobs:
           ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml
           ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml
 
-      - name: Cleanup vault password file
+      - name: Cleanup secrets
         if: always()
-        run: rm -f ~/.vault_pass
+        run: |
+          rm -f ~/.vault_pass
+          rm -f ~/.ssh/id_rsa
+
+      - name: Notify Discord on failure
+        if: failure()
+        run: |
+          curl -s -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "embeds": [{
+                "title": "Deploy Failed",
+                "description": "**Repo:** ${{ github.repository }}\n**Branch:** ${{ github.ref_name }}\n**Commit:** ${{ github.sha }}\n**Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                "color": 15158332
+              }]
+            }'
