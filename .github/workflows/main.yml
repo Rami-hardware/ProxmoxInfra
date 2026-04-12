@@ -88,11 +88,11 @@ jobs:
           source venv/bin/activate
           ansible-lint Ansbile/
 
+      # gateway and media use Docker command/shell tasks that break in check mode
+      # --check is limited to template-driven playbooks only
       - name: Ansible dry run (check + diff)
         run: |
           source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --check --diff --vault-password-file ~/.vault_pass
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml --check --diff --vault-password-file ~/.vault_pass
           ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml --check --diff --vault-password-file ~/.vault_pass
           ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml --check --diff --vault-password-file ~/.vault_pass
         env:
