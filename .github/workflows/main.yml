@@ -105,7 +105,7 @@ jobs:
     name: Deploy Infrastructure Code
     runs-on: self-hosted
     needs: testing
-    environment: production
+    environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || 'development' }}
 
     steps:
       - name: Checkout code
