@@ -48,6 +48,8 @@ prometheus_scrape_jobs:
         replacement: "host-node"
   - name: loki
     targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:3100"]
+    labels:
+      release: "prometheus"
     relabel_configs:
       - target_label: instance
         replacement: monitoring-server
