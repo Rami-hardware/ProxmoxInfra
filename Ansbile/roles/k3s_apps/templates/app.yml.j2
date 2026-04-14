@@ -50,11 +50,17 @@ metadata:
   namespace: {{ item.namespace }}
 spec:
   replicas: {{ item.replicas | default(1) }}
+{% set uses_host_port = (item.host_port is defined) or
+    (item.extra_ports | default([]) | selectattr('host_port', 'defined') | list | length > 0) %}
   strategy:
+{% if uses_host_port %}
+    type: Recreate
+{% else %}
     type: RollingUpdate
     rollingUpdate:
       maxSurge: 1
       maxUnavailable: 0
+{% endif %}
   selector:
     matchLabels:
       app: {{ item.name }}

@@ -93,7 +93,6 @@ jobs:
       - name: Ansible dry run (check + diff)
         run: |
           source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --check --diff --vault-password-file ~/.vault_pass
           ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml --check --diff --vault-password-file ~/.vault_pass
         env:
           ANSIBLE_HOST_KEY_CHECKING: 'False'
@@ -244,7 +243,6 @@ jobs:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         run: |
           source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml
           ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml
 
       - name: Cleanup secrets

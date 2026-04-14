@@ -353,7 +353,7 @@ k3s_apps_list:
     namespace: network
     image: nginx:latest
     port: 80
-    host_port: 80
+    node__port: 80
     target_node: gateway-server
     skip_pv: true
     dns_policy: None
