@@ -60,8 +60,16 @@ jobs:
           source venv/bin/activate
           ansible-galaxy collection install -r Ansbile/requirements.yml
 
-      - name: Create Ansible Vault password file
+      - name: Setup SSH and Vault
+        shell: bash
         run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 192.168.1.200 >> ~/.ssh/known_hosts || true
+          ssh-keyscan -H 192.168.1.201 >> ~/.ssh/known_hosts || true
+          ssh-keyscan -H 192.168.1.203 >> ~/.ssh/known_hosts || true
+          ssh-keyscan -H 192.168.1.204 >> ~/.ssh/known_hosts || true
           echo "${ANSIBLE_VAULT_PASSWORD}" > ~/.vault_pass
           chmod 600 ~/.vault_pass
         env:
@@ -86,7 +94,7 @@ jobs:
         run: |
           source venv/bin/activate
           ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml --check --diff --vault-password-file ~/.vault_pass
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml --check --diff --vault-password-file ~/.vault_pass
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --check --diff --vault-password-file ~/.vault_pass
         env:
           ANSIBLE_HOST_KEY_CHECKING: 'False'
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
@@ -97,9 +105,11 @@ jobs:
           OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
 
-      - name: Cleanup vault password file
+      - name: Cleanup secrets
         if: always()
-        run: rm -f ~/.vault_pass
+        run: |
+          rm -f ~/.vault_pass
+          rm -f ~/.ssh/id_rsa
 
   Deploy:
     name: Deploy Infrastructure Code
@@ -234,7 +244,7 @@ jobs:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         run: |
           source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml
           ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml
 
       - name: Cleanup secrets
