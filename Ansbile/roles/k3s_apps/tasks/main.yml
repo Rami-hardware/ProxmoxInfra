@@ -180,11 +180,13 @@
 # cause an immediate 0-second failure on the next run.
 - name: Restart deployments that have exceeded their progress deadline
   ansible.builtin.shell:
-    cmd: >
-      k3s kubectl rollout status deployment/{{ item.name }} -n {{ item.namespace }} --timeout=5s 2>&1
-      | grep -q "exceeded its progress deadline"
-      && k3s kubectl rollout restart deployment/{{ item.name }} -n {{ item.namespace }}
-      || true
+    cmd: |
+      set -o pipefail
+      STATUS=$(k3s kubectl rollout status deployment/{{ item.name }} -n {{ item.namespace }} --timeout=5s 2>&1 || true)
+      if echo "$STATUS" | grep -q "exceeded its progress deadline"; then
+        k3s kubectl rollout restart deployment/{{ item.name }} -n {{ item.namespace }}
+      fi
+    executable: /bin/bash
   loop: "{{ k3s_apps_list }}"
   loop_control:
     label: "{{ item.name }}"
