@@ -6,8 +6,9 @@
     # - DNS
     # - docker_setup
     # - promtail
-    - docker_apps
+    # - docker_apps
     # - nginx_config
     # - adguard
     # - crowdsec
     # - ufw
+    - k3s_agent
