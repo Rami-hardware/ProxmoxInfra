@@ -3,7 +3,14 @@
   become: true
 
   pre_tasks:
-    - name: Stop Docker nginx if running (migrating to K3s hostPort — port conflict)
+    - name: Stop and disable nginx systemd service if running (migrating to K3s hostPort)
+      ansible.builtin.service:
+        name: nginx
+        state: stopped
+        enabled: false
+      failed_when: false
+
+    - name: Stop Docker nginx container if running (migrating to K3s hostPort)
       ansible.builtin.command:
         cmd: docker rm -f nginx
       failed_when: false
