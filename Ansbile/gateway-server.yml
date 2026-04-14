@@ -2,6 +2,13 @@
   hosts: gateway-server
   become: true
 
+  pre_tasks:
+    - name: Stop Docker nginx if running (migrating to K3s hostPort — port conflict)
+      ansible.builtin.command:
+        cmd: docker rm -f nginx
+      failed_when: false
+      changed_when: false
+
   roles:
     # - DNS
     # - docker_setup
