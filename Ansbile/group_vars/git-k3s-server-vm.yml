@@ -401,7 +401,6 @@ k3s_apps_list:
       - "8.8.4.4"
     replicas: 1
     port: 3000
-    node_port: 3000
     extra_ports:
       - port: 8081
       - port: 53
