@@ -200,6 +200,24 @@
   register: k3s_apps_rollout
   ignore_errors: true
 
+- name: Show pod status for failed deployments
+  ansible.builtin.command:
+    cmd: "k3s kubectl get pods -n {{ item.item.namespace }} -l app={{ item.item.name }} -o wide"
+  when: item.failed | default(false)
+  loop: "{{ k3s_apps_rollout.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  changed_when: false
+
+- name: Show pod events for failed deployments
+  ansible.builtin.command:
+    cmd: "k3s kubectl get events -n {{ item.item.namespace }} --field-selector involvedObject.name={{ item.item.name }} --sort-by='.lastTimestamp'"
+  when: item.failed | default(false)
+  loop: "{{ k3s_apps_rollout.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  changed_when: false
+
 - name: Describe pods for failed deployments
   ansible.builtin.command:
     cmd: "k3s kubectl describe pods -n {{ item.item.namespace }} -l app={{ item.item.name }}"
