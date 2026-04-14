@@ -97,9 +97,14 @@ spec:
             - "{{ arg }}"
 {% endfor %}
 {% endif %}
-{% if item.port is defined %}
+{% if item.port is defined or item.extra_ports | default([]) | length > 0 %}
           ports:
+{% if item.port is defined %}
             - containerPort: {{ item.port }}
+{% endif %}
+{% for ep in item.extra_ports | default([]) %}
+            - containerPort: {{ ep.port }}
+{% endfor %}
 {% endif %}
 {% if item.env | default([]) | length > 0 %}
           env:
@@ -118,6 +123,9 @@ spec:
 {% for vol in item.extra_volumes | default([]) %}
             - name: {{ vol.name }}
               mountPath: {{ vol.mount_path }}
+{% if vol.read_only | default(false) %}
+              readOnly: true
+{% endif %}
 {% endfor %}
 {% if item.gpu | default(false) %}
             - name: dri
@@ -142,6 +150,9 @@ spec:
         - name: {{ vol.name }}
           hostPath:
             path: {{ vol.host_path }}
+{% if vol.host_path_type is defined %}
+            type: {{ vol.host_path_type }}
+{% endif %}
 {% endfor %}
 {% if item.gpu | default(false) %}
         - name: dri
@@ -164,4 +175,9 @@ spec:
     - port: {{ item.port }}
       targetPort: {{ item.port }}
       nodePort: {{ item.node_port }}
+{% for ep in item.extra_ports | default([]) %}
+    - port: {{ ep.port }}
+      targetPort: {{ ep.port }}
+      nodePort: {{ ep.node_port }}
+{% endfor %}
 {% endif %}
