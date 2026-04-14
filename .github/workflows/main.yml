@@ -16,12 +16,28 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+          if [ -d .git ]; then
+            git fetch --depth=1 origin ${{ github.sha }}
+          else
+            git clone --depth=1 "https://github.com/${{ github.repository }}.git" .
+          fi
+          git checkout ${{ github.sha }}
+          git clean -ffd
 
       - name: Install system dependencies
         run: |
-          sudo apt update
-          sudo apt install -y unzip curl git ansible python3-venv python3-pip
+          MISSING=""
+          for pkg in unzip curl git ansible python3-venv python3-pip; do
+            dpkg -s "$pkg" &>/dev/null || MISSING="$MISSING $pkg"
+          done
+          if [ -n "$MISSING" ]; then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends $MISSING
+          fi
 
       - name: Verify installations
         run: |
@@ -31,9 +47,16 @@ jobs:
 
       # ── Terraform ────────────────────────────────────────────────────────────
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.6.0
+        run: |
+          TF_VERSION="1.6.0"
+          if terraform version 2>/dev/null | grep -q "v${TF_VERSION}"; then
+            echo "Terraform ${TF_VERSION} already installed"
+          else
+            curl -fsSL "https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip" -o /tmp/tf.zip
+            sudo unzip -o /tmp/tf.zip terraform -d /usr/local/bin/
+            rm /tmp/tf.zip
+          fi
+          terraform version
 
       - name: Terraform init (no backend)
         working-directory: Terraform
@@ -119,13 +142,30 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+          if [ -d .git ]; then
+            git fetch --depth=1 origin ${{ github.sha }}
+          else
+            git clone --depth=1 "https://github.com/${{ github.repository }}.git" .
+          fi
+          git checkout ${{ github.sha }}
+          git clean -ffd
 
       # ── Terraform ────────────────────────────────────────────────────────────
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.6.0
+        run: |
+          TF_VERSION="1.6.0"
+          if terraform version 2>/dev/null | grep -q "v${TF_VERSION}"; then
+            echo "Terraform ${TF_VERSION} already installed"
+          else
+            curl -fsSL "https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip" -o /tmp/tf.zip
+            sudo unzip -o /tmp/tf.zip terraform -d /usr/local/bin/
+            rm /tmp/tf.zip
+          fi
+          terraform version
 
       - name: Terraform init
         working-directory: Terraform

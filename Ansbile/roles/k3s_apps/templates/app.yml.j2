@@ -101,9 +101,15 @@ spec:
           ports:
 {% if item.port is defined %}
             - containerPort: {{ item.port }}
+{% if item.host_port is defined %}
+              hostPort: {{ item.host_port }}
+{% endif %}
 {% endif %}
 {% for ep in item.extra_ports | default([]) %}
             - containerPort: {{ ep.port }}
+{% if ep.host_port is defined %}
+              hostPort: {{ ep.host_port }}
+{% endif %}
 {% endfor %}
 {% endif %}
 {% if item.env | default([]) | length > 0 %}
@@ -160,7 +166,7 @@ spec:
             path: /dev/dri
 {% endif %}
 {% endif %}
-{% if item.port is defined %}
+{% if item.port is defined and item.node_port is defined %}
 ---
 apiVersion: v1
 kind: Service
@@ -175,7 +181,7 @@ spec:
     - port: {{ item.port }}
       targetPort: {{ item.port }}
       nodePort: {{ item.node_port }}
-{% for ep in item.extra_ports | default([]) %}
+{% for ep in item.extra_ports | default([]) if ep.node_port is defined %}
     - port: {{ ep.port }}
       targetPort: {{ ep.port }}
       nodePort: {{ ep.node_port }}
