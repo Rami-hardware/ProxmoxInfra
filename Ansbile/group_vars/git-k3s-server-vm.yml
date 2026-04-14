@@ -400,10 +400,12 @@ k3s_apps_list:
       - "8.8.8.8"
       - "8.8.4.4"
     replicas: 1
-    port: 3000
+    port: 8081
     extra_ports:
-      - port: 8081
       - port: 53
+    args:
+      - "--web-addr"
+      - "0.0.0.0:8081"
     extra_volumes:
       - name: conf
         host_path: /opt/adguardhome/conf
