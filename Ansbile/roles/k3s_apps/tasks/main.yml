@@ -159,11 +159,36 @@
       item.stdout.split(',')[2] == 'Released'
   changed_when: false
 
+- name: Show K3s cluster nodes
+  ansible.builtin.command:
+    cmd: "k3s kubectl get nodes -o wide"
+  changed_when: false
+
 - name: Apply all K3s app manifests
   ansible.builtin.command:
     cmd: "k3s kubectl apply --server-side --force-conflicts -f {{ k3s_apps_manifest_dir }}"
   changed_when: true
+  register: k3s_apps_apply_result
   when: k3s_apps_list | length > 0
+
+- name: Show apply output
+  ansible.builtin.debug:
+    msg: "{{ k3s_apps_apply_result.stdout_lines }}"
+  when: k3s_apps_list | length > 0
+
+# Force a rollout restart so ProgressDeadlineExceeded from prior failed runs doesn't
+# cause an immediate 0-second failure on the next run.
+- name: Restart deployments that have exceeded their progress deadline
+  ansible.builtin.shell:
+    cmd: >
+      k3s kubectl rollout status deployment/{{ item.name }} -n {{ item.namespace }} --timeout=5s 2>&1
+      | grep -q "exceeded its progress deadline"
+      && k3s kubectl rollout restart deployment/{{ item.name }} -n {{ item.namespace }}
+      || true
+  loop: "{{ k3s_apps_list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  changed_when: false
 
 - name: Wait for app deployments to be ready
   ansible.builtin.command:
