@@ -406,10 +406,10 @@ k3s_apps_list:
       - port: 53
     extra_volumes:
       - name: conf
-        host_path: /var/lib/docker/volumes/docker_adguard_config/_data
+        host_path: /opt/adguardhome/conf
         mount_path: /opt/adguardhome/conf
       - name: work
-        host_path: /var/lib/docker/volumes/docker_adguard_work/_data
+        host_path: /opt/adguardhome/work
         mount_path: /opt/adguardhome/work
     memory_request: "64Mi"
     memory_limit: "256Mi"
