@@ -170,3 +170,22 @@
     cmd: "k3s kubectl rollout status deployment/{{ item.name }} -n {{ item.namespace }} --timeout=300s"
   changed_when: false
   loop: "{{ k3s_apps_list }}"
+  register: k3s_apps_rollout
+  ignore_errors: true
+
+- name: Describe pods for failed deployments
+  ansible.builtin.command:
+    cmd: "k3s kubectl describe pods -n {{ item.item.namespace }} -l app={{ item.item.name }}"
+  when: item.failed | default(false)
+  loop: "{{ k3s_apps_rollout.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  changed_when: false
+
+- name: Fail if any deployment did not become ready
+  ansible.builtin.fail:
+    msg: "Deployment '{{ item.item.name }}' in namespace '{{ item.item.namespace }}' failed to become ready. See describe output above."
+  when: item.failed | default(false)
+  loop: "{{ k3s_apps_rollout.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"

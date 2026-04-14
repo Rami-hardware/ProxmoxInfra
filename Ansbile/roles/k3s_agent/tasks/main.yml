@@ -51,3 +51,4 @@
     INSTALL_K3S_VERSION: "{{ k3s_agent_version }}"
     K3S_URL: "https://{{ hostvars['git-k3s-server']['ansible_host'] }}:6443"
     K3S_TOKEN: "{{ k3s_agent_token }}"
+    K3S_NODE_NAME: "{{ inventory_hostname }}"

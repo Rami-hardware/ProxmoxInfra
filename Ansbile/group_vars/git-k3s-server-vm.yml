@@ -370,7 +370,6 @@ k3s_apps_list:
       - name: nginx-conf
         host_path: /opt/nginx/conf/nginx.conf
         mount_path: /etc/nginx/nginx.conf
-        host_path_type: File
         read_only: true
       - name: conf-d
         host_path: /opt/nginx/conf/conf.d
