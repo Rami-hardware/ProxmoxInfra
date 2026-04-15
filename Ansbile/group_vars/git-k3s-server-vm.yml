@@ -377,9 +377,6 @@ k3s_apps_list:
       - "8.8.8.8"
       - "8.8.4.4"
     replicas: 1
-    external_ip: 192.168.1.200
-    port: 80
-    node_port: 8181
     extra_volumes:
       - name: nginx-conf
         host_path: /opt/nginx/conf/nginx.conf
