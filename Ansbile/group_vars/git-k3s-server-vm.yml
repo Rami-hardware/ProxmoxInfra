@@ -437,9 +437,13 @@ k3s_apps_list:
         protocol: TCP
       - port: 53
         protocol: UDP
-      - port: 8081
+      - port: 443
         protocol: TCP
-      - port: 8081
+      - port: 443
+        protocol: UDP
+      - port: 80
+        protocol: TCP
+      - port: 80
         protocol: UDP
     extra_volumes:
       - name: conf
