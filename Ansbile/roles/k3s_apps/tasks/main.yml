@@ -85,12 +85,6 @@
     dest: "{{ k3s_apps_manifest_dir }}/promtail.yml"
     mode: '0644'
 
-- name: Template AdGuard Home StatefulSet manifest
-  ansible.builtin.template:
-    src: adguardhome-statefulset.yml.j2
-    dest: "{{ k3s_apps_manifest_dir }}/adguardhome.yml"
-    mode: '0644'
-
 # Remove manifests for apps that were deleted from k3s_apps_list
 - name: Find existing app manifests on disk
   ansible.builtin.find:
@@ -104,7 +98,7 @@
   loop: "{{ k3s_apps_existing_manifests.files }}"
   when: >
     (item.path | basename | splitext)[0] not in
-    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac', 'adguardhome']
+    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac']
   changed_when: true
 
 - name: Remove stale manifest files
@@ -114,7 +108,7 @@
   loop: "{{ k3s_apps_existing_manifests.files }}"
   when: >
     (item.path | basename | splitext)[0] not in
-    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac', 'adguardhome']
+    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac']
 
 # Single template for all apps — item.* variables drive the output
 - name: Template app manifests
@@ -243,7 +237,3 @@
   loop_control:
     label: "{{ item.item.name }}"
 
-- name: Wait for AdGuard Home StatefulSet to be ready
-  ansible.builtin.command:
-    cmd: "k3s kubectl rollout status statefulset/adguard-statefulset -n adguard --timeout=300s"
-  changed_when: false
