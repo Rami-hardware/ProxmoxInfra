@@ -5,6 +5,7 @@ k3s_apps_list:
   - name: overseerr
     namespace: media
     image: sctx/overseerr:latest
+    external_ip: 192.168.1.201
     port: 5055
     node_port: 5055
     target_node: media-server
@@ -21,6 +22,7 @@ k3s_apps_list:
   - name: jellyfin
     namespace: media
     image: jellyfin/jellyfin:latest
+    external_ip: 192.168.1.201
     port: 8096
     node_port: 8096
     target_node: media-server
@@ -48,6 +50,7 @@ k3s_apps_list:
   - name: bazarr
     namespace: media
     image: linuxserver/bazarr:latest
+    external_ip: 192.168.1.201
     port: 6767
     node_port: 6767
     target_node: media-server
@@ -73,6 +76,7 @@ k3s_apps_list:
   - name: radarr
     namespace: media
     image: linuxserver/radarr:latest
+    external_ip: 192.168.1.201
     port: 7878
     node_port: 7878
     target_node: media-server
@@ -98,6 +102,7 @@ k3s_apps_list:
   - name: prowlarr
     namespace: media
     image: linuxserver/prowlarr:latest
+    external_ip: 192.168.1.201
     port: 9696
     node_port: 9696
     target_node: media-server
@@ -115,6 +120,7 @@ k3s_apps_list:
 
   - name: qbittorrent
     namespace: media
+    external_ip: 192.168.1.201
     image: linuxserver/qbittorrent:latest
     port: 8080
     node_port: 8080
@@ -139,6 +145,7 @@ k3s_apps_list:
   - name: flaresolverr
     namespace: media
     image: ghcr.io/flaresolverr/flaresolverr:latest
+    external_ip: 192.168.1.201
     port: 8191
     node_port: 8191
     target_node: media-server
@@ -157,6 +164,7 @@ k3s_apps_list:
     image: mrorbitman/subsyncarr:latest
     target_node: media-server
     config_path: /opt/subsyncarr
+    external_ip: 192.168.1.201
     config_mount: /config
     replicas: 1
     extra_volumes:
@@ -183,6 +191,7 @@ k3s_apps_list:
   - name: scraparr
     namespace: media
     image: ghcr.io/thecfu/scraparr
+    external_ip: 192.168.1.201
     port: 7100
     node_port: 7100
     target_node: media-server
@@ -198,6 +207,7 @@ k3s_apps_list:
 
   - name: intel-gpu-exporter
     namespace: monitoring
+    external_ip: 192.168.1.203
     image: ghcr.io/onedr0p/intel-gpu-exporter:rolling
     port: 8080
     node_port: 8082
@@ -218,6 +228,7 @@ k3s_apps_list:
 
   - name: qbittorrent-exporter
     namespace: monitoring
+    external_ip: 192.168.1.201
     image: caseyscarborough/qbittorrent-exporter:latest
     port: 17871
     node_port: 17871
@@ -239,6 +250,7 @@ k3s_apps_list:
   - name: sonarr
     namespace: media
     image: linuxserver/sonarr:latest
+    external_ip: 192.168.1.201
     port: 8989
     node_port: 8989
     target_node: media-server
@@ -264,6 +276,7 @@ k3s_apps_list:
   - name: grafana
     namespace: monitoring
     image: grafana/grafana:latest
+    external_ip: 192.168.1.203
     port: 3000
     node_port: 3000
     target_node: monitoring-server
@@ -284,6 +297,7 @@ k3s_apps_list:
   - name: prometheus
     namespace: monitoring
     image: prom/prometheus:latest
+    external_ip: 192.168.1.203
     port: 9090
     node_port: 9090
     target_node: monitoring-server
@@ -303,6 +317,7 @@ k3s_apps_list:
   - name: loki
     namespace: monitoring
     image: grafana/loki:latest
+    external_ip: 192.168.1.203
     port: 3100
     node_port: 3100
     target_node: monitoring-server
@@ -319,6 +334,7 @@ k3s_apps_list:
   - name: alertmanager
     namespace: monitoring
     image: prom/alertmanager:latest
+    external_ip: 192.168.1.203
     port: 9093
     node_port: 9093
     target_node: monitoring-server
@@ -335,6 +351,7 @@ k3s_apps_list:
   - name: speedtest-exporter
     namespace: monitoring
     image: miguelndecarvalho/speedtest-exporter
+    external_ip: 192.168.1.203
     port: 9798
     node_port: 9798
     target_node: monitoring-server
@@ -360,18 +377,7 @@ k3s_apps_list:
       - "8.8.8.8"
       - "8.8.4.4"
     replicas: 1
-    port: 80
-    node_port: 8085
     external_ip: 192.168.1.200
-    extra_ports:
-      - port: 443
-        protocol: TCP
-      - port: 443
-        protocol: UDP
-      - port: 8181
-        protocol: TCP
-      - port: 8181
-        protocol: UDP
     extra_volumes:
       - name: nginx-conf
         host_path: /opt/nginx/conf/nginx.conf
