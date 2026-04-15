@@ -389,31 +389,3 @@ k3s_apps_list:
     cpu_request: "25m"
     cpu_limit: "200m"
 
-  - name: adguardhome
-    namespace: network
-    image: adguard/adguardhome:latest
-    target_node: gateway-server
-    skip_pv: true
-    host_network: true
-    dns_policy: None
-    dns_nameservers:
-      - "8.8.8.8"
-      - "8.8.4.4"
-    replicas: 1
-    port: 8081
-    extra_ports:
-      - port: 53
-    args:
-      - "--web-addr"
-      - "0.0.0.0:8081"
-    extra_volumes:
-      - name: conf
-        host_path: /opt/adguardhome/conf
-        mount_path: /opt/adguardhome/conf
-      - name: work
-        host_path: /opt/adguardhome/work
-        mount_path: /opt/adguardhome/work
-    memory_request: "64Mi"
-    memory_limit: "256Mi"
-    cpu_request: "25m"
-    cpu_limit: "200m"

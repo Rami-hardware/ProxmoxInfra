@@ -1,0 +1,103 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: adguard
+---
+# Headless service required by StatefulSet for pod DNS identity
+apiVersion: v1
+kind: Service
+metadata:
+  name: adguard
+  namespace: adguard
+  labels:
+    app: adguard-home
+spec:
+  clusterIP: None
+  selector:
+    app: adguard-home
+  ports:
+    - name: dns-udp
+      port: 53
+      protocol: UDP
+    - name: dns-tcp
+      port: 53
+      protocol: TCP
+    - name: http
+      port: 80
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: adguard-statefulset
+  namespace: adguard
+spec:
+  serviceName: "adguard"
+  replicas: 2
+  selector:
+    matchLabels:
+      app: adguard-home
+  template:
+    metadata:
+      labels:
+        app: adguard-home
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - adguard-home
+              topologyKey: "kubernetes.io/hostname"
+      containers:
+        - name: adguard-home
+          image: adguard/adguardhome:latest
+          ports:
+            - containerPort: 53
+              name: dns-udp
+              hostPort: 53
+              protocol: UDP
+            - containerPort: 53
+              name: dns-tcp
+              hostPort: 53
+              protocol: TCP
+            - containerPort: 3000
+              name: http-initial
+              protocol: TCP
+            - containerPort: 80
+              name: http
+              hostPort: 5380
+              protocol: TCP
+          volumeMounts:
+            - name: adguard-data
+              mountPath: /opt/adguardhome/work/
+            - name: adguard-config
+              mountPath: /opt/adguardhome/conf/
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "25m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+  volumeClaimTemplates:
+    - metadata:
+        name: adguard-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+        storageClassName: "local-path"
+    - metadata:
+        name: adguard-config
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+        storageClassName: "local-path"
