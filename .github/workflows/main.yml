@@ -37,7 +37,7 @@ jobs:
 
       - name: Terraform init (no backend)
         working-directory: Terraform
-        run: terraform init -backend=false
+        run: terraform init -backend=false -upgrade
 
       - name: Terraform format check
         working-directory: Terraform
