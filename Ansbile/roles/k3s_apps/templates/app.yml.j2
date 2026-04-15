@@ -187,6 +187,10 @@ metadata:
   namespace: {{ item.namespace }}
 spec:
   type: NodePort
+{% if item.external_ip is defined %}
+  externalIPs:
+    - {{ item.external_ip }}
+{% endif %}
   selector:
     app: {{ item.name }}
   ports:

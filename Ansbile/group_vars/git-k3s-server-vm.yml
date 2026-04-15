@@ -402,6 +402,7 @@ k3s_apps_list:
     replicas: 1
     port: 3000
     node_port: 3000
+    external_ip: 192.168.1.200
     extra_ports:
       - port: 53
         protocol: TCP
