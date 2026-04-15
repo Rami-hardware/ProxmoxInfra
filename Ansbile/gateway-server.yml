@@ -7,8 +7,8 @@
     # - docker_setup
     # - promtail
     # - docker_apps
-    # - nginx_config
+    - nginx_config
     # - adguard
     # - crowdsec
     # - ufw
-    - k3s_agent
+    # - k3s_agent

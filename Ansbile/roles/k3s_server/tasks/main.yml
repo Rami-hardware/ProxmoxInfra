@@ -20,6 +20,9 @@
     content: |
       service-node-port-range: "1024-65535"
       resolv-conf: /etc/rancher/k3s/resolv.conf
+      disable:
+        - traefik
+        - servicelb
     mode: '0644'
   register: k3s_server_config_result
   notify: Restart k3s
