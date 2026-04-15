@@ -35,37 +35,6 @@ jobs:
         with:
           terraform_version: 1.6.0
 
-      - name: Configure Terraform provider mirror
-        run: |
-          mkdir -p ~/.terraform.d/tf-mirror
-          {
-            echo 'provider_installation {'
-            echo '  filesystem_mirror {'
-            echo "    path    = \"$HOME/.terraform.d/tf-mirror\""
-            echo '    include = ["registry.terraform.io/*/*"]'
-            echo '  }'
-            echo '  direct {'
-            echo '    exclude = ["registry.terraform.io/*/*"]'
-            echo '  }'
-            echo '}'
-          } > ~/.terraformrc
-
-      - name: Seed Terraform provider mirror
-        run: |
-          seed() {
-            local host=$1 ns=$2 type=$3 version=$4 url=$5
-            local dest="$HOME/.terraform.d/tf-mirror/${host}/${ns}/${type}/${version}"
-            mkdir -p "$dest"
-            if [ ! -f "$dest/linux_amd64.zip" ]; then
-              echo "Downloading ${ns}/${type} v${version}..."
-              curl -fsSL -o "$dest/linux_amd64.zip" "$url"
-            else
-              echo "${ns}/${type} v${version} already in mirror."
-            fi
-          }
-          seed registry.terraform.io bpg proxmox 0.70.1 "https://github.com/bpg/terraform-provider-proxmox/releases/download/v0.70.1/terraform-provider-proxmox_0.70.1_linux_amd64.zip"
-          seed registry.terraform.io telmate proxmox 2.9.14 "https://github.com/Telmate/terraform-provider-proxmox/releases/download/v2.9.14/terraform-provider-proxmox_2.9.14_linux_amd64.zip"
-
       - name: Terraform init (no backend)
         working-directory: Terraform
         run: terraform init -backend=false
@@ -156,37 +125,6 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.0
-
-      - name: Configure Terraform provider mirror
-        run: |
-          mkdir -p ~/.terraform.d/tf-mirror
-          {
-            echo 'provider_installation {'
-            echo '  filesystem_mirror {'
-            echo "    path    = \"$HOME/.terraform.d/tf-mirror\""
-            echo '    include = ["registry.terraform.io/*/*"]'
-            echo '  }'
-            echo '  direct {'
-            echo '    exclude = ["registry.terraform.io/*/*"]'
-            echo '  }'
-            echo '}'
-          } > ~/.terraformrc
-
-      - name: Seed Terraform provider mirror
-        run: |
-          seed() {
-            local host=$1 ns=$2 type=$3 version=$4 url=$5
-            local dest="$HOME/.terraform.d/tf-mirror/${host}/${ns}/${type}/${version}"
-            mkdir -p "$dest"
-            if [ ! -f "$dest/linux_amd64.zip" ]; then
-              echo "Downloading ${ns}/${type} v${version}..."
-              curl -fsSL -o "$dest/linux_amd64.zip" "$url"
-            else
-              echo "${ns}/${type} v${version} already in mirror."
-            fi
-          }
-          seed registry.terraform.io bpg proxmox 0.70.1 "https://github.com/bpg/terraform-provider-proxmox/releases/download/v0.70.1/terraform-provider-proxmox_0.70.1_linux_amd64.zip"
-          seed registry.terraform.io telmate proxmox 2.9.14 "https://github.com/Telmate/terraform-provider-proxmox/releases/download/v2.9.14/terraform-provider-proxmox_2.9.14_linux_amd64.zip"
 
       - name: Terraform init
         working-directory: Terraform
