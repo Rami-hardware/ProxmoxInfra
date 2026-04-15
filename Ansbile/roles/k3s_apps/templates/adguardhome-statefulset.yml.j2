@@ -121,12 +121,12 @@ metadata:
   namespace: adguard
 data:
   LOG_LEVEL: "info"
-  ORIGIN_URL: "http://{{ adguard_sync_origin_url }}:5380"
-  ORIGIN_USERNAME: "{{ adguard_sync_username }}"
-  ORIGIN_PASSWORD: "{{ adguard_sync_password }}"
-  REPLICA1_URL: "http://{{ adguard_sync_replica_url }}:5380"
-  REPLICA1_USERNAME: "{{ adguard_sync_username }}"
-  REPLICA1_PASSWORD: "{{ adguard_sync_password }}"
+  ORIGIN_URL: "http://{{ k3s_apps_adguard_sync_origin_url }}:5380"
+  ORIGIN_USERNAME: "{{ k3s_apps_adguard_sync_username }}"
+  ORIGIN_PASSWORD: "{{ k3s_apps_adguard_sync_password }}"
+  REPLICA1_URL: "http://{{ k3s_apps_adguard_sync_replica_url }}:5380"
+  REPLICA1_USERNAME: "{{ k3s_apps_adguard_sync_username }}"
+  REPLICA1_PASSWORD: "{{ k3s_apps_adguard_sync_password }}"
   CRON: "*/5 * * * *"
   RUN_ON_START: "true"
   API_PORT: "8080"
