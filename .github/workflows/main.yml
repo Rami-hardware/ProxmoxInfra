@@ -37,8 +37,8 @@ jobs:
 
       - name: Configure Terraform provider cache
         run: |
-          mkdir -p /opt/terraform-providers
-          echo 'plugin_cache_dir = "/opt/terraform-providers"' > ~/.terraformrc
+          mkdir -p ~/.terraform.d/plugin-cache
+          echo 'plugin_cache_dir = "$HOME/.terraform.d/plugin-cache"' > ~/.terraformrc
 
       - name: Terraform init (no backend)
         working-directory: Terraform
@@ -133,8 +133,8 @@ jobs:
 
       - name: Configure Terraform provider cache
         run: |
-          mkdir -p /opt/terraform-providers
-          echo 'plugin_cache_dir = "/opt/terraform-providers"' > ~/.terraformrc
+          mkdir -p ~/.terraform.d/plugin-cache
+          echo 'plugin_cache_dir = "$HOME/.terraform.d/plugin-cache"' > ~/.terraformrc
 
       - name: Terraform init
         working-directory: Terraform
