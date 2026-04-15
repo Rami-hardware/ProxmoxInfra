@@ -15,3 +15,9 @@ k3s_apps_manifest_dir: /opt/k3s/manifests
 #   memory_request / memory_limit
 #   cpu_request  / cpu_limit
 k3s_apps_list: []
+
+# AdGuard Home sync — override in group_vars with real node IPs and credentials
+adguard_sync_origin_url: "192.168.1.200"
+adguard_sync_replica_url: "192.168.1.204"
+adguard_sync_username: "admin"
+adguard_sync_password: "admin"
