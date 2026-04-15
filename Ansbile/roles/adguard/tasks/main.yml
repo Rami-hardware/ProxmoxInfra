@@ -26,12 +26,13 @@
     group: 1000
     mode: '0700'
     path: "{{ adguard_config_path }}"
-    regexp: '^address:.*'
-    replace: '    address: 0.0.0.0:{{ adguard_ui_port }}'
+    regexp: '^(\s*)address:.*'
+    replace: '\1address: 0.0.0.0:{{ adguard_ui_port }}'
+  notify: Reload adguardhome container
 
 - name: Fix AdGuard config directory permissions
   ansible.builtin.file:
-    path: /var/lib/docker/volumes/docker_adguard_config/_data
+    path: "{{ adguard_conf_dir }}"
     owner: 1000
     group: 1000
     mode: '0700'
@@ -40,7 +41,7 @@
 
 - name: Fix file permissions inside AdGuard config
   ansible.builtin.find:
-    paths: /var/lib/docker/volumes/docker_adguard_config/_data
+    paths: "{{ adguard_conf_dir }}"
     file_type: file
   register: adguard_files
 
@@ -54,7 +55,7 @@
 
 - name: Fix AdGuard work directory permissions
   ansible.builtin.file:
-    path: /var/lib/docker/volumes/docker_adguard_work/_data
+    path: "{{ adguard_work_dir }}"
     owner: 1000
     group: 1000
     mode: '0700'
@@ -63,7 +64,7 @@
 
 - name: Fix file permissions inside AdGuard work
   ansible.builtin.find:
-    paths: /var/lib/docker/volumes/docker_adguard_work/_data
+    paths: "{{ adguard_work_dir }}"
     file_type: file
   register: adguard_work_files
 

@@ -19,7 +19,9 @@ service_tcp_ports:
 adguardhome_volume_config_dir: "adguard_config:/opt/adguardhome/conf"
 adguardhome_volume_work_dir: "adguard_work:/opt/adguardhome/work"
 
-adguard_config_path: "/var/lib/docker/volumes/docker_adguard_config/_data/AdGuardHome.yaml"
+adguard_config_path: "/opt/adguardhome/conf/AdGuardHome.yaml"
+adguard_conf_dir: "/opt/adguardhome/conf"
+adguard_work_dir: "/opt/adguardhome/work"
 adguard_ui_port: 8081
 fallback_dns: 1.1.1.1
 
@@ -91,4 +93,4 @@ nginx_services:
 
   - name: adguard
     ip: 192.168.1.200
-    port: 3000
+    port: 8081
