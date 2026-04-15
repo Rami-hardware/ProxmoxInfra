@@ -59,8 +59,8 @@ jobs:
         run: |
           seed() {
             local host=$1 ns=$2 type=$3 version=$4 url=$5
-            local dest="$HOME/.terraform.d/tf-mirror/${host}/${ns}/${type}/${version}"
-            local zip="$dest/linux_amd64.zip"
+            local dest="$HOME/.terraform.d/tf-mirror/${host}/${ns}/${type}"
+            local zip="$dest/terraform-provider-${type}_${version}_linux_amd64.zip"
             mkdir -p "$dest"
             if ! unzip -t "$zip" > /dev/null 2>&1; then
               echo "Downloading ${ns}/${type} v${version}..."
@@ -188,8 +188,8 @@ jobs:
         run: |
           seed() {
             local host=$1 ns=$2 type=$3 version=$4 url=$5
-            local dest="$HOME/.terraform.d/tf-mirror/${host}/${ns}/${type}/${version}"
-            local zip="$dest/linux_amd64.zip"
+            local dest="$HOME/.terraform.d/tf-mirror/${host}/${ns}/${type}"
+            local zip="$dest/terraform-provider-${type}_${version}_linux_amd64.zip"
             mkdir -p "$dest"
             if ! unzip -t "$zip" > /dev/null 2>&1; then
               echo "Downloading ${ns}/${type} v${version}..."
