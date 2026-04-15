@@ -38,7 +38,19 @@ jobs:
       - name: Configure Terraform provider cache
         run: |
           mkdir -p ~/.terraform.d/plugin-cache
-          echo 'plugin_cache_dir = "$HOME/.terraform.d/plugin-cache"' > ~/.terraformrc
+          cat > ~/.terraformrc << EOF
+          plugin_cache_dir = "$HOME/.terraform.d/plugin-cache"
+
+          provider_installation {
+            filesystem_mirror {
+              path    = "$HOME/.terraform.d/plugin-cache"
+              include = ["registry.terraform.io/*/*"]
+            }
+            direct {
+              exclude = ["registry.terraform.io/*/*"]
+            }
+          }
+          EOF
 
       - name: Terraform init (no backend)
         working-directory: Terraform
@@ -134,7 +146,19 @@ jobs:
       - name: Configure Terraform provider cache
         run: |
           mkdir -p ~/.terraform.d/plugin-cache
-          echo 'plugin_cache_dir = "$HOME/.terraform.d/plugin-cache"' > ~/.terraformrc
+          cat > ~/.terraformrc << EOF
+          plugin_cache_dir = "$HOME/.terraform.d/plugin-cache"
+
+          provider_installation {
+            filesystem_mirror {
+              path    = "$HOME/.terraform.d/plugin-cache"
+              include = ["registry.terraform.io/*/*"]
+            }
+            direct {
+              exclude = ["registry.terraform.io/*/*"]
+            }
+          }
+          EOF
 
       - name: Terraform init
         working-directory: Terraform
