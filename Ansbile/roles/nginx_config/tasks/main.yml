@@ -55,7 +55,7 @@
     owner: root
     group: root
     mode: "0644"
-  notify: Reload nginx container
+
 
 - name: Deploy vhosts config
   ansible.builtin.template:
@@ -64,4 +64,3 @@
     owner: root
     group: root
     mode: "0644"
-  notify: Reload nginx container
