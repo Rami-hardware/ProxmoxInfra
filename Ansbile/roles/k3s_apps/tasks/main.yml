@@ -236,4 +236,3 @@
   loop: "{{ k3s_apps_rollout.results }}"
   loop_control:
     label: "{{ item.item.name }}"
-
