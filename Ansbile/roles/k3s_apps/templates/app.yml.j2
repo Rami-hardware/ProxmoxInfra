@@ -106,7 +106,7 @@ spec:
             - "{{ arg }}"
 {% endfor %}
 {% endif %}
-{% if item.port is defined or item.extra_ports | default([]) | length > 0 %}
+{% if not (item.host_network | default(false)) and (item.port is defined or item.extra_ports | default([]) | length > 0) %}
           ports:
 {% if item.port is defined %}
             - containerPort: {{ item.port }}
@@ -197,6 +197,14 @@ spec:
     - port: {{ item.port }}
       targetPort: {{ item.port }}
       nodePort: {{ item.node_port }}
+{% for sp in item.service_ports | default([]) %}
+    - port: {{ sp.port }}
+      targetPort: {{ sp.port }}
+      nodePort: {{ sp.node_port }}
+{% if sp.protocol is defined %}
+      protocol: {{ sp.protocol }}
+{% endif %}
+{% endfor %}
 {% for ep in item.extra_ports | default([]) if ep.node_port is defined %}
     - port: {{ ep.port }}
       targetPort: {{ ep.port }}
