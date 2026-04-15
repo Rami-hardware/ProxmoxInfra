@@ -1,7 +1,6 @@
 docker_apps_enabled:
   - adguardhome
   - promtail
-  - nginx
   - node-exporter
   - crowdsec
   - crowdsec-nginx-bouncer
@@ -71,6 +70,31 @@ nginx_volumes:
   - /opt/nginx/logs:/var/log/nginx
   - /opt/nginx/conf/sites-enabled:/etc/nginx/sites-enabled:ro
   - /opt/nginx/certs:/etc/nginx/certs:ro
+
+nginx_extra_volumes:
+  - name: nginx-conf
+    host_path: /opt/nginx/conf/nginx.conf
+    mount_path: /etc/nginx/nginx.conf
+    read_only: true
+  - name: conf-d
+    host_path: /opt/nginx/conf/conf.d
+    mount_path: /etc/nginx/conf.d
+    read_only: true
+  - name: snippets
+    host_path: /opt/nginx/conf/snippets
+    mount_path: /etc/nginx/snippets
+    read_only: true
+  - name: logs
+    host_path: /opt/nginx/logs
+    mount_path: /var/log/nginx
+  - name: sites-enabled
+    host_path: /opt/nginx/conf/sites-enabled
+    mount_path: /etc/nginx/sites-enabled
+    read_only: true
+  - name: certs
+    host_path: /opt/nginx/certs
+    mount_path: /etc/nginx/certs
+    read_only: true
 
 nginx_services:
   - name: jellyfin

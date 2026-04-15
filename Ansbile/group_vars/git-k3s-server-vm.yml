@@ -417,7 +417,7 @@ k3s_apps_list:
       - "8.8.8.8"
       - "8.8.4.4"
     replicas: 1
-    port: 3000
+    port: 8081
     node_port: 8081
     external_ip: 192.168.1.200
     extra_ports:
