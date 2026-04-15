@@ -380,15 +380,6 @@ k3s_apps_list:
     external_ip: 192.168.1.200
     port: 80
     node_port: 8181
-    extra_ports:
-      - port: 443
-        protocol: TCP
-      - port: 443
-        protocol: UDP
-      - port: 8081
-        protocol: TCP
-      - port: 8081
-        protocol: UDP
     extra_volumes:
       - name: nginx-conf
         host_path: /opt/nginx/conf/nginx.conf
