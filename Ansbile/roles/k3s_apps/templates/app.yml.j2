@@ -116,6 +116,9 @@ spec:
 {% endif %}
 {% for ep in item.extra_ports | default([]) %}
             - containerPort: {{ ep.port }}
+{% if ep.protocol is defined %}
+              protocol: {{ ep.protocol }}
+{% endif %}
 {% if ep.host_port is defined %}
               hostPort: {{ ep.host_port }}
 {% endif %}
@@ -194,5 +197,8 @@ spec:
     - port: {{ ep.port }}
       targetPort: {{ ep.port }}
       nodePort: {{ ep.node_port }}
+{% if ep.protocol is defined %}
+      protocol: {{ ep.protocol }}
+{% endif %}
 {% endfor %}
 {% endif %}
