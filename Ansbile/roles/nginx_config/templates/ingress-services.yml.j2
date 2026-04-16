@@ -8,14 +8,14 @@ metadata:
   namespace: {{ svc.sub }}
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
-{%- if svc.disable_buffering | default(false) %}
+{% if svc.disable_buffering | default(false) %}
     nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
-{%- endif %}
-{%- if svc.streaming | default(false) %}
+{% endif %}
+{% if svc.streaming | default(false) %}
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-{%- endif %}
+{% endif %}
 spec:
   ingressClassName: nginx
   rules:
@@ -40,14 +40,14 @@ metadata:
   namespace: {{ svc.namespace | default('media') }}
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
-{%- if svc.disable_buffering | default(false) %}
+{% if svc.disable_buffering | default(false) %}
     nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
-{%- endif %}
-{%- if svc.streaming | default(false) %}
+{% endif %}
+{% if svc.streaming | default(false) %}
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-{%- endif %}
+{% endif %}
 spec:
   ingressClassName: nginx
   tls:
