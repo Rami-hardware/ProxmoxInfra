@@ -67,23 +67,23 @@
 - name: Slurp origin cert from gateway-server
   ansible.builtin.slurp:
     src: /opt/nginx/certs/origin.pem
-  register: nginx_origin_cert
+  register: nginx_config_origin_cert
 
 - name: Slurp origin key from gateway-server
   ansible.builtin.slurp:
     src: /opt/nginx/certs/origin.key
-  register: nginx_origin_key
+  register: nginx_config_origin_key
 
 - name: Copy origin cert to k3s control plane
   ansible.builtin.copy:
-    content: "{{ nginx_origin_cert.content | b64decode }}"
+    content: "{{ nginx_config_origin_cert.content | b64decode }}"
     dest: /tmp/cloudflare-origin.pem
     mode: "0600"
   delegate_to: git-k3s-server
 
 - name: Copy origin key to k3s control plane
   ansible.builtin.copy:
-    content: "{{ nginx_origin_key.content | b64decode }}"
+    content: "{{ nginx_config_origin_key.content | b64decode }}"
     dest: /tmp/cloudflare-origin.key
     mode: "0600"
   delegate_to: git-k3s-server
