@@ -65,12 +65,12 @@
 
 # TLS secret for public ingress (Cloudflare origin cert) — one per namespace
 - name: Create cloudflare-origin-tls secret in each public service namespace
-  ansible.builtin.command: >
+  ansible.builtin.shell: >
     k3s kubectl create secret tls cloudflare-origin-tls
     --cert=/opt/nginx/certs/origin.pem
     --key=/opt/nginx/certs/origin.key
     -n {{ item }}
-    --dry-run=client -o yaml | k3s kubectl apply --server-side -f -
+    --dry-run=client -o yaml | k3s kubectl apply -f -
   loop: "{{ nginx_services | map(attribute='namespace') | unique | list }}"
   changed_when: true
 
