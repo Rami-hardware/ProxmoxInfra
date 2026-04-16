@@ -30,8 +30,8 @@ server {
     listen 443 ssl http2;
     server_name {{ svc.name }}.darkestserver.com;
 
-    ssl_certificate     /etc/nginx/certs/origin.pem;
-    ssl_certificate_key /etc/nginx/certs/origin.key;
+    ssl_certificate     /opt/nginx/certs/origin.pem;
+    ssl_certificate_key /opt/nginx/certs/origin.key;
 
     ssl_protocols TLSv1.2 TLSv1.3;
 
@@ -52,26 +52,11 @@ server {
 }
 {% endfor %}
 
-# HTTP → HTTPS redirect
+# HTTP-only local services
 {% for svc in nginx_services_local %}
 server {
     listen 80;
-    server_name {{ svc.name }}.media.lan;
-    return 301 https://$host$request_uri;
-}
-{% endfor %}
-
-
-# HTTPS services (Cloudflare origin cert)
-{% for svc in nginx_services_local %}
-server {
-    listen 443 ssl http2;
     server_name {{ svc.name }}.{{ svc.sub }}.lan;
-
-    ssl_certificate     /etc/nginx/certs/origin.pem;
-    ssl_certificate_key /etc/nginx/certs/origin.key;
-
-    ssl_protocols TLSv1.2 TLSv1.3;
 
     access_log off;
 
