@@ -1,5 +1,9 @@
-# External Services + Endpoints for local LAN services (point to real node IPs)
+---
+# ──────────────────────────────────────────────────────────────────────────────
+# Local LAN services  (HTTP-only · host: <name>.<sub>.lan)
+# ──────────────────────────────────────────────────────────────────────────────
 {% for svc in nginx_services_local %}
+# {{ svc.name }} — headless service + endpoints → {{ svc.ip }}:{{ svc.port }}
 ---
 apiVersion: v1
 kind: Service
@@ -10,7 +14,6 @@ spec:
   clusterIP: None
   ports:
     - port: {{ svc.port }}
-      targetPort: {{ svc.port }}
       protocol: TCP
 ---
 apiVersion: v1
@@ -24,38 +27,6 @@ subsets:
     ports:
       - port: {{ svc.port }}
         protocol: TCP
-{% endfor %}
-
-# External Services + Endpoints for public services (point to real node IPs)
-{% for svc in nginx_services %}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ svc.k8s_service | default(svc.name) }}-ext
-  namespace: {{ svc.namespace | default('media') }}
-spec:
-  clusterIP: None
-  ports:
-    - port: {{ svc.port }}
-      targetPort: {{ svc.port }}
-      protocol: TCP
----
-apiVersion: v1
-kind: Endpoints
-metadata:
-  name: {{ svc.k8s_service | default(svc.name) }}-ext
-  namespace: {{ svc.namespace | default('media') }}
-subsets:
-  - addresses:
-      - ip: {{ svc.ip }}
-    ports:
-      - port: {{ svc.port }}
-        protocol: TCP
-{% endfor %}
-
-# Ingress resources for local LAN services
-{% for svc in nginx_services_local %}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -71,6 +42,7 @@ metadata:
 {% if svc.streaming | default(false) %}
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "600"
 {% endif %}
 spec:
   ingressClassName: nginx
@@ -86,15 +58,43 @@ spec:
                 port:
                   number: {{ svc.port }}
 {% endfor %}
-
-# Ingress resources for public services
+---
+# ──────────────────────────────────────────────────────────────────────────────
+# Public services  (HTTPS + TLS · host: <name>.darkestserver.com)
+# ──────────────────────────────────────────────────────────────────────────────
 {% for svc in nginx_services %}
+{% set svc_name = svc.k8s_service | default(svc.name) %}
+{% set ns = svc.namespace | default('media') %}
+# {{ svc.name }} — headless service + endpoints → {{ svc.ip }}:{{ svc.port }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ svc_name }}-ext
+  namespace: {{ ns }}
+spec:
+  clusterIP: None
+  ports:
+    - port: {{ svc.port }}
+      protocol: TCP
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: {{ svc_name }}-ext
+  namespace: {{ ns }}
+subsets:
+  - addresses:
+      - ip: {{ svc.ip }}
+    ports:
+      - port: {{ svc.port }}
+        protocol: TCP
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ svc.name }}-public
-  namespace: {{ svc.namespace | default('media') }}
+  namespace: {{ ns }}
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
 {% if svc.disable_buffering | default(false) %}
@@ -104,6 +104,7 @@ metadata:
 {% if svc.streaming | default(false) %}
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "600"
 {% endif %}
 spec:
   ingressClassName: nginx
@@ -119,7 +120,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ svc.k8s_service | default(svc.name) }}-ext
+                name: {{ svc_name }}-ext
                 port:
                   number: {{ svc.port }}
 {% endfor %}
