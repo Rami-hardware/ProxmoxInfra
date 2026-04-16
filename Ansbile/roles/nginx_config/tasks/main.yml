@@ -61,3 +61,19 @@
     owner: root
     group: root
     mode: "0644"
+
+
+# Kubernetes Ingress resources for all services
+- name: Template ingress-services manifest
+  ansible.builtin.template:
+    src: ingress-services.yml.j2
+    dest: /opt/k3s/manifests/ingress-services.yml
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Apply ingress-services manifest
+  ansible.builtin.command: >
+    k3s kubectl apply --server-side --force-conflicts
+    -f /opt/k3s/manifests/ingress-services.yml
+  changed_when: true

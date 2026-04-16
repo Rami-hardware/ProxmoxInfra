@@ -1,0 +1,69 @@
+# Ingress resources for local LAN services (ingress-nginx → k8s Service)
+{% for svc in nginx_services_local %}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ svc.name }}
+  namespace: {{ svc.sub }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    {% if svc.disable_buffering | default(false) %}
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    {% endif %}
+    {% if svc.streaming | default(false) %}
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    {% endif %}
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: {{ svc.name }}.{{ svc.sub }}.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ svc.name }}
+                port:
+                  number: {{ svc.port }}
+{% endfor %}
+
+# Ingress resources for public services (ingress-nginx → k8s Service)
+{% for svc in nginx_services %}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ svc.name }}-public
+  namespace: {{ svc.namespace | default('media') }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    {% if svc.disable_buffering | default(false) %}
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    {% endif %}
+    {% if svc.streaming | default(false) %}
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    {% endif %}
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - {{ svc.name }}.darkestserver.com
+      secretName: cloudflare-origin-tls
+  rules:
+    - host: {{ svc.name }}.darkestserver.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ svc.name }}
+                port:
+                  number: {{ svc.port }}
+{% endfor %}

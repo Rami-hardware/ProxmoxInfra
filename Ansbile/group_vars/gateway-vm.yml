@@ -101,23 +101,28 @@ nginx_services:
     ip: 192.168.1.201
     port: 8096
     disable_buffering: true
+    namespace: media
 
   - name: overseerr
     ip: 192.168.1.201
     port: 5055
+    namespace: media
 
   - name: bazarr
     ip: 192.168.1.201
     port: 6767
+    namespace: media
 
   - name: qbittorrent
     ip: 192.168.1.201
     port: 8080
     disable_buffering: true
+    namespace: media
 
   - name: adguard
     ip: 192.168.1.200
     port: 8081
+    namespace: network
 
 nginx_services_local:
   - name: jellyfin
@@ -125,3 +130,4 @@ nginx_services_local:
     ip: 192.168.1.201
     port: 8096
     disable_buffering: true
+    namespace: media
