@@ -89,7 +89,7 @@ nginx_services:
 
 nginx_services_local:
   - name: jellyfin
-    sub: media
+    namespace: media
     ip: 192.168.1.201
     port: 8096
     disable_buffering: true

@@ -1,15 +1,16 @@
 ---
 # ──────────────────────────────────────────────────────────────────────────────
-# Local LAN services  (HTTP-only · host: <name>.<sub>.lan)
+# Local LAN services  (HTTP-only · host: <name>.<namespace>.lan)
 # ──────────────────────────────────────────────────────────────────────────────
 {% for svc in nginx_services_local %}
+{% set ns = svc.namespace | default('media') %}
 # {{ svc.name }} — headless service + endpoints → {{ svc.ip }}:{{ svc.port }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: {{ svc.name }}-ext
-  namespace: {{ svc.sub }}
+  namespace: {{ ns }}
 spec:
   clusterIP: None
   ports:
@@ -20,7 +21,7 @@ apiVersion: v1
 kind: Endpoints
 metadata:
   name: {{ svc.name }}-ext
-  namespace: {{ svc.sub }}
+  namespace: {{ ns }}
 subsets:
   - addresses:
       - ip: {{ svc.ip }}
@@ -32,7 +33,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ svc.name }}
-  namespace: {{ svc.sub }}
+  namespace: {{ ns }}
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
 {% if svc.disable_buffering | default(false) %}
@@ -47,7 +48,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: {{ svc.name }}.{{ svc.sub }}.lan
+    - host: {{ svc.name }}.{{ ns }}.lan
       http:
         paths:
           - path: /
