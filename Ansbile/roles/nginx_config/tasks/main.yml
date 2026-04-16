@@ -72,7 +72,7 @@
         --cert=/opt/nginx/certs/origin.pem \
         --key=/opt/nginx/certs/origin.key \
         -n {{ item }} \
-        --dry-run=client -o yaml | k3s kubectl apply -f -
+        --dry-run=client -o yaml | k3s kubectl apply --validate=false -f -
     executable: /bin/bash
   loop: "{{ nginx_services | map(attribute='namespace') | unique | list }}"
   changed_when: true
