@@ -64,18 +64,51 @@
 
 
 # TLS secret for public ingress (Cloudflare origin cert) — one per namespace
+- name: Slurp origin cert from gateway-server
+  ansible.builtin.slurp:
+    src: /opt/nginx/certs/origin.pem
+  register: nginx_origin_cert
+
+- name: Slurp origin key from gateway-server
+  ansible.builtin.slurp:
+    src: /opt/nginx/certs/origin.key
+  register: nginx_origin_key
+
+- name: Copy origin cert to k3s control plane
+  ansible.builtin.copy:
+    content: "{{ nginx_origin_cert.content | b64decode }}"
+    dest: /tmp/cloudflare-origin.pem
+    mode: "0600"
+  delegate_to: git-k3s-server
+
+- name: Copy origin key to k3s control plane
+  ansible.builtin.copy:
+    content: "{{ nginx_origin_key.content | b64decode }}"
+    dest: /tmp/cloudflare-origin.key
+    mode: "0600"
+  delegate_to: git-k3s-server
+
 - name: Create cloudflare-origin-tls secret in each public service namespace
   ansible.builtin.shell:
     cmd: |
       set -o pipefail
       k3s kubectl create secret tls cloudflare-origin-tls \
-        --cert=/opt/nginx/certs/origin.pem \
-        --key=/opt/nginx/certs/origin.key \
+        --cert=/tmp/cloudflare-origin.pem \
+        --key=/tmp/cloudflare-origin.key \
         -n {{ item }} \
         --dry-run=client -o yaml | k3s kubectl apply -f -
     executable: /bin/bash
   loop: "{{ nginx_services | map(attribute='namespace') | unique | list }}"
   changed_when: true
+  delegate_to: git-k3s-server
+
+- name: Remove temp cert files from k3s control plane
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /tmp/cloudflare-origin.pem
+    - /tmp/cloudflare-origin.key
   delegate_to: git-k3s-server
 
 
