@@ -44,7 +44,6 @@
     owner: root
     group: root
     mode: "0644"
-  notify: Reload nginx container
 
 - name: Deploy proxy common snippet
   ansible.builtin.template:
