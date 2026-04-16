@@ -410,7 +410,7 @@ k3s_apps_list:
       - name: work
         host_path: /opt/adguardhome/work
         mount_path: /opt/adguardhome/work
-    memory_request: "64Mi"
-    memory_limit: "256Mi"
+    memory_request: "128Mi"
+    memory_limit: "512Mi"
     cpu_request: "25m"
     cpu_limit: "200m"
