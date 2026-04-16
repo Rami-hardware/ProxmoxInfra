@@ -57,70 +57,26 @@ crowdsec_nginx_env:
 crowdsec_online_api_key: a7c65c19d023489a88b70036e3a10397nmDvrI0bzgfqoUau
 crowdsec_online_api_secret: K6yiJt6KCOfj0AeXbeWQ4BptCGhEYfdCwrNwrr3NoStJ3BOGyoov7JCgbW467u3v
 
-# Configuration for Nginx
-nginx_ports:
-  - "80:80"
-  - "443:443"
-  - "8181:8181"
-
-nginx_volumes:
-  - /opt/nginx/conf/nginx.conf:/etc/nginx/nginx.conf:ro
-  - /opt/nginx/conf/conf.d:/etc/nginx/conf.d:ro
-  - /opt/nginx/conf/snippets:/etc/nginx/snippets:ro
-  - /opt/nginx/logs:/var/log/nginx
-  - /opt/nginx/conf/sites-enabled:/etc/nginx/sites-enabled:ro
-  - /opt/nginx/certs:/etc/nginx/certs:ro
-
-nginx_extra_volumes:
-  - name: nginx-conf
-    host_path: /opt/nginx/conf/nginx.conf
-    mount_path: /etc/nginx/nginx.conf
-    read_only: true
-  - name: conf-d
-    host_path: /opt/nginx/conf/conf.d
-    mount_path: /etc/nginx/conf.d
-    read_only: true
-  - name: snippets
-    host_path: /opt/nginx/conf/snippets
-    mount_path: /etc/nginx/snippets
-    read_only: true
-  - name: logs
-    host_path: /opt/nginx/logs
-    mount_path: /var/log/nginx
-  - name: sites-enabled
-    host_path: /opt/nginx/conf/sites-enabled
-    mount_path: /etc/nginx/sites-enabled
-    read_only: true
-  - name: certs
-    host_path: /opt/nginx/certs
-    mount_path: /etc/nginx/certs
-    read_only: true
-
 nginx_services:
   - name: jellyfin
-    ip: 192.168.1.201
     port: 8096
     disable_buffering: true
     namespace: media
 
   - name: overseerr
-    ip: 192.168.1.201
     port: 5055
     namespace: media
 
   - name: bazarr
-    ip: 192.168.1.201
     port: 6767
     namespace: media
 
   - name: qbittorrent
-    ip: 192.168.1.201
     port: 8080
     disable_buffering: true
     namespace: media
 
   - name: adguard
-    ip: 192.168.1.200
     port: 8081
     namespace: network
     k8s_service: adguard-home
@@ -128,7 +84,5 @@ nginx_services:
 nginx_services_local:
   - name: jellyfin
     sub: media
-    ip: 192.168.1.201
     port: 8096
     disable_buffering: true
-    namespace: media

@@ -1,89 +1,14 @@
-- name: Ensure nginx cert directory exists
-  ansible.builtin.file:
-    path: /opt/nginx/certs
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
-
-- name: Deploy Cloudflare origin certificate
-  ansible.builtin.copy:
-    src: origin.pem
-    dest: /opt/nginx/certs/origin.pem
-    owner: root
-    group: root
-    mode: "0644"
-
-- name: Deploy Cloudflare origin private key
-  ansible.builtin.copy:
-    src: origin.key
-    dest: /opt/nginx/certs/origin.key
-    owner: root
-    group: root
-    mode: "0600"
-
-
-- name: Ensure nginx config directories exist
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
-  loop:
-    - /opt/nginx/conf
-    - /opt/nginx/conf/snippets
-    - /opt/nginx/conf/conf.d
-    - /opt/nginx/logs
-
-
-- name: Deploy main nginx.conf
-  ansible.builtin.template:
-    src: nginx.conf.j2
-    dest: /opt/nginx/conf/nginx.conf
-    owner: root
-    group: root
-    mode: "0644"
-
-- name: Deploy proxy common snippet
-  ansible.builtin.template:
-    src: proxy-common.conf.j2
-    dest: /opt/nginx/conf/snippets/proxy-common.conf
-    owner: root
-    group: root
-    mode: "0644"
-
-
-- name: Deploy vhosts config
-  ansible.builtin.template:
-    src: vhosts.j2
-    dest: /opt/nginx/conf/conf.d/services.conf
-    owner: root
-    group: root
-    mode: "0644"
-
-
 # TLS secret for public ingress (Cloudflare origin cert) — one per namespace
-- name: Slurp origin cert from gateway-server
-  ansible.builtin.slurp:
-    src: /opt/nginx/certs/origin.pem
-  register: nginx_config_origin_cert
-
-- name: Slurp origin key from gateway-server
-  ansible.builtin.slurp:
-    src: /opt/nginx/certs/origin.key
-  register: nginx_config_origin_key
-
 - name: Copy origin cert to k3s control plane
   ansible.builtin.copy:
-    content: "{{ nginx_config_origin_cert.content | b64decode }}"
+    content: "{{ lookup('file', 'origin.pem') }}"
     dest: /tmp/cloudflare-origin.pem
     mode: "0600"
   delegate_to: git-k3s-server
 
 - name: Copy origin key to k3s control plane
   ansible.builtin.copy:
-    content: "{{ nginx_config_origin_key.content | b64decode }}"
+    content: "{{ lookup('file', 'origin.key') }}"
     dest: /tmp/cloudflare-origin.key
     mode: "0600"
   delegate_to: git-k3s-server
