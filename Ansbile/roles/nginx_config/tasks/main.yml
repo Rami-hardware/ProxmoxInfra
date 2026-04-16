@@ -113,21 +113,23 @@
 
 
 # Kubernetes Ingress resources for all services
-- name: Ensure k3s manifests directory exists
+- name: Ensure k3s manifests directory exists on control plane
   ansible.builtin.file:
     path: /opt/k3s/manifests
     state: directory
     owner: root
     group: root
     mode: "0755"
+  delegate_to: git-k3s-server
 
-- name: Template ingress-services manifest
+- name: Template ingress-services manifest onto control plane
   ansible.builtin.template:
     src: ingress-services.yml.j2
     dest: /opt/k3s/manifests/ingress-services.yml
     owner: root
     group: root
     mode: "0644"
+  delegate_to: git-k3s-server
 
 - name: Apply ingress-services manifest
   ansible.builtin.command: >
