@@ -13,7 +13,6 @@
     owner: root
     group: root
     mode: "0644"
-  notify: Reload nginx container
 
 - name: Deploy Cloudflare origin private key
   ansible.builtin.copy:
@@ -22,7 +21,6 @@
     owner: root
     group: root
     mode: "0600"
-  notify: Reload nginx container
 
 
 - name: Ensure nginx config directories exist
