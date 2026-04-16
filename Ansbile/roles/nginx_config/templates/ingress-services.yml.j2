@@ -1,4 +1,60 @@
-# Ingress resources for local LAN services (ingress-nginx → k8s Service)
+# External Services + Endpoints for local LAN services (point to real node IPs)
+{% for svc in nginx_services_local %}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ svc.name }}
+  namespace: {{ svc.sub }}
+spec:
+  clusterIP: None
+  ports:
+    - port: {{ svc.port }}
+      targetPort: {{ svc.port }}
+      protocol: TCP
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: {{ svc.name }}
+  namespace: {{ svc.sub }}
+subsets:
+  - addresses:
+      - ip: {{ svc.ip }}
+    ports:
+      - port: {{ svc.port }}
+        protocol: TCP
+{% endfor %}
+
+# External Services + Endpoints for public services (point to real node IPs)
+{% for svc in nginx_services %}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ svc.k8s_service | default(svc.name) }}
+  namespace: {{ svc.namespace | default('media') }}
+spec:
+  clusterIP: None
+  ports:
+    - port: {{ svc.port }}
+      targetPort: {{ svc.port }}
+      protocol: TCP
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: {{ svc.k8s_service | default(svc.name) }}
+  namespace: {{ svc.namespace | default('media') }}
+subsets:
+  - addresses:
+      - ip: {{ svc.ip }}
+    ports:
+      - port: {{ svc.port }}
+        protocol: TCP
+{% endfor %}
+
+# Ingress resources for local LAN services
 {% for svc in nginx_services_local %}
 ---
 apiVersion: networking.k8s.io/v1
@@ -26,11 +82,12 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ svc.k8s_service | default(svc.name) }}
+                name: {{ svc.name }}
                 port:
                   number: {{ svc.port }}
 {% endfor %}
-# Ingress resources for public services (ingress-nginx → k8s Service)
+
+# Ingress resources for public services
 {% for svc in nginx_services %}
 ---
 apiVersion: networking.k8s.io/v1

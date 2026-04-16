@@ -59,24 +59,29 @@ crowdsec_online_api_secret: K6yiJt6KCOfj0AeXbeWQ4BptCGhEYfdCwrNwrr3NoStJ3BOGyoov
 
 nginx_services:
   - name: jellyfin
+    ip: 192.168.1.201
     port: 8096
     disable_buffering: true
     namespace: media
 
   - name: overseerr
+    ip: 192.168.1.201
     port: 5055
     namespace: media
 
   - name: bazarr
+    ip: 192.168.1.201
     port: 6767
     namespace: media
 
   - name: qbittorrent
+    ip: 192.168.1.201
     port: 8080
     disable_buffering: true
     namespace: media
 
   - name: adguard
+    ip: 192.168.1.200
     port: 8081
     namespace: network
     k8s_service: adguard-home
@@ -84,5 +89,6 @@ nginx_services:
 nginx_services_local:
   - name: jellyfin
     sub: media
+    ip: 192.168.1.201
     port: 8096
     disable_buffering: true
