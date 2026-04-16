@@ -118,3 +118,10 @@ nginx_services:
   - name: adguard
     ip: 192.168.1.200
     port: 8081
+
+nginx_services_local:
+  - name: jellyfin
+    sub: media
+    ip: 192.168.1.201
+    port: 8096
+    disable_buffering: true
