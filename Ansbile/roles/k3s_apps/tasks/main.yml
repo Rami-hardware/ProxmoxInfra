@@ -98,7 +98,7 @@
   loop: "{{ k3s_apps_existing_manifests.files }}"
   when: >
     (item.path | basename | splitext)[0] not in
-    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac']
+    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac', 'ingress-nginx']
   changed_when: true
 
 - name: Remove stale manifest files
@@ -108,7 +108,7 @@
   loop: "{{ k3s_apps_existing_manifests.files }}"
   when: >
     (item.path | basename | splitext)[0] not in
-    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac']
+    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac', 'ingress-nginx']
 
 # Single template for all apps — item.* variables drive the output
 - name: Template app manifests
@@ -236,3 +236,23 @@
   loop: "{{ k3s_apps_rollout.results }}"
   loop_control:
     label: "{{ item.item.name }}"
+
+
+# ingress-nginx controller
+- name: Template ingress-nginx manifest
+  ansible.builtin.template:
+    src: ingress-nginx.yml.j2
+    dest: "{{ k3s_apps_manifest_dir }}/ingress-nginx.yml"
+    mode: "0644"
+
+- name: Apply ingress-nginx manifest
+  ansible.builtin.command: >
+    k3s kubectl apply --server-side --force-conflicts
+    -f {{ k3s_apps_manifest_dir }}/ingress-nginx.yml
+  changed_when: true
+
+- name: Wait for ingress-nginx controller to be ready
+  ansible.builtin.command: >
+    k3s kubectl rollout status deployment/ingress-nginx-controller
+    -n ingress-nginx --timeout=120s
+  changed_when: false
