@@ -72,10 +72,11 @@
         --cert=/opt/nginx/certs/origin.pem \
         --key=/opt/nginx/certs/origin.key \
         -n {{ item }} \
-        --dry-run=client -o yaml | k3s kubectl apply --validate=false -f -
+        --dry-run=client -o yaml | k3s kubectl apply -f -
     executable: /bin/bash
   loop: "{{ nginx_services | map(attribute='namespace') | unique | list }}"
   changed_when: true
+  delegate_to: git-k3s-server
 
 
 # Kubernetes Ingress resources for all services
@@ -100,3 +101,4 @@
     k3s kubectl apply --server-side --force-conflicts
     -f /opt/k3s/manifests/ingress-services.yml
   changed_when: true
+  delegate_to: git-k3s-server
