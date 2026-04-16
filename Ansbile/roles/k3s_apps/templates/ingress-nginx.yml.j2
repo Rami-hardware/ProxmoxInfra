@@ -202,7 +202,7 @@ metadata:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/component: controller
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/component: controller
@@ -210,11 +210,11 @@ spec:
     - name: http
       port: 80
       targetPort: http
-      nodePort: {{ ingress_nginx_http_nodeport | default(30080) }}
+      protocol: TCP
     - name: https
       port: 443
       targetPort: https
-      nodePort: {{ ingress_nginx_https_nodeport | default(30443) }}
+      protocol: TCP
 ---
 apiVersion: networking.k8s.io/v1
 kind: IngressClass

@@ -349,46 +349,6 @@ k3s_apps_list:
     cpu_request: "25m"
     cpu_limit: "200m"
 
-  - name: nginx
-    namespace: network
-    image: nginx:latest
-    target_node: gateway-server
-    skip_pv: true
-    host_network: true
-    dns_policy: None
-    dns_nameservers:
-      - "8.8.8.8"
-      - "8.8.4.4"
-    replicas: 1
-    extra_volumes:
-      - name: nginx-conf
-        host_path: /opt/nginx/conf/nginx.conf
-        mount_path: /etc/nginx/nginx.conf
-        read_only: true
-      - name: conf-d
-        host_path: /opt/nginx/conf/conf.d
-        mount_path: /etc/nginx/conf.d
-        read_only: true
-      - name: snippets
-        host_path: /opt/nginx/conf/snippets
-        mount_path: /etc/nginx/snippets
-        read_only: true
-      - name: logs
-        host_path: /opt/nginx/logs
-        mount_path: /var/log/nginx
-      - name: sites-enabled
-        host_path: /opt/nginx/conf/sites-enabled
-        mount_path: /etc/nginx/sites-enabled
-        read_only: true
-      - name: certs
-        host_path: /opt/nginx/certs
-        mount_path: /etc/nginx/certs
-        read_only: true
-    memory_request: "64Mi"
-    memory_limit: "256Mi"
-    cpu_request: "25m"
-    cpu_limit: "200m"
-
   - name: adguard-home
     namespace: network
     image: adguard/adguardhome:latest
