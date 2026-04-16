@@ -63,7 +63,27 @@
     mode: "0644"
 
 
+# TLS secret for public ingress (Cloudflare origin cert) — one per namespace
+- name: Create cloudflare-origin-tls secret in each public service namespace
+  ansible.builtin.command: >
+    k3s kubectl create secret tls cloudflare-origin-tls
+    --cert=/opt/nginx/certs/origin.pem
+    --key=/opt/nginx/certs/origin.key
+    -n {{ item }}
+    --dry-run=client -o yaml | k3s kubectl apply --server-side -f -
+  loop: "{{ nginx_services | map(attribute='namespace') | unique | list }}"
+  changed_when: true
+
+
 # Kubernetes Ingress resources for all services
+- name: Ensure k3s manifests directory exists
+  ansible.builtin.file:
+    path: /opt/k3s/manifests
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: Template ingress-services manifest
   ansible.builtin.template:
     src: ingress-services.yml.j2
