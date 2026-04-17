@@ -133,10 +133,8 @@ jobs:
       - name: Ansible syntax check
         run: |
           source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --syntax-check --vault-password-file ~/.vault_pass
           ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml --syntax-check --vault-password-file ~/.vault_pass
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml --syntax-check --vault-password-file ~/.vault_pass
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml --syntax-check --vault-password-file ~/.vault_pass
+
 
       - name: Ansible lint
         run: |
@@ -354,10 +352,8 @@ jobs:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         run: |
           source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml
-
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml
+          
       - name: Cleanup secrets
         if: always()
         run: |
