@@ -6,7 +6,7 @@
     # - DNS
     # - docker_setup
     # - promtail
-    - docker_apps
+    # - docker_apps
     # - k3s_agent
-    #  - scraparr
+    - scraparr
     # - ufw
