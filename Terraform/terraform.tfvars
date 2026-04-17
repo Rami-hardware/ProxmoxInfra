@@ -3,7 +3,7 @@ vms = {
     name       = "gateway-server"
     vmid       = 505
     ip         = "192.168.1.200/24"
-    cores      = 1
+    cores      = 2
     memory     = 2048
     balloon    = 512
     ciuser     = "gateway"
@@ -54,6 +54,29 @@ vms = {
     balloon    = 512
     ciuser     = "monitoring"
     cipassword = "monitoring@123"
+    hostpci    = null
+    disks = [
+      {
+        datastore_id = "local-lvm"
+        interface    = "scsi0"
+        size         = 20
+        file_format  = "raw"
+        file_id      = ""
+        iothread     = true
+        discard      = "on"
+      }
+    ]
+  }
+
+  Securtiy = {
+    name       = "Securtiy-server"
+    vmid       = 619
+    ip         = "192.168.1.204/24"
+    cores      = 2
+    memory     = 6144
+    balloon    = 512
+    ciuser     = "securtiy"
+    cipassword = "securtiy@123"
     hostpci    = null
     disks = [
       {
