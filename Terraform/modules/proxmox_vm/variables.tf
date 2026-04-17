@@ -28,6 +28,12 @@ variable "memory" {
   type = number
 }
 
+variable "balloon" {
+  type        = number
+  default     = 0
+  description = "Minimum balloon memory in MB (0 = ballooning disabled). Proxmox reclaims memory between this value and 'memory' when the host is under pressure."
+}
+
 variable "clone" {
   type = string
 }

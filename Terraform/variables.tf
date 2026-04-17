@@ -5,6 +5,7 @@ variable "vms" {
     ip         = string
     cores      = number
     memory     = number
+    balloon    = optional(number, 0) # min balloon RAM in MB; 0 = disabled
     ciuser     = string
     cipassword = string
     hostpcis   = optional(list(string), []) # optional PCI passthrough
