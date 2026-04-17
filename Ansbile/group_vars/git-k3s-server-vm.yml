@@ -276,6 +276,8 @@ k3s_apps_list:
         mount_path: /etc/grafana/provisioning
     env:
       - { name: GF_PATHS_DATA, value: /opt/docker/grafana }
+      - { name: GF_FEATURE_TOGGLES_ENABLE, value: "kubernetesDashboards=false" }
+
     memory_request: "128Mi"
     memory_limit: "512Mi"
     cpu_request: "50m"
