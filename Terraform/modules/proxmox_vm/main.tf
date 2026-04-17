@@ -15,7 +15,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
 
   memory {
     dedicated = var.memory
-    floating  = var.balloon  # enables ballooning; Proxmox shrinks VM RAM down to this when host is under pressure
+    floating  = var.balloon # enables ballooning; Proxmox shrinks VM RAM down to this when host is under pressure
   }
 
   dynamic "disk" {
