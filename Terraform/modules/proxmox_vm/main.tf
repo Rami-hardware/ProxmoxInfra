@@ -62,6 +62,21 @@ resource "proxmox_virtual_environment_vm" "vm" {
       clone,
       hostpci,
       cpu,
+      memory,
+      agent,
+      operating_system,
+      migrate,
+      on_boot,
+      reboot,
+      stop_on_destroy,
+      timeout_clone,
+      timeout_create,
+      timeout_migrate,
+      timeout_move_disk,
+      timeout_reboot,
+      timeout_shutdown_vm,
+      timeout_start_vm,
+      timeout_stop_vm,
     ]
   }
 
