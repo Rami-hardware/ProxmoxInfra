@@ -227,11 +227,13 @@ jobs:
           terraform import -lock=false 'module.proxmox_vms["gateway"].proxmox_virtual_environment_vm.vm'    pve/505 || echo "gateway already imported"
           terraform import -lock=false 'module.proxmox_vms["media"].proxmox_virtual_environment_vm.vm'      pve/911 || echo "media already imported"
           terraform import -lock=false 'module.proxmox_vms["monitoring"].proxmox_virtual_environment_vm.vm' pve/511 || echo "monitoring already imported"
+          terraform import -lock=false 'module.proxmox_vms["security"].proxmox_virtual_environment_vm.vm'   pve/619 || echo "security already imported"
           terraform import -lock=false 'module.proxmox_vms["github"].proxmox_virtual_environment_vm.vm'     pve/115 || echo "github already imported"
           # Remove stale state entries that are no longer managed
-          terraform state rm 'module.proxmox_vms["monitor"].proxmox_virtual_environment_vm.vm' 2>/dev/null || echo "monitor stale entry not present"
-          terraform state rm 'module.proxmox_vms["game"].proxmox_virtual_environment_vm.vm'    2>/dev/null || echo "game stale entry not present"
-          terraform state rm 'module.proxmox_vms["dev"].proxmox_virtual_environment_vm.vm'     2>/dev/null || echo "dev stale entry not present"
+          terraform state rm 'module.proxmox_vms["monitor"].proxmox_virtual_environment_vm.vm'   2>/dev/null || echo "monitor stale entry not present"
+          terraform state rm 'module.proxmox_vms["game"].proxmox_virtual_environment_vm.vm'      2>/dev/null || echo "game stale entry not present"
+          terraform state rm 'module.proxmox_vms["dev"].proxmox_virtual_environment_vm.vm'       2>/dev/null || echo "dev stale entry not present"
+          terraform state rm 'module.proxmox_vms["securtiy"].proxmox_virtual_environment_vm.vm'  2>/dev/null || echo "securtiy stale entry not present"
 
       - name: Terraform plan (compare code vs server)
         id: plan
@@ -281,6 +283,7 @@ jobs:
             -target='module.proxmox_vms["gateway"]' \
             -target='module.proxmox_vms["media"]' \
             -target='module.proxmox_vms["monitoring"]' \
+            -target='module.proxmox_vms["security"]' \
             -target='module.proxmox_vms["github"]'
 
       # ── Ansible ──────────────────────────────────────────────────────────────
