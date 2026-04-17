@@ -102,10 +102,13 @@ jobs:
       # ── Ansible ──────────────────────────────────────────────────────────────
       - name: Install Ansible lint in virtualenv
         run: |
-          python3 -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip
-          pip install ansible-lint
+          if [ ! -f venv/bin/ansible-lint ]; then
+            python3 -m venv venv
+            source venv/bin/activate
+            pip install --quiet ansible-lint
+          else
+            echo "ansible-lint already installed — skipping."
+          fi
 
       - name: Install Ansible collections
         run: |
@@ -310,10 +313,13 @@ jobs:
 
       - name: Set up Python virtualenv
         run: |
-          python3 -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip
-          pip install ansible
+          if [ ! -f venv/bin/ansible ]; then
+            python3 -m venv venv
+            source venv/bin/activate
+            pip install --quiet ansible
+          else
+            echo "ansible already installed — skipping."
+          fi
 
       - name: Install Ansible collections
         run: |
