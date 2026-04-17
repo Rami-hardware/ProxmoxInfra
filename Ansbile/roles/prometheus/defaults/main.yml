@@ -14,8 +14,3 @@ prometheus_alertmanager_port: 9093
 #   scrape_interval - (optional) override global interval
 #   scrape_timeout  - (optional) override global timeout
 prometheus_scrape_jobs: []
-
-# Alert thresholds
-prometheus_alert_load_threshold: 9      # node_load15; ~75% of 12 logical CPUs (i5-10400F)
-prometheus_alert_memory_threshold: 90   # percent
-prometheus_alert_disk_threshold: 85     # percent

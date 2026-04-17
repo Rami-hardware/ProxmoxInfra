@@ -109,14 +109,6 @@ prometheus_scrape_jobs:
       - target_label: instance
         replacement: monitoring-server
 
-# ── Prometheus alert thresholds ───────────────────────────────────────────────
-# node_load15 threshold: i5-10400F = 6 cores / 12 threads; Linux sees 12 CPUs.
-# 9 = 75% of 12 — only fires on genuinely sustained high load.
-# CI bursts (~2.3 load) are ~19% utilisation and will never trigger this.
-prometheus_alert_load_threshold: 9
-prometheus_alert_memory_threshold: 90
-prometheus_alert_disk_threshold: 85
-
 # ── Loki ──────────────────────────────────────────────────────────────────────
 loki_config_dir: /opt/docker/loki
 loki_http_port: 3100
