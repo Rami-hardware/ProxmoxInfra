@@ -34,6 +34,7 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.0
+          terraform_wrapper: false  # wrapper intercepts exit codes; breaks -detailed-exitcode
 
       # Point Terraform at a local filesystem mirror so it never contacts
       # registry.terraform.io (unreachable from the self-hosted runner).
@@ -168,6 +169,7 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.0
+          terraform_wrapper: false  # wrapper intercepts exit codes; breaks -detailed-exitcode
 
       - name: Configure Terraform provider mirror
         run: |
@@ -228,6 +230,8 @@ jobs:
           terraform import -lock=false 'module.proxmox_vms["monitoring"].proxmox_virtual_environment_vm.vm' pve/511 || echo "monitoring already imported"
           terraform import -lock=false 'module.proxmox_vms["github"].proxmox_virtual_environment_vm.vm'     pve/115 || echo "github already imported"
           terraform import -lock=false 'module.proxmox_vms["dev"].proxmox_virtual_environment_vm.vm'        pve/223 || echo "dev already imported"
+          # Remove stale "monitor" key (renamed to "monitoring") to prevent accidental destroy
+          terraform state rm 'module.proxmox_vms["monitor"].proxmox_virtual_environment_vm.vm' 2>/dev/null || echo "monitor stale entry not present"
 
       - name: Terraform plan (compare code vs server)
         id: plan
