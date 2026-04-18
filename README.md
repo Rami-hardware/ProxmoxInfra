@@ -51,13 +51,14 @@ A fully automated homelab running on Proxmox, provisioned with Terraform, config
 
 ### Monitoring (192.168.1.203) — K3s worker
 
-| App                | Port | Description                           |
-| :----------------- | :--- | :------------------------------------ |
-| Prometheus         | 9090 | Metrics collection                    |
-| Grafana            | 3000 | Dashboards                            |
-| Loki               | 3100 | Log aggregation                       |
-| Alertmanager       | 9093 | Alert routing                         |
-| Speedtest Exporter | 9798 | ISP bandwidth tracking (10m interval) |
+| App                 | Port | Description                           |
+| :------------------ | :--- | :------------------------------------ |
+| Prometheus          | 9090 | Metrics collection                    |
+| Grafana             | 3000 | Dashboards                            |
+| Loki                | 3100 | Log aggregation                       |
+| Alertmanager        | 9093 | Alert routing                         |
+| Speedtest Exporter  | 9798 | ISP bandwidth tracking (10m interval) |
+| Cloudflare Exporter | 9199 | Cloudflare zone/DNS/WAF metrics       |
 
 ### Git / K3s (192.168.1.204)
 
