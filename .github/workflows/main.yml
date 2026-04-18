@@ -307,7 +307,7 @@ jobs:
           else
             echo "All packages already installed — skipping apt-get update."
           fi
-
+ 
       - name: Set up Python virtualenv
         run: |
           if [ ! -f venv/bin/ansible ]; then
