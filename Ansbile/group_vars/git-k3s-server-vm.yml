@@ -358,6 +358,10 @@ k3s_apps_list:
     node_port: 9199
     target_node: monitoring-server
     skip_pv: true
+    dns_policy: None
+    dns_nameservers:
+      - "8.8.8.8"
+      - "8.8.4.4"
     replicas: 1
     env:
       - { name: CF_API_TOKEN, value: "{{ lookup('env', 'CF_API_TOKEN') }}" }
