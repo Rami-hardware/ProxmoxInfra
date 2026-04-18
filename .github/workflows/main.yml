@@ -146,7 +146,7 @@ jobs:
       - name: Ansible dry run (check + diff)
         run: |
           source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml --check --diff --vault-password-file ~/.vault_pass
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml --check --diff --vault-password-file ~/.vault_pass
         env:
           ANSIBLE_HOST_KEY_CHECKING: 'False'
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
@@ -292,8 +292,7 @@ jobs:
             -target='module.proxmox_vms["gateway"]' \
             -target='module.proxmox_vms["media"]' \
             -target='module.proxmox_vms["monitoring"]' \
-            -target='module.proxmox_vms["security"]' \
-            -target='module.proxmox_vms["github"]'
+            -target='module.proxmox_vms["security"]'
 
       # ── Ansible ──────────────────────────────────────────────────────────────
       - name: Install system dependencies
