@@ -366,6 +366,7 @@ k3s_apps_list:
     env:
       - { name: CF_API_TOKEN, value: "{{ lookup('env', 'CF_API_TOKEN') }}" }
       - { name: FREE_TIER, value: "true" }
+      - { name: SCRAPE_DELAY, value: "0" }
       - { name: LOG_LEVEL, value: "warn" }
     memory_request: "64Mi"
     memory_limit: "256Mi"
