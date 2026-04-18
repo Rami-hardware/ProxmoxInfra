@@ -351,6 +351,27 @@ k3s_apps_list:
     cpu_request: "25m"
     cpu_limit: "200m"
 
+  - name: cloudflare-exporter
+    namespace: monitoring
+    image: ghcr.io/lablabs/cloudflare_exporter:latest
+    port: 8080
+    node_port: 9199
+    target_node: monitoring-server
+    skip_pv: true
+    dns_policy: None
+    dns_nameservers:
+      - "8.8.8.8"
+      - "8.8.4.4"
+    replicas: 1
+    env:
+      - { name: CF_API_TOKEN, value: "{{ lookup('env', 'CF_API_TOKEN') }}" }
+      - { name: FREE_TIER, value: "true" }
+      - { name: LOG_LEVEL, value: "warn" }
+    memory_request: "64Mi"
+    memory_limit: "256Mi"
+    cpu_request: "25m"
+    cpu_limit: "200m"
+
   - name: adguard-home
     namespace: network
     image: adguard/adguardhome:latest
