@@ -57,6 +57,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
   lifecycle {
     prevent_destroy = false
     ignore_changes = [
+      disk,
       initialization,
       clone,
       hostpci,

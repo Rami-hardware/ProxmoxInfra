@@ -1,0 +1,5 @@
+- name: Deploy security Server Configuration
+  hosts: security-server
+  become: true
+  roles:
+    - DNS

@@ -133,7 +133,7 @@ jobs:
       - name: Ansible syntax check
         run: |
           source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml --syntax-check --vault-password-file ~/.vault_pass
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/security-server.yml --syntax-check --vault-password-file ~/.vault_pass
 
 
       - name: Ansible lint
@@ -146,7 +146,7 @@ jobs:
       - name: Ansible dry run (check + diff)
         run: |
           source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml --check --diff --vault-password-file ~/.vault_pass
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/security-server.yml --check --diff --vault-password-file ~/.vault_pass
         env:
           ANSIBLE_HOST_KEY_CHECKING: 'False'
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
@@ -351,7 +351,7 @@ jobs:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         run: |
           source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/security-server.yml
           
       - name: Cleanup secrets
         if: always()
