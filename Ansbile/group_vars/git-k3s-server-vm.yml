@@ -367,6 +367,7 @@ k3s_apps_list:
       - "--free_tier"
       - "--cf_zones=46593646510004b325d04d011dcc49df"
       - "--scrape_delay=300"
+      - "--metrics_denylist=cloudflare_worker_requests_total,cloudflare_r2_requests_total"
     env:
       - { name: CF_API_TOKEN, value: "{{ lookup('env', 'CF_API_TOKEN') }}" }
     memory_request: "64Mi"
