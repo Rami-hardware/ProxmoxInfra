@@ -31,8 +31,6 @@ A fully automated homelab running on Proxmox, provisioned with Terraform, config
 - **Nginx** — reverse proxy for all internal services
 - **CrowdSec** — intrusion detection + nginx bouncer
 - **AdGuard Home** — local DNS + ad blocking (K3s, `host_network` mode)
-- **Authelia** — SSO / 2FA authentication layer
-- **UFW** — host firewall
 
 ### Media (192.168.1.201) — K3s worker
 
@@ -214,22 +212,22 @@ The provider mirror is seeded from GitHub Releases on first run and cached on th
 
 ## Technologies
 
-| Category       | Tools                                                                         |
-| :------------- | :---------------------------------------------------------------------------------------------------- |
-| Virtualization | Proxmox VE                                                                                            |
-| IaC            | Terraform (bpg/proxmox provider v0.70.1)                                                              |
-| Configuration  | Ansible                                                                                               |
-| Containers     | Docker, Docker Compose                                                                                |
-| Orchestration  | K3s (Kubernetes)                                                                                      |
-| CI/CD          | GitHub Actions (self-hosted runner)                                                                   |
-| Metrics        | Prometheus, node-exporter, kubelet-cadvisor, kube-state-metrics, intel-gpu-exporter, qbittorrent-exporter, scraparr |
-| Visualization  | Grafana                                                                                               |
-| Logging        | Loki, Promtail                                                                                        |
-| Alerting       | Alertmanager                                                                                          |
-| Reverse Proxy  | Nginx                                                                                                 |
-| Security       | CrowdSec, Authelia, UFW, Ansible Vault                                                                |
-| DNS            | AdGuard Home                                                                                          |
-| Media          | Jellyfin, Radarr, Sonarr, Bazarr, Overseerr, qBittorrent, Subsyncarr                                 |
+| Category | Tools |
+| :--- | :--- |
+| Virtualization | Proxmox VE |
+| IaC | Terraform (bpg/proxmox provider v0.70.1) |
+| Configuration | Ansible |
+| Containers | Docker, Docker Compose |
+| Orchestration | K3s (Kubernetes) |
+| CI/CD | GitHub Actions (self-hosted runner) |
+| Metrics | Prometheus, node-exporter, kubelet-cadvisor, kube-state-metrics, intel-gpu-exporter, qbittorrent-exporter, scraparr |
+| Visualization | Grafana |
+| Logging | Loki, Promtail |
+| Alerting | Alertmanager |
+| Reverse Proxy | Nginx |
+| Security | CrowdSec, Authelia, UFW, Ansible Vault |
+| DNS | AdGuard Home |
+| Media | Jellyfin, Radarr, Sonarr, Bazarr, Overseerr, qBittorrent, Subsyncarr |
 
 ---
 
