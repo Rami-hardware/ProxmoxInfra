@@ -353,7 +353,7 @@ k3s_apps_list:
 
   - name: cloudflare-exporter
     namespace: monitoring
-    image: lablabs/cloudflare-exporter:latest
+    image: ghcr.io/lablabs/cloudflare_exporter:latest
     port: 8080
     node_port: 9199
     target_node: monitoring-server
