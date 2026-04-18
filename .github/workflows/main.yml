@@ -155,7 +155,6 @@ jobs:
           PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
           RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
           OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
 
       - name: Cleanup secrets
         if: always()
@@ -348,7 +347,6 @@ jobs:
           PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
           RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
           OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         run: |
           source venv/bin/activate
           ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml

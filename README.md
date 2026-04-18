@@ -58,7 +58,6 @@ A fully automated homelab running on Proxmox, provisioned with Terraform, config
 | Loki                | 3100 | Log aggregation                       |
 | Alertmanager        | 9093 | Alert routing                         |
 | Speedtest Exporter  | 9798 | ISP bandwidth tracking (10m interval) |
-| Cloudflare Exporter | 9199 | Cloudflare zone/DNS/WAF metrics       |
 
 ### Git / K3s (192.168.1.204)
 
