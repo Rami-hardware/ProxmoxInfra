@@ -29,7 +29,6 @@ A fully automated homelab running on Proxmox, provisioned with Terraform, config
 ### Gateway (192.168.1.200) — K3s worker
 
 - **Nginx** — reverse proxy for all internal services
-- **CrowdSec** — intrusion detection + nginx bouncer
 - **AdGuard Home** — local DNS + ad blocking (K3s, `host_network` mode)
 
 ### Media (192.168.1.201) — K3s worker

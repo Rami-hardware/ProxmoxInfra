@@ -293,7 +293,6 @@ jobs:
             -target='module.proxmox_vms["media"]' \
             -target='module.proxmox_vms["monitoring"]' \
             -target='module.proxmox_vms["security"]'
-
       # ── Ansible ──────────────────────────────────────────────────────────────
       - name: Install system dependencies
         run: |
