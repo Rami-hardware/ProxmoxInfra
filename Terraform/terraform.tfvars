@@ -36,7 +36,7 @@ vms = {
       {
         datastore_id = "local-lvm"
         interface    = "scsi0"
-        size         = 100
+        size         = 200
         file_format  = "raw"
         file_id      = ""
         iothread     = true
