@@ -365,9 +365,11 @@ k3s_apps_list:
     replicas: 1
     env:
       - { name: CF_API_TOKEN, value: "{{ lookup('env', 'CF_API_TOKEN') }}" }
-      - { name: FREE_TIER, value: "true" }
+      - { name: CF_SCRAPE_COLOS, value: "false" }
+      - { name: CF_SCRAPE_LOAD_BALANCERS, value: "false" }
+      - { name: CF_SCRAPE_R2, value: "false" }
+      - { name: CF_SCRAPE_WORKERS, value: "false" }
       - { name: SCRAPE_DELAY, value: "0" }
-      - { name: LOG_LEVEL, value: "warn" }
     memory_request: "64Mi"
     memory_limit: "256Mi"
     cpu_request: "25m"
