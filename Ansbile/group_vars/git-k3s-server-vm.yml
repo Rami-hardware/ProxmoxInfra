@@ -363,15 +363,12 @@ k3s_apps_list:
       - "8.8.8.8"
       - "8.8.4.4"
     replicas: 1
+    args:
+      - "--free_tier"
+      - "--cf_zones=46593646510004b325d04d011dcc49df"
+      - "--scrape_delay=300"
     env:
       - { name: CF_API_TOKEN, value: "{{ lookup('env', 'CF_API_TOKEN') }}" }
-      - { name: CF_ZONES, value: "46593646510004b325d04d011dcc49df" }
-      - { name: CF_FREE_TIER, value: "true" }
-      - { name: CF_SCRAPE_COLOS, value: "false" }
-      - { name: CF_SCRAPE_LOAD_BALANCERS, value: "false" }
-      - { name: CF_SCRAPE_R2, value: "false" }
-      - { name: CF_SCRAPE_WORKERS, value: "false" }
-      - { name: SCRAPE_DELAY, value: "300" }
     memory_request: "64Mi"
     memory_limit: "256Mi"
     cpu_request: "25m"
