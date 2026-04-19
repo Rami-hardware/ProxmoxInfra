@@ -36,28 +36,35 @@ A fully automated homelab running on Proxmox, provisioned with Terraform, config
 
 ### Media (192.168.1.201) — K3s worker
 
-| App          | Port | Description                                         |
-| :----------- | :--- | :-------------------------------------------------- |
-| Jellyfin     | 8096 | Media server with Intel Arc GPU transcoding         |
-| Radarr       | 7878 | Movie automation                                    |
-| Sonarr       | 8989 | TV automation                                       |
-| Bazarr       | 6767 | Subtitle automation                                 |
-| Overseerr    | 5055 | Media request management                            |
-| qBittorrent  | 8080 | Torrent client                                      |
-| Prowlarr     | 9696 | Indexer management                                  |
-| FlareSolverr | 8191 | Cloudflare bypass (stateless)                       |
-| Subsyncarr   | —    | Subtitle sync with VAAPI hardware acceleration      |
-| Scraparr     | 7100 | Metrics exporter for arr apps                       |
+| App          | Local URL (HTTPS)                                                   | Port | Description                                    |
+| :----------- | :------------------------------------------------------------------ | :--- | :--------------------------------------------- |
+| Jellyfin     | <https://jellyfin.media.lan>                                        | 8096 | Media server with Intel Arc GPU transcoding    |
+| Radarr       | <https://radarr.media.lan>                                          | 7878 | Movie automation                               |
+| Sonarr       | <https://sonarr.media.lan>                                          | 8989 | TV automation                                  |
+| Bazarr       | <https://bazarr.media.lan>                                          | 6767 | Subtitle automation                            |
+| Overseerr    | <https://overseerr.media.lan>                                       | 5055 | Media request management                       |
+| qBittorrent  | <https://qbittorrent.media.lan>                                     | 8080 | Torrent client                                 |
+| Prowlarr     | <https://prowlarr.media.lan>                                        | 9696 | Indexer management                             |
+| FlareSolverr | —                                                                   | 8191 | Cloudflare bypass (stateless)                  |
+| Subsyncarr   | —                                                                   | —    | Subtitle sync with VAAPI hardware acceleration |
+| Scraparr     | —                                                                   | 7100 | Metrics exporter for arr apps                  |
 
 ### Monitoring (192.168.1.203) — K3s worker
 
-| App                 | Port | Description                           |
-| :------------------ | :--- | :------------------------------------ |
-| Prometheus          | 9090 | Metrics collection                    |
-| Grafana             | 3000 | Dashboards                            |
-| Loki                | 3100 | Log aggregation                       |
-| Alertmanager        | 9093 | Alert routing                         |
-| Speedtest Exporter  | 9798 | ISP bandwidth tracking (10m interval) |
+| App                | Local URL (HTTPS)                                                   | Port | Description                           |
+| :----------------- | :------------------------------------------------------------------ | :--- | :------------------------------------ |
+| Prometheus         | <https://prometheus.monitoring.lan>                                 | 9090 | Metrics collection                    |
+| Grafana            | <https://grafana.monitoring.lan>                                    | 3000 | Dashboards                            |
+| Loki               | —                                                                   | 3100 | Log aggregation                       |
+| Alertmanager       | <https://alertmanager.monitoring.lan>                               | 9093 | Alert routing                         |
+| Speedtest Exporter | —                                                                   | 9798 | ISP bandwidth tracking (10m interval) |
+
+### Network (gateway-server) — K3s worker
+
+| App      | Local URL                             | Port | Description         |
+| :------- | :------------------------------------ | :--- | :------------------ |
+| AdGuard  | <https://adguard.network.lan>         | 8081 | DNS + ad blocking   |
+| CA Cert  | <http://ca.network.lan/ca.crt>        | 80   | Homelab CA download |
 
 ### Git / K3s (192.168.1.204)
 
