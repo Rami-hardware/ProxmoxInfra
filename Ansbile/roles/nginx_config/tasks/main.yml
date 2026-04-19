@@ -59,8 +59,10 @@
 - name: Force-remove old cert if SAN no longer matches homelab.lan
   ansible.builtin.shell:
     cmd: |
+      set -o pipefail
       openssl x509 -in /opt/k3s/local-tls/local.crt -noout -text 2>/dev/null \
         | grep -q 'homelab.lan' || rm -f /opt/k3s/local-tls/local.crt
+    executable: /bin/bash
   changed_when: false
   failed_when: false
   delegate_to: git-k3s-server
