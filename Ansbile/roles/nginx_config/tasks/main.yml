@@ -159,6 +159,39 @@
   changed_when: true
   delegate_to: git-k3s-server
 
+# ── Publish CA cert to a world-readable path for easy scp/curl ───────────────
+- name: Publish CA cert to world-readable path
+  ansible.builtin.copy:
+    content: "{{ nginx_config_local_ca_crt.content | b64decode }}"
+    dest: /opt/k3s/local-ca.crt
+    owner: root
+    group: root
+    mode: "0644"
+  delegate_to: git-k3s-server
+
+# ── Distribute CA to every managed host ──────────────────────────────────────
+- name: Install CA cert on managed hosts
+  ansible.builtin.copy:
+    content: "{{ nginx_config_local_ca_crt.content | b64decode }}"
+    dest: /usr/local/share/ca-certificates/homelab-local-ca.crt
+    owner: root
+    group: root
+    mode: "0644"
+  delegate_to: "{{ nginx_config_host }}"
+  become: true
+  loop: "{{ groups['all'] | difference(['host-node']) }}"
+  loop_control:
+    loop_var: nginx_config_host
+
+- name: Update CA trust store on managed hosts
+  ansible.builtin.command: update-ca-certificates
+  delegate_to: "{{ nginx_config_host }}"
+  become: true
+  changed_when: true
+  loop: "{{ groups['all'] | difference(['host-node']) }}"
+  loop_control:
+    loop_var: nginx_config_host
+
 # ── Auto-trust CA on Ansible controller ──────────────────────────────────────
 - name: Write CA cert to controller
   ansible.builtin.copy:
