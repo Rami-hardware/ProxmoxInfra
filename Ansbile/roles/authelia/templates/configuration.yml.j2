@@ -3,12 +3,10 @@ server:
 
 session:
   cookies:
-{% for ns in authelia_local_namespaces %}
-    - domain: {{ ns }}.lan
-      authelia_url: https://auth.network.lan
+    - domain: homelab.lan
+      authelia_url: https://auth.homelab.lan
       expiration: 3600
       inactivity: 300
-{% endfor %}
     - domain: darkestserver.com
       authelia_url: https://auth.darkestserver.com
       expiration: 3600
@@ -22,13 +20,11 @@ access_control:
   default_policy: deny
   rules:
     - domain:
-        - auth.network.lan
+        - auth.homelab.lan
         - auth.darkestserver.com
       policy: bypass
-{% for ns in authelia_local_namespaces %}
-    - domain: "*.{{ ns }}.lan"
+    - domain: "*.homelab.lan"
       policy: one_factor
-{% endfor %}
     - domain: "*.darkestserver.com"
       policy: two_factor
 

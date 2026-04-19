@@ -130,10 +130,10 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - auth.network.lan
+        - auth.homelab.lan
       secretName: local-tls
   rules:
-    - host: auth.network.lan
+    - host: auth.homelab.lan
       http:
         paths:
           - path: /
