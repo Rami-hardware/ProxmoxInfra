@@ -269,6 +269,9 @@ k3s_apps_list:
     target_node: monitoring-server
     config_path: /opt/docker/grafana
     config_mount: /opt/docker/grafana
+    dns_policy: None
+    dns_nameservers:
+      - "8.8.8.8"
     replicas: 1
     extra_volumes:
       - name: provisioning
@@ -346,29 +349,6 @@ k3s_apps_list:
       - "8.8.8.8"
       - "8.8.4.4"
     replicas: 1
-    memory_request: "64Mi"
-    memory_limit: "256Mi"
-    cpu_request: "25m"
-    cpu_limit: "200m"
-
-  - name: cloudflare-exporter
-    namespace: monitoring
-    image: docker.io/cyb3rjak3/cloudflare-exporter:latest
-    port: 8080
-    node_port: 9199
-    target_node: monitoring-server
-    skip_pv: true
-    dns_policy: None
-    dns_nameservers:
-      - "8.8.8.8"
-      - "8.8.4.4"
-    replicas: 1
-    args:
-      - "--cf_zones=46593646510004b325d04d011dcc49df"
-      - "--scrape_delay=300"
-      - "--metrics_denylist=cloudflare_worker_requests_total,cloudflare_r2_requests_total"
-    env:
-      - { name: CF_API_TOKEN, value: "{{ lookup('env', 'CF_API_TOKEN') }}" }
     memory_request: "64Mi"
     memory_limit: "256Mi"
     cpu_request: "25m"
