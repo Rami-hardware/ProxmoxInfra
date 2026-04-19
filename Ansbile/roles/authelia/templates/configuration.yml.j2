@@ -3,7 +3,7 @@ server:
 
 session:
   cookies:
-{% for ns in nginx_services_local | map(attribute='namespace') | unique | list %}
+{% for ns in authelia_local_namespaces %}
     - domain: {{ ns }}.lan
       authelia_url: https://auth.network.lan
       expiration: 3600
@@ -25,7 +25,7 @@ access_control:
         - auth.network.lan
         - auth.darkestserver.com
       policy: bypass
-{% for ns in nginx_services_local | map(attribute='namespace') | unique | list %}
+{% for ns in authelia_local_namespaces %}
     - domain: "*.{{ ns }}.lan"
       policy: one_factor
 {% endfor %}

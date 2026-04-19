@@ -1,3 +1,8 @@
+authelia_local_namespaces:
+  - media
+  - network
+  - monitoring
+
 authelia_session_secret: "{{ vault_authelia_session_secret }}"
 authelia_encryption_key: "{{ vault_authelia_encryption_key }}"
 authelia_jwt_secret: "{{ vault_authelia_jwt_secret }}"
