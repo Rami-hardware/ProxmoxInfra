@@ -69,6 +69,12 @@
     mode: "0644"
   delegate_to: git-k3s-server
 
+- name: Read local CA cert
+  ansible.builtin.slurp:
+    src: /opt/k3s/local-tls/ca.crt
+  register: nginx_config_local_ca_crt
+  delegate_to: git-k3s-server
+
 - name: Read local wildcard cert
   ansible.builtin.slurp:
     src: /opt/k3s/local-tls/local.crt
@@ -152,3 +158,18 @@
     -f /opt/k3s/manifests/ingress-services.yml
   changed_when: true
   delegate_to: git-k3s-server
+
+# ── Auto-trust CA on Ansible controller ──────────────────────────────────────
+- name: Write CA cert to controller
+  ansible.builtin.copy:
+    content: "{{ nginx_config_local_ca_crt.content | b64decode }}"
+    dest: /usr/local/share/ca-certificates/homelab-local-ca.crt
+    mode: "0644"
+  delegate_to: localhost
+  become: true
+
+- name: Update CA trust store on controller
+  ansible.builtin.command: update-ca-certificates
+  delegate_to: localhost
+  become: true
+  changed_when: true

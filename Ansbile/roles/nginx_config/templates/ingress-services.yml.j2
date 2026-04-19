@@ -1,5 +1,89 @@
 ---
 # ──────────────────────────────────────────────────────────────────────────────
+# CA cert distribution  (HTTP · http://ca.network.lan/ca.crt)
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: local-ca-cert
+  namespace: network
+data:
+  ca.crt: |
+    {{ nginx_config_local_ca_crt.content | b64decode | indent(4) }}
+  nginx.conf: |
+    server {
+      listen 80;
+      root /usr/share/nginx/html;
+      location /ca.crt {
+        add_header Content-Type application/x-x509-ca-cert;
+        add_header Content-Disposition 'attachment; filename="homelab-ca.crt"';
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ca-dist
+  namespace: network
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ca-dist
+  template:
+    metadata:
+      labels:
+        app: ca-dist
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: cert
+              mountPath: /usr/share/nginx/html/ca.crt
+              subPath: ca.crt
+            - name: cert
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: nginx.conf
+      volumes:
+        - name: cert
+          configMap:
+            name: local-ca-cert
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ca-dist
+  namespace: network
+spec:
+  selector:
+    app: ca-dist
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ca-dist
+  namespace: network
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: ca.network.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ca-dist
+                port:
+                  number: 80
+---
+# ──────────────────────────────────────────────────────────────────────────────
 # Local LAN services  (HTTPS + TLS · host: <name>.<namespace>.lan)
 # ──────────────────────────────────────────────────────────────────────────────
 {% for svc in nginx_services_local %}
