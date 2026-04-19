@@ -7,6 +7,8 @@ on:
       - development
       - staging
       - main
+  schedule:
+    - cron: '0 3 1 * *'  # 1st of every month at 03:00 UTC — cert renewal check
 
 jobs:
   testing:
@@ -123,6 +125,7 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H 192.168.1.200 >> ~/.ssh/known_hosts || true
           ssh-keyscan -H 192.168.1.201 >> ~/.ssh/known_hosts || true
+          ssh-keyscan -H 192.168.1.202 >> ~/.ssh/known_hosts || true
           ssh-keyscan -H 192.168.1.203 >> ~/.ssh/known_hosts || true
           ssh-keyscan -H 192.168.1.204 >> ~/.ssh/known_hosts || true
           echo "${ANSIBLE_VAULT_PASSWORD}" > ~/.vault_pass
@@ -330,6 +333,7 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H 192.168.1.200 >> ~/.ssh/known_hosts || true
           ssh-keyscan -H 192.168.1.201 >> ~/.ssh/known_hosts || true
+          ssh-keyscan -H 192.168.1.202 >> ~/.ssh/known_hosts || true
           ssh-keyscan -H 192.168.1.203 >> ~/.ssh/known_hosts || true
           ssh-keyscan -H 192.168.1.204 >> ~/.ssh/known_hosts || true
           echo "${ANSIBLE_VAULT_PASSWORD}" > ~/.vault_pass
@@ -350,6 +354,7 @@ jobs:
         run: |
           source venv/bin/activate
           ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/security-server.yml
           ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml
           
       - name: Cleanup secrets

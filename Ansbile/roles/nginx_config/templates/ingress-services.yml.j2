@@ -173,6 +173,12 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "600"
 {% endif %}
+{% if svc.auth | default(false) %}
+    nginx.ingress.kubernetes.io/auth-url: "http://authelia.network.svc.cluster.local/api/authz/forward-auth"
+    nginx.ingress.kubernetes.io/auth-signin: "https://auth.network.lan?rm=$request_method"
+    nginx.ingress.kubernetes.io/auth-response-headers: "Remote-User,Remote-Groups,Remote-Name,Remote-Email"
+    nginx.ingress.kubernetes.io/auth-snippet: "proxy_set_header X-Forwarded-Method $request_method;"
+{% endif %}
 spec:
   ingressClassName: nginx
   tls:
@@ -238,6 +244,12 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "600"
+{% endif %}
+{% if svc.auth | default(false) %}
+    nginx.ingress.kubernetes.io/auth-url: "http://authelia.network.svc.cluster.local/api/authz/forward-auth"
+    nginx.ingress.kubernetes.io/auth-signin: "https://auth.darkestserver.com?rm=$request_method"
+    nginx.ingress.kubernetes.io/auth-response-headers: "Remote-User,Remote-Groups,Remote-Name,Remote-Email"
+    nginx.ingress.kubernetes.io/auth-snippet: "proxy_set_header X-Forwarded-Method $request_method;"
 {% endif %}
 spec:
   ingressClassName: nginx

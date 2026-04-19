@@ -1,5 +1,11 @@
 users:
-  john:
-    password: "$argon2id$v=19$m=65536,t=2,p=1$..." # replace with hashed password
-    displayname: "John Doe"
-    email: "john@example.com"
+{% for user in authelia_users %}
+  {{ user.username }}:
+    displayname: "{{ user.displayname }}"
+    password: "{{ user.password_hash }}"
+    email: "{{ user.email }}"
+    groups:
+{% for group in user.groups | default(['admins']) %}
+      - {{ group }}
+{% endfor %}
+{% endfor %}

@@ -1,6 +1,8 @@
 - name: Deploy security Server Configuration
   hosts: security-server
   become: true
+  vars_files:
+    - group_vars/vault.yml
   roles:
     - DNS
-    - promtail
+    - authelia

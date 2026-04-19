@@ -1,35 +1,37 @@
 server:
-  host: 0.0.0.0
-  port: 9091
-  tls:
-    key: /certs/authelia.key
-    certificate: /certs/authelia.crt
+  address: tcp://0.0.0.0:9091
 
 session:
-  name: authelia_session
-  secret: "supersecret_session_key_here"
-  expiration: 3600
-  inactivity: 300
-  # Remove 'domain'; use 'domains' instead if needed
-  domains: ["respawnxd.co"]
+  cookies:
+    - domain: lan
+      authelia_url: https://auth.network.lan
+      expiration: 3600
+      inactivity: 300
+    - domain: darkestserver.com
+      authelia_url: https://auth.darkestserver.com
+      expiration: 3600
+      inactivity: 300
 
 authentication_backend:
   file:
     path: /config/users_database.yml
 
 access_control:
-  default_policy: two_factor
-  rules: []
+  default_policy: deny
+  rules:
+    - domain:
+        - auth.network.lan
+        - auth.darkestserver.com
+      policy: bypass
+    - domain: "*.lan"
+      policy: one_factor
+    - domain: "*.darkestserver.com"
+      policy: two_factor
 
 storage:
   local:
-    path: /config/db.sqlite3
-  encryption_key: "supersecret_encryption_key_here"
+    path: /data/db.sqlite3
 
 notifier:
   filesystem:
-    filename: /config/notification.txt
-
-identity_validation:
-  reset_password:
-    jwt_secret: "supersecret_jwt_key_here"
+    filename: /data/notification.txt

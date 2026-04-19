@@ -1,5 +1,5 @@
-authelia_config_dir: /opt/docker/authelia/config
-authelia_cert_dir: /opt/docker/authelia/certs
-authelia_session_secret: "replace_with_random_long_secret"
-authelia_encryption_key: "replace_with_random_long_key"
-authelia_domain: "respawnxd.co"
+authelia_session_secret: "change_me_session_secret"
+authelia_encryption_key: "change_me_encryption_key_32chars_min"
+authelia_jwt_secret: "change_me_jwt_secret"
+
+authelia_users: []

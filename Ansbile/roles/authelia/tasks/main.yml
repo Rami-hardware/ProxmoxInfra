@@ -1,24 +1,37 @@
 ---
-- name: Ensure Authelia config directory exists
+- name: Ensure authelia data directory exists on security-server
   ansible.builtin.file:
-    path: "{{ authelia_config_dir }}"
+    path: /opt/authelia/data
     state: directory
-    mode: "0755"
+    owner: root
+    group: root
+    mode: "0700"
 
-- name: Ensure Authelia cert directory exists
+- name: Template authelia K3s manifests
+  ansible.builtin.template:
+    src: k3s-manifests.yml.j2
+    dest: /opt/k3s/manifests/authelia.yml
+    owner: root
+    group: root
+    mode: "0600"
+  delegate_to: git-k3s-server
+
+- name: Apply authelia manifests
+  ansible.builtin.command: >
+    k3s kubectl apply --server-side --force-conflicts
+    -f /opt/k3s/manifests/authelia.yml
+  changed_when: true
+  delegate_to: git-k3s-server
+
+- name: Remove authelia manifest (contains sensitive data)
   ansible.builtin.file:
-    path: "{{ authelia_cert_dir }}"
-    state: directory
-    mode: "0755"
+    path: /opt/k3s/manifests/authelia.yml
+    state: absent
+  delegate_to: git-k3s-server
 
-- name: Deploy Authelia configuration
-  ansible.builtin.template:
-    src: configuration.yml.j2
-    dest: "{{ authelia_config_dir }}/configuration.yml"
-    mode: "0644"
-
-- name: Deploy Authelia users database
-  ansible.builtin.template:
-    src: users_database.yml.j2
-    dest: "{{ authelia_config_dir }}/users_database.yml"
-    mode: "0644"
+- name: Wait for authelia to be ready
+  ansible.builtin.command: >
+    k3s kubectl rollout status deployment/authelia
+    -n network --timeout=120s
+  changed_when: false
+  delegate_to: git-k3s-server

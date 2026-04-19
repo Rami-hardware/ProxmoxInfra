@@ -58,6 +58,24 @@
     mode: "0600"
   delegate_to: git-k3s-server
 
+- name: Check wildcard cert expiry
+  community.crypto.x509_certificate_info:
+    path: /opt/k3s/local-tls/local.crt
+    valid_at:
+      sixty_days: "+60d"
+  register: nginx_config_cert_info
+  delegate_to: git-k3s-server
+  ignore_errors: true
+
+- name: Remove wildcard cert if expiring within 60 days
+  ansible.builtin.file:
+    path: /opt/k3s/local-tls/local.crt
+    state: absent
+  delegate_to: git-k3s-server
+  when:
+    - nginx_config_cert_info is not failed
+    - not nginx_config_cert_info.valid_at.sixty_days
+
 - name: Sign local wildcard cert with local CA
   community.crypto.x509_certificate:
     path: /opt/k3s/local-tls/local.crt
