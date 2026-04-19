@@ -68,6 +68,7 @@ spec:
       labels:
         app: authelia
     spec:
+      enableServiceLinks: false
       nodeSelector:
         kubernetes.io/hostname: security-server
       containers:
