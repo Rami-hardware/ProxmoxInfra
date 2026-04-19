@@ -1,6 +1,6 @@
 ---
 # ──────────────────────────────────────────────────────────────────────────────
-# Local LAN services  (HTTP-only · host: <name>.<namespace>.lan)
+# Local LAN services  (HTTPS + TLS · host: <name>.<namespace>.lan)
 # ──────────────────────────────────────────────────────────────────────────────
 {% for svc in nginx_services_local %}
 {% set ns = svc.namespace | default('media') %}
@@ -47,6 +47,10 @@ metadata:
 {% endif %}
 spec:
   ingressClassName: nginx
+  tls:
+    - hosts:
+        - {{ svc.name }}.{{ ns }}.lan
+      secretName: local-tls
   rules:
     - host: {{ svc.name }}.{{ ns }}.lan
       http:

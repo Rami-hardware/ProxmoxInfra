@@ -1,4 +1,100 @@
 ---
+# ── Local TLS: self-signed CA + wildcard cert ─────────────────────────────────
+- name: Ensure local TLS working directory exists
+  ansible.builtin.file:
+    path: /opt/k3s/local-tls
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  delegate_to: git-k3s-server
+
+- name: Generate local CA private key
+  community.crypto.openssl_privatekey:
+    path: /opt/k3s/local-tls/ca.key
+    size: 4096
+    mode: "0600"
+  delegate_to: git-k3s-server
+
+- name: Generate local CA certificate
+  community.crypto.x509_certificate:
+    path: /opt/k3s/local-tls/ca.crt
+    privatekey_path: /opt/k3s/local-tls/ca.key
+    provider: selfsigned
+    selfsigned_not_after: "+3650d"
+    subject:
+      CN: Local Homelab CA
+      O: Homelab
+    mode: "0644"
+  delegate_to: git-k3s-server
+
+- name: Generate local wildcard private key
+  community.crypto.openssl_privatekey:
+    path: /opt/k3s/local-tls/local.key
+    size: 4096
+    mode: "0600"
+  delegate_to: git-k3s-server
+
+- name: Generate local wildcard CSR
+  community.crypto.openssl_csr:
+    path: /opt/k3s/local-tls/local.csr
+    privatekey_path: /opt/k3s/local-tls/local.key
+    subject:
+      CN: "*.lan"
+    subject_alt_name: >-
+      {{ nginx_services_local
+         | map(attribute='namespace') | unique
+         | map('regex_replace', '^(.+)$', 'DNS:*.\1.lan')
+         | list }}
+    mode: "0600"
+  delegate_to: git-k3s-server
+
+- name: Sign local wildcard cert with local CA
+  community.crypto.x509_certificate:
+    path: /opt/k3s/local-tls/local.crt
+    csr_path: /opt/k3s/local-tls/local.csr
+    ownca_path: /opt/k3s/local-tls/ca.crt
+    ownca_privatekey_path: /opt/k3s/local-tls/ca.key
+    provider: ownca
+    ownca_not_after: "+825d"
+    mode: "0644"
+  delegate_to: git-k3s-server
+
+- name: Read local wildcard cert
+  ansible.builtin.slurp:
+    src: /opt/k3s/local-tls/local.crt
+  register: local_tls_crt
+  delegate_to: git-k3s-server
+
+- name: Read local wildcard key
+  ansible.builtin.slurp:
+    src: /opt/k3s/local-tls/local.key
+  register: local_tls_key
+  delegate_to: git-k3s-server
+
+- name: Template local-tls secret manifest
+  ansible.builtin.template:
+    src: local-tls-secret.yml.j2
+    dest: /opt/k3s/manifests/local-tls-secret.yml
+    owner: root
+    group: root
+    mode: "0600"
+  delegate_to: git-k3s-server
+
+- name: Apply local-tls secret
+  ansible.builtin.command: >
+    k3s kubectl apply --server-side --force-conflicts
+    -f /opt/k3s/manifests/local-tls-secret.yml
+  changed_when: true
+  delegate_to: git-k3s-server
+
+- name: Remove local-tls secret manifest (contains sensitive data)
+  ansible.builtin.file:
+    path: /opt/k3s/manifests/local-tls-secret.yml
+    state: absent
+  delegate_to: git-k3s-server
+
+# ── Cloudflare origin TLS ─────────────────────────────────────────────────────
 - name: Ensure k3s ingress manifests directory exists
   ansible.builtin.file:
     path: /opt/k3s/manifests
