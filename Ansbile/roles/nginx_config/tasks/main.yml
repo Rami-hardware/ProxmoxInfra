@@ -16,15 +16,25 @@
     mode: "0600"
   delegate_to: git-k3s-server
 
+- name: Generate local CA CSR
+  community.crypto.openssl_csr:
+    path: /opt/k3s/local-tls/ca.csr
+    privatekey_path: /opt/k3s/local-tls/ca.key
+    common_name: Local Homelab CA
+    organization_name: Homelab
+    basic_constraints:
+      - "CA:TRUE"
+    basic_constraints_critical: true
+    mode: "0600"
+  delegate_to: git-k3s-server
+
 - name: Generate local CA certificate
   community.crypto.x509_certificate:
     path: /opt/k3s/local-tls/ca.crt
     privatekey_path: /opt/k3s/local-tls/ca.key
+    csr_path: /opt/k3s/local-tls/ca.csr
     provider: selfsigned
     selfsigned_not_after: "+3650d"
-    subject:
-      CN: Local Homelab CA
-      O: Homelab
     mode: "0644"
   delegate_to: git-k3s-server
 
@@ -39,8 +49,7 @@
   community.crypto.openssl_csr:
     path: /opt/k3s/local-tls/local.csr
     privatekey_path: /opt/k3s/local-tls/local.key
-    subject:
-      CN: "*.lan"
+    common_name: "*.lan"
     subject_alt_name: >-
       {{ nginx_services_local
          | map(attribute='namespace') | unique
@@ -63,13 +72,13 @@
 - name: Read local wildcard cert
   ansible.builtin.slurp:
     src: /opt/k3s/local-tls/local.crt
-  register: local_tls_crt
+  register: nginx_config_local_tls_crt
   delegate_to: git-k3s-server
 
 - name: Read local wildcard key
   ansible.builtin.slurp:
     src: /opt/k3s/local-tls/local.key
-  register: local_tls_key
+  register: nginx_config_local_tls_key
   delegate_to: git-k3s-server
 
 - name: Template local-tls secret manifest
