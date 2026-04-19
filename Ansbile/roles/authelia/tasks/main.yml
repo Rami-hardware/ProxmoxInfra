@@ -32,6 +32,6 @@
 - name: Wait for authelia to be ready
   ansible.builtin.command: >
     k3s kubectl rollout status deployment/authelia
-    -n network --timeout=120s
+    -n network --timeout=300s
   changed_when: false
   delegate_to: git-k3s-server

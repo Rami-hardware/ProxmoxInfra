@@ -10,7 +10,7 @@ authelia_jwt_secret: "{{ vault_authelia_jwt_secret }}"
 authelia_users:
   - username: rami
     displayname: "Rami"
-    email: ramidannah5@gmai.com
+    email: ramidannah5@gmail.com
     password_hash: "{{ vault_authelia_password_hash }}"
     groups:
       - admins
