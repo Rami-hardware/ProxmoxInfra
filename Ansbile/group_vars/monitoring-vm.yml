@@ -101,11 +101,11 @@ prometheus_scrape_jobs:
     relabel_configs:
       - target_label: instance
         replacement: host-node
-  - name: cloudflare
-    targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:9199"]
+  - name: ingress-nginx
+    targets: ["{{ hostvars['git-k3s-server']['ansible_host'] }}:10254"]
     relabel_configs:
       - target_label: instance
-        replacement: monitoring-server
+        replacement: git-k3s-server
   - name: speedtest
     targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:9798"]
     scrape_interval: 10m
