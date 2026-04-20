@@ -183,16 +183,20 @@
     cmd: "k3s kubectl get nodes -o wide"
   changed_when: false
 
-- name: Apply all K3s app manifests
-  ansible.builtin.command:
-    cmd: "k3s kubectl apply --server-side --force-conflicts -f {{ k3s_apps_manifest_dir }}"
-  changed_when: true
-  register: k3s_apps_apply_result
+- name: Find manifests to apply
+  ansible.builtin.find:
+    paths: "{{ k3s_apps_manifest_dir }}"
+    patterns: "*.yml"
+  register: k3s_apps_manifests_to_apply
   when: k3s_apps_list | length > 0
 
-- name: Show apply output
-  ansible.builtin.debug:
-    msg: "{{ k3s_apps_apply_result.stdout_lines }}"
+- name: Apply K3s app manifests one by one
+  ansible.builtin.command:
+    cmd: "k3s kubectl apply --server-side --force-conflicts -f {{ item.path }}"
+  loop: "{{ k3s_apps_manifests_to_apply.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  changed_when: true
   when: k3s_apps_list | length > 0
 
 # Force a rollout restart so ProgressDeadlineExceeded from prior failed runs doesn't
