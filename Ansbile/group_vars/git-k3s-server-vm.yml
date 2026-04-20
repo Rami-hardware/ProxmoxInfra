@@ -5,7 +5,13 @@ authelia_session_secret: "change_me_session_secret"
 authelia_encryption_key: "change_me_encryption_key_32chars_min"
 authelia_jwt_secret: "change_me_jwt_secret"
 
-authelia_users: []
+authelia_users:
+  - username: admin
+    displayname: "Admin"
+    email: "rami@atomzstudio.com"
+    password_hash: "REPLACE_WITH_ARGON2_HASH"
+    groups:
+      - admins
 
 k3s_apps_list:
   - name: overseerr
