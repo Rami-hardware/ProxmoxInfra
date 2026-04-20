@@ -187,7 +187,7 @@
   delegate_to: git-k3s-server
 
 # ── Remove legacy ca-dist resources from cluster ─────────────────────────────
-- name: Remove ca-dist k8s resources
+- name: Remove legacy ca-dist k8s resources (renamed to ca-cert)
   ansible.builtin.command: >
     k3s kubectl delete --ignore-not-found
     deployment/ca-dist service/ca-dist ingress/ca-dist configmap/local-ca-cert

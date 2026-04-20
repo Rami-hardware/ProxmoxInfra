@@ -1,5 +1,97 @@
 ---
 # ──────────────────────────────────────────────────────────────────────────────
+# CA cert endpoint  (HTTP only · http://ca.homelab.lan/ca.crt)
+# Visit from any device to download and trust the local CA once.
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ca-cert-file
+  namespace: network
+data:
+  ca.crt: |
+    {{ nginx_config_local_ca_crt.content | b64decode | indent(4) }}
+  nginx.conf: |
+    server {
+      listen 80;
+      root /usr/share/nginx/html;
+      location /ca.crt {
+        add_header Content-Type application/x-x509-ca-cert;
+        add_header Content-Disposition 'attachment; filename="homelab-ca.crt"';
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ca-cert
+  namespace: network
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ca-cert
+  template:
+    metadata:
+      labels:
+        app: ca-cert
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: cert
+              mountPath: /usr/share/nginx/html/ca.crt
+              subPath: ca.crt
+            - name: cert
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: nginx.conf
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "16Mi"
+            limits:
+              cpu: "50m"
+              memory: "32Mi"
+      volumes:
+        - name: cert
+          configMap:
+            name: ca-cert-file
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ca-cert
+  namespace: network
+spec:
+  selector:
+    app: ca-cert
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ca-cert
+  namespace: network
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: ca.homelab.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ca-cert
+                port:
+                  number: 80
+---
+# ──────────────────────────────────────────────────────────────────────────────
 # Local LAN services  (HTTPS + TLS · host: <name>.<namespace>.lan)
 # ──────────────────────────────────────────────────────────────────────────────
 {% for svc in nginx_services_local %}

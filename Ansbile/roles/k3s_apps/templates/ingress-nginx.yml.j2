@@ -177,6 +177,8 @@ spec:
               memory: "256Mi"
 ---
 # ── LoadBalancer Service ──────────────────────────────────────────────────────
+# externalIPs ensures kube-proxy routes git-k3s-server:80/443 → ingress pods
+# without needing MetalLB or klipper-lb (both disabled in this cluster).
 apiVersion: v1
 kind: Service
 metadata:
@@ -184,6 +186,8 @@ metadata:
   namespace: ingress-nginx
 spec:
   type: LoadBalancer
+  externalIPs:
+    - {{ hostvars[ingress_nginx_node | default('git-k3s-server')]['ansible_host'] }}
   selector:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/component: controller
