@@ -7,10 +7,6 @@ session:
       authelia_url: https://auth.homelab.lan
       expiration: 3600
       inactivity: 300
-    - domain: darkestserver.com
-      authelia_url: https://auth.darkestserver.com
-      expiration: 3600
-      inactivity: 300
 
 authentication_backend:
   file:
@@ -19,14 +15,12 @@ authentication_backend:
 access_control:
   default_policy: deny
   rules:
-    - domain:
-        - auth.homelab.lan
-        - auth.darkestserver.com
+    - domain: "auth.homelab.lan"
       policy: bypass
     - domain: "*.homelab.lan"
       policy: one_factor
     - domain: "*.darkestserver.com"
-      policy: two_factor
+      policy: bypass
 
 storage:
   local:
