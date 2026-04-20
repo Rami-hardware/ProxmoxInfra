@@ -394,6 +394,7 @@ k3s_apps_list:
     target_node: gateway-server
     config_path: /opt/docker/authelia/config
     config_mount: /config
+    enable_service_links: false
     replicas: 1
     extra_volumes:
       - name: data

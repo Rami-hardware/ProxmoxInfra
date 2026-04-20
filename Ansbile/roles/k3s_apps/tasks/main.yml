@@ -86,6 +86,7 @@
     - monitoring-server
     - git-k3s-server
     - gateway-server
+    - security-server
   loop_control:
     loop_var: k3s_node
 
@@ -100,6 +101,7 @@
     - monitoring-server
     - git-k3s-server
     - gateway-server
+    - security-server
   loop_control:
     loop_var: k3s_node
 
