@@ -115,9 +115,11 @@
   delegate_to: git-k3s-server
 
 - name: Ensure TLS namespaces exist before applying secrets
-  ansible.builtin.shell: >
-    k3s kubectl create namespace {{ ns_item }}
-    --dry-run=client -o yaml | k3s kubectl apply -f -
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      k3s kubectl create namespace {{ ns_item }} --dry-run=client -o yaml | k3s kubectl apply -f -
+    executable: /bin/bash
   delegate_to: git-k3s-server
   changed_when: false
   loop: >-

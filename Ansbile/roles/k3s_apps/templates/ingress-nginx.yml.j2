@@ -154,6 +154,7 @@ spec:
               containerPort: 443
             - name: metrics
               containerPort: 10254
+              hostPort: 10254
           livenessProbe:
             httpGet:
               path: /healthz
