@@ -399,6 +399,7 @@ k3s_apps_list:
       - name: data
         host_path: /opt/docker/authelia/data
         mount_path: /data
+        create_host_dir: true
     env:
       - { name: AUTHELIA_SESSION_SECRET, value: "{{ authelia_session_secret }}" }
       - { name: AUTHELIA_STORAGE_ENCRYPTION_KEY, value: "{{ authelia_encryption_key }}" }

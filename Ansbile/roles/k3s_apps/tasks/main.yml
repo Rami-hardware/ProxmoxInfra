@@ -18,6 +18,18 @@
     loop_var: app
     label: "{{ app.name }}"
 
+# Create host directories for extra_volumes that explicitly set create_host_dir: true
+- name: Ensure extra volume host directories exist on target nodes
+  ansible.builtin.file:
+    path: "{{ item.1.host_path }}"
+    state: directory
+    mode: '0755'
+  delegate_to: "{{ item.0.target_node }}"
+  loop: "{{ k3s_apps_list | selectattr('extra_volumes', 'defined') | list | subelements('extra_volumes') }}"
+  loop_control:
+    label: "{{ item.0.name }}: {{ item.1.host_path }}"
+  when: item.1.create_host_dir | default(false)
+
 # Deploy authelia configuration files to its config directory on the target node
 - name: Deploy authelia configuration.yml
   ansible.builtin.template:
