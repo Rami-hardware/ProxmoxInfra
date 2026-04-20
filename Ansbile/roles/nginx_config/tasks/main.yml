@@ -114,6 +114,21 @@
   register: nginx_config_local_tls_key
   delegate_to: git-k3s-server
 
+- name: Ensure TLS namespaces exist before applying secrets
+  ansible.builtin.command: >
+    k3s kubectl create namespace {{ ns_item }}
+    --dry-run=client -o yaml | k3s kubectl apply -f -
+  delegate_to: git-k3s-server
+  changed_when: false
+  loop: >-
+    {{ (
+      nginx_services_local | map(attribute='namespace') | list +
+      nginx_services       | map(attribute='namespace') | list +
+      nginx_config_extra_namespaces | default([])
+    ) | unique | list }}
+  loop_control:
+    loop_var: ns_item
+
 - name: Template local-tls secret manifest
   ansible.builtin.template:
     src: local-tls-secret.yml.j2

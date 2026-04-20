@@ -5,4 +5,4 @@
     - group_vars/vault.yml
   roles:
     - DNS
-    - authelia
+    # - authelia

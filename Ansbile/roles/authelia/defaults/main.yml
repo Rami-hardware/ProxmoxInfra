@@ -1,5 +1,0 @@
-authelia_session_secret: "change_me_session_secret"
-authelia_encryption_key: "change_me_encryption_key_32chars_min"
-authelia_jwt_secret: "change_me_jwt_secret"
-
-authelia_users: []

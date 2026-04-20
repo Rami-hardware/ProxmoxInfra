@@ -18,6 +18,23 @@
     loop_var: app
     label: "{{ app.name }}"
 
+# Deploy authelia configuration files to its config directory on the target node
+- name: Deploy authelia configuration.yml
+  ansible.builtin.template:
+    src: configuration.yml.j2
+    dest: "{{ (k3s_apps_list | selectattr('name', 'equalto', 'authelia') | first).config_path }}/configuration.yml"
+    mode: '0600'
+  delegate_to: "{{ (k3s_apps_list | selectattr('name', 'equalto', 'authelia') | first).target_node }}"
+  when: k3s_apps_list | selectattr('name', 'equalto', 'authelia') | list | length > 0
+
+- name: Deploy authelia users_database.yml
+  ansible.builtin.template:
+    src: users_database.yml.j2
+    dest: "{{ (k3s_apps_list | selectattr('name', 'equalto', 'authelia') | first).config_path }}/users_database.yml"
+    mode: '0600'
+  delegate_to: "{{ (k3s_apps_list | selectattr('name', 'equalto', 'authelia') | first).target_node }}"
+  when: k3s_apps_list | selectattr('name', 'equalto', 'authelia') | list | length > 0
+
 # Prometheus RBAC — allows scraping kubelet /metrics/cadvisor
 - name: Template Prometheus RBAC manifest
   ansible.builtin.template:

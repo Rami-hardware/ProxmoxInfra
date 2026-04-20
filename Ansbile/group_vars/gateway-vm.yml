@@ -71,27 +71,23 @@ nginx_services:
     ip: 192.168.1.201
     port: 5055
     namespace: media
-    auth: true
 
   - name: bazarr
     ip: 192.168.1.201
     port: 6767
     namespace: media
-    auth: true
 
   - name: qbittorrent
     ip: 192.168.1.201
     port: 8080
     disable_buffering: true
     namespace: media
-    auth: true
 
   - name: adguard
     ip: 192.168.1.200
     port: 8081
     namespace: network
     k8s_service: adguard-home
-    auth: true
 
 nginx_services_local:
   - name: jellyfin
