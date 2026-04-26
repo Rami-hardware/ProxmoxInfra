@@ -73,9 +73,6 @@ spec:
               readOnly: true
             - name: containerd-sock
               mountPath: /run/containerd/containerd.sock
-            - name: config
-              mountPath: /etc/falco
-              readOnly: true
           resources:
             requests:
               memory: "64Mi"
@@ -90,6 +87,3 @@ spec:
         - name: containerd-sock
           hostPath:
             path: /run/containerd/containerd.sock
-        - name: config
-          hostPath:
-            path: {{ falco_config_dir }}

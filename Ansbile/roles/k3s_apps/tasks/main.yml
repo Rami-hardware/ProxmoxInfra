@@ -301,17 +301,6 @@
     -f {{ k3s_apps_manifest_dir }}/falco.yml
   changed_when: true
 
-- name: Template Wazuh Agent DaemonSet manifest
-  ansible.builtin.template:
-    src: wazuh-agent-daemonset.yml.j2
-    dest: "{{ k3s_apps_manifest_dir }}/wazuh-agent.yml"
-    mode: '0644'
-
-- name: Apply Wazuh Agent manifest
-  ansible.builtin.command: >
-    k3s kubectl apply --server-side --force-conflicts
-    -f {{ k3s_apps_manifest_dir }}/wazuh-agent.yml
-  changed_when: true
 
 - name: Template Trivy Operator manifest
   ansible.builtin.template:

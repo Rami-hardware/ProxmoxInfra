@@ -4,6 +4,7 @@ prometheus_retention_time: 30d
 # ── Security stack ────────────────────────────────────────────────────────────
 falco_config_dir: /opt/falco/config
 wazuh_agent_version: "4.9.0"
+# wazuh-agent has no official Docker image — agents are installed via package on each host
 trivy_operator_version: "0.22.0"
 
 authelia_session_secret: "change_me_session_secret"
