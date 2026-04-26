@@ -32,6 +32,33 @@
          | list | length) > 0
       }}
 
+- name: Delete existing nginx-ingress-bouncer if key file is missing on gateway
+  ansible.builtin.command: >
+    k3s kubectl -n security exec {{ crowdsec_pod_name.stdout }}
+    -- cscli bouncers delete nginx-ingress-bouncer
+  delegate_to: git-k3s-server
+  when:
+    - crowdsec_nginx_bouncer_exists
+    - not (lookup('file', '/opt/docker/crowdsec/nginx-ingress-bouncer.key', errors='ignore') | default('', true) | trim)
+  changed_when: true
+
+- name: Re-check if nginx-ingress-bouncer exists after potential delete
+  ansible.builtin.command: >
+    k3s kubectl -n security exec {{ crowdsec_pod_name.stdout }}
+    -- cscli bouncers list -o json
+  delegate_to: git-k3s-server
+  register: crowdsec_bouncers_json2
+  changed_when: false
+
+- name: Update bouncer exists fact
+  ansible.builtin.set_fact:
+    crowdsec_nginx_bouncer_exists: >-
+      {{
+        (crowdsec_bouncers_json2.stdout | default('[]', true) | from_json
+         | selectattr('name', 'equalto', 'nginx-ingress-bouncer')
+         | list | length) > 0
+      }}
+
 - name: Create nginx bouncer and capture API key
   ansible.builtin.command: >
     k3s kubectl -n security exec {{ crowdsec_pod_name.stdout }}
@@ -43,7 +70,7 @@
 
 - name: Set nginx bouncer API key fact
   ansible.builtin.set_fact:
-    crowdsec_nginx_bouncer_key: "{{ crowdsec_nginx_bouncer_key_cmd.stdout | trim }}"
+    crowdsec_nginx_bouncer_key: "{{ crowdsec_nginx_bouncer_key_cmd.stdout | trim or crowdsec_nginx_bouncer_key_cmd.stderr | trim }}"
   when: not crowdsec_nginx_bouncer_exists
 
 - name: Fail if nginx bouncer key is missing
