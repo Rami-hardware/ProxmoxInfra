@@ -419,6 +419,7 @@ k3s_apps_list:
     env:
       - { name: COLLECTIONS, value: "crowdsecurity/nginx crowdsecurity/linux" }
       - { name: GID, value: "1000" }
+      - { name: DISABLE_AGENT, value: "true" }
       - { name: ENROLL_KEY, value: "{{ crowdsec_enrollment_token }}" }
       - { name: ENROLL_INSTANCE_NAME, value: "{{ crowdsec_enroll_instance_name }}" }
       - { name: ENROLL_TAGS, value: "{{ crowdsec_enroll_tags }}" }
