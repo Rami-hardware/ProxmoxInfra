@@ -27,7 +27,7 @@
   ansible.builtin.set_fact:
     crowdsec_nginx_bouncer_exists: >-
       {{
-        (crowdsec_bouncers_json.stdout | from_json
+        (crowdsec_bouncers_json.stdout | default('[]') | from_json
          | selectattr('name', 'equalto', 'nginx-bouncer')
          | list | length) > 0
       }}
