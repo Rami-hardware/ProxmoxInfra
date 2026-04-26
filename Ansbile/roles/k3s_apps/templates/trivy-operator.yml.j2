@@ -1,0 +1,106 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: trivy-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: trivy-operator
+  namespace: trivy-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: trivy-operator
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "nodes", "namespaces", "services", "serviceaccounts", "configmaps", "resourcequotas", "limitranges", "persistentvolumeclaims", "persistentvolumes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "daemonsets", "statefulsets", "replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses", "networkpolicies"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["aquasecurity.github.io"]
+    resources: ["*"]
+    verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: trivy-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: trivy-operator
+subjects:
+  - kind: ServiceAccount
+    name: trivy-operator
+    namespace: trivy-system
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trivy-operator-config
+  namespace: trivy-system
+data:
+  scannerReportTTL: "24h"
+  vulnerabilityReportsPlugin: "Trivy"
+  configAuditReportsPlugin: "Trivy"
+  trivyImageRef: "ghcr.io/aquasecurity/trivy:latest"
+  trivySeverity: "CRITICAL,HIGH"
+  trivyIgnoreUnfixed: "true"
+  trivyScanners: "vulnerability"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trivy-operator
+  namespace: trivy-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trivy-operator
+  template:
+    metadata:
+      labels:
+        app: trivy-operator
+    spec:
+      serviceAccountName: trivy-operator
+      containers:
+        - name: trivy-operator
+          image: ghcr.io/aquasecurity/trivy-operator:{{ trivy_operator_version }}
+          env:
+            - name: OPERATOR_NAMESPACE
+              value: "trivy-system"
+            - name: OPERATOR_TARGET_NAMESPACES
+              value: ""
+            - name: OPERATOR_LOG_DEV_MODE
+              value: "false"
+            - name: OPERATOR_SCAN_JOB_TIMEOUT
+              value: "5m"
+            - name: OPERATOR_VULNERABILITY_SCANNER_ENABLED
+              value: "true"
+            - name: OPERATOR_CONFIG_AUDIT_SCANNER_ENABLED
+              value: "false"
+            - name: TRIVY_SEVERITY
+              value: "CRITICAL,HIGH"
+            - name: TRIVY_IGNORE_UNFIXED
+              value: "true"
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"

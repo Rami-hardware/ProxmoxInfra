@@ -1,6 +1,11 @@
 ---
 prometheus_retention_time: 30d
 
+# ── Security stack ────────────────────────────────────────────────────────────
+falco_config_dir: /opt/falco/config
+wazuh_agent_version: "4.9.0"
+trivy_operator_version: "0.22.0"
+
 authelia_session_secret: "change_me_session_secret"
 authelia_encryption_key: "change_me_encryption_key_32chars_min"
 authelia_jwt_secret: "change_me_jwt_secret"
@@ -396,6 +401,31 @@ k3s_apps_list:
     memory_limit: "512Mi"
     cpu_request: "100m"
     cpu_limit: "500m"
+
+  - name: crowdsec
+    namespace: security
+    image: crowdsecurity/crowdsec:latest
+    port: 8080
+    node_port: 30080
+    target_node: security-server
+    config_path: /opt/crowdsec/config
+    config_mount: /etc/crowdsec
+    replicas: 1
+    extra_volumes:
+      - name: data
+        host_path: /opt/crowdsec/data
+        mount_path: /var/lib/crowdsec/data
+        create_host_dir: true
+    env:
+      - { name: COLLECTIONS, value: "crowdsecurity/nginx crowdsecurity/linux" }
+      - { name: GID, value: "1000" }
+      - { name: ENROLL_KEY, value: "{{ crowdsec_enrollment_token }}" }
+      - { name: ENROLL_INSTANCE_NAME, value: "{{ crowdsec_enroll_instance_name }}" }
+      - { name: ENROLL_TAGS, value: "{{ crowdsec_enroll_tags }}" }
+    memory_request: "64Mi"
+    memory_limit: "256Mi"
+    cpu_request: "50m"
+    cpu_limit: "300m"
 
   - name: wazuh-manager
     namespace: security
