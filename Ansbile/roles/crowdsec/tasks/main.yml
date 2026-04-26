@@ -60,22 +60,30 @@
       }}
 
 - name: Create nginx bouncer and capture API key
-  ansible.builtin.command: >
-    k3s kubectl -n security exec {{ crowdsec_pod_name.stdout }}
-    -- cscli bouncers add nginx-ingress-bouncer -o raw
+  ansible.builtin.shell: |
+    k3s kubectl -n security exec {{ crowdsec_pod_name.stdout }} \
+      -- cscli bouncers add nginx-ingress-bouncer -o raw 2>&1
   delegate_to: git-k3s-server
   register: crowdsec_nginx_bouncer_key_cmd
   when: not crowdsec_nginx_bouncer_exists
   changed_when: true
 
+- name: Debug bouncer key output
+  ansible.builtin.debug:
+    msg:
+      stdout: "{{ crowdsec_nginx_bouncer_key_cmd.stdout | default('') }}"
+      stderr: "{{ crowdsec_nginx_bouncer_key_cmd.stderr | default('') }}"
+      rc: "{{ crowdsec_nginx_bouncer_key_cmd.rc | default('') }}"
+  when: not crowdsec_nginx_bouncer_exists
+
 - name: Set nginx bouncer API key fact
   ansible.builtin.set_fact:
-    crowdsec_nginx_bouncer_key: "{{ crowdsec_nginx_bouncer_key_cmd.stdout | trim or crowdsec_nginx_bouncer_key_cmd.stderr | trim }}"
+    crowdsec_nginx_bouncer_key: "{{ crowdsec_nginx_bouncer_key_cmd.stdout | trim }}"
   when: not crowdsec_nginx_bouncer_exists
 
 - name: Fail if nginx bouncer key is missing
   ansible.builtin.fail:
-    msg: "CrowdSec nginx bouncer API key could not be created!"
+    msg: "CrowdSec nginx bouncer API key could not be created! stdout={{ crowdsec_nginx_bouncer_key_cmd.stdout | default('') }} stderr={{ crowdsec_nginx_bouncer_key_cmd.stderr | default('') }}"
   when:
     - not crowdsec_nginx_bouncer_exists
     - crowdsec_nginx_bouncer_key | default('') == ''
