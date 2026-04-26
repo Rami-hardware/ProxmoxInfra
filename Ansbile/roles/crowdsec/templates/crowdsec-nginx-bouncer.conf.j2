@@ -1,4 +1,4 @@
 api_url: http://{{ hostvars['security-server']['ansible_host'] }}:30080/
-api_key: {{ crowdsec_nginx_bouncer_key }}
+api_key: {{ crowdsec_nginx_ingress_bouncer_key }}
 update_frequency: 10s
 deny_status_code: 403

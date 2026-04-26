@@ -27,15 +27,15 @@
   ansible.builtin.set_fact:
     crowdsec_nginx_bouncer_exists: >-
       {{
-        (crowdsec_bouncers_json.stdout | default('[]') | from_json
-         | selectattr('name', 'equalto', 'nginx-bouncer')
+        (crowdsec_bouncers_json.stdout | default('[]', true) | from_json
+         | selectattr('name', 'equalto', 'nginx-ingress-bouncer')
          | list | length) > 0
       }}
 
 - name: Create nginx bouncer and capture API key
   ansible.builtin.command: >
     k3s kubectl -n security exec {{ crowdsec_pod_name.stdout }}
-    -- cscli bouncers add nginx-bouncer -o raw
+    -- cscli bouncers add nginx-ingress-bouncer -o raw
   delegate_to: git-k3s-server
   register: crowdsec_nginx_bouncer_key_cmd
   when: not crowdsec_nginx_bouncer_exists
@@ -55,7 +55,7 @@
 
 - name: Save nginx bouncer API key to gateway
   ansible.builtin.copy:
-    dest: /opt/docker/crowdsec/nginx-bouncer.key
+    dest: /opt/docker/crowdsec/nginx-ingress-bouncer.key
     content: "{{ crowdsec_nginx_bouncer_key }}"
     owner: root
     group: root
