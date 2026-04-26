@@ -289,6 +289,20 @@
   loop_control:
     loop_var: k3s_node
 
+- name: Create minimal CrowdSec acquis.yaml on security-server
+  ansible.builtin.copy:
+    dest: /opt/crowdsec/config/acquis.yaml
+    content: |
+      ---
+      source: file
+      filenames:
+        - /var/log/syslog
+      labels:
+        type: syslog
+    mode: '0644'
+    force: false
+  delegate_to: security-server
+
 - name: Template Falco DaemonSet manifest
   ansible.builtin.template:
     src: falco-daemonset.yml.j2

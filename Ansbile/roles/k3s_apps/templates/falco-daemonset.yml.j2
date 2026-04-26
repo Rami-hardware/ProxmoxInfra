@@ -54,19 +54,16 @@ spec:
           effect: NoSchedule
       containers:
         - name: falco
-          image: falcosecurity/falco-no-driver:latest
-          args:
-            - /usr/bin/falco
-            - --modern-bpf
-            - -o
-            - json_output=true
-            - -o
-            - log_stderr=true
+          image: falcosecurity/falco:latest
           securityContext:
             privileged: true
           env:
             - name: HOST_ROOT
               value: /host
+            - name: FALCO_DRIVER_CHOICE
+              value: "modern_bpf"
+            - name: FALCO_ARGS
+              value: "-o json_output=true -o log_stderr=true"
           volumeMounts:
             - name: proc
               mountPath: /host/proc
