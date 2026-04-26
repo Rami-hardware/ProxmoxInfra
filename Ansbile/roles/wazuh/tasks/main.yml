@@ -12,14 +12,13 @@
   delegate_to: git-k3s-server
   changed_when: false
 
-- name: Check Wazuh manager status
-  ansible.builtin.shell: |
-    k3s kubectl -n security exec {{ wazuh_pod_name.stdout }} \
-      -- /var/ossec/bin/wazuh-control status
+- name: Show Wazuh manager pod status
+  ansible.builtin.command: >
+    k3s kubectl -n security get pod {{ wazuh_pod_name.stdout }} -o wide
   delegate_to: git-k3s-server
   register: wazuh_status
   changed_when: false
 
-- name: Show Wazuh manager status
+- name: Print Wazuh manager status
   ansible.builtin.debug:
     msg: "{{ wazuh_status.stdout_lines }}"
