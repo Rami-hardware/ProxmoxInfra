@@ -5,5 +5,5 @@
     - group_vars/vault.yml
   roles:
     - DNS
-    - crowdsec
+    - wazuh
     # - authelia

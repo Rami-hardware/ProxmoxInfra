@@ -1,0 +1,25 @@
+- name: Get Wazuh manager pod name
+  ansible.builtin.command: >
+    k3s kubectl -n security get pod -l app=wazuh-manager -o jsonpath='{.items[0].metadata.name}'
+  delegate_to: git-k3s-server
+  register: wazuh_pod_name
+  changed_when: false
+
+- name: Wait for Wazuh manager pod to be ready
+  ansible.builtin.command: >
+    k3s kubectl -n security wait pod/{{ wazuh_pod_name.stdout }}
+    --for=condition=Ready --timeout=300s
+  delegate_to: git-k3s-server
+  changed_when: false
+
+- name: Check Wazuh manager status
+  ansible.builtin.shell: |
+    k3s kubectl -n security exec {{ wazuh_pod_name.stdout }} \
+      -- /var/ossec/bin/wazuh-control status
+  delegate_to: git-k3s-server
+  register: wazuh_status
+  changed_when: false
+
+- name: Show Wazuh manager status
+  ansible.builtin.debug:
+    msg: "{{ wazuh_status.stdout_lines }}"

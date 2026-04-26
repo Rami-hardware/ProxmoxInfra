@@ -6,10 +6,10 @@ authelia_encryption_key: "change_me_encryption_key_32chars_min"
 authelia_jwt_secret: "change_me_jwt_secret"
 
 authelia_users:
-  - username: admin
-    displayname: "Admin"
+  - username: rami
+    displayname: "Rami"
     email: "rami@atomzstudio.com"
-    password_hash: "REPLACE_WITH_ARGON2_HASH"
+    password_hash: "{{ vault_authelia_password_hash }}"
     groups:
       - admins
 
@@ -328,6 +328,11 @@ k3s_apps_list:
     replicas: 1
     args:
       - "-config.file=/etc/loki/config.yml"
+    extra_volumes:
+      - name: data
+        host_path: /opt/docker/loki/data
+        mount_path: /loki
+        create_host_dir: true
     memory_request: "128Mi"
     memory_limit: "384Mi"
     cpu_request: "50m"
@@ -392,30 +397,47 @@ k3s_apps_list:
     cpu_request: "100m"
     cpu_limit: "500m"
 
-  - name: crowdsec
+  - name: wazuh-manager
     namespace: security
-    image: crowdsecurity/crowdsec:latest
-    port: 8080
-    node_port: 30080
+    image: wazuh/wazuh-manager:4.9.0
+    port: 55000
+    node_port: 30055
     target_node: security-server
-    config_path: /opt/crowdsec/config
-    config_mount: /etc/crowdsec
+    config_path: /opt/wazuh/config
+    config_mount: /var/ossec/etc
     replicas: 1
+    extra_ports:
+      - port: 1514
+        host_port: 1514
+        protocol: UDP
+      - port: 1515
+        host_port: 1515
+      - port: 1516
+        host_port: 1516
     extra_volumes:
-      - name: data
-        host_path: /opt/crowdsec/data
-        mount_path: /var/lib/crowdsec/data
+      - name: logs
+        host_path: /opt/wazuh/logs
+        mount_path: /var/ossec/logs
+        create_host_dir: true
+      - name: queue
+        host_path: /opt/wazuh/queue
+        mount_path: /var/ossec/queue
+        create_host_dir: true
+      - name: var
+        host_path: /opt/wazuh/var
+        mount_path: /var/ossec/var
+        create_host_dir: true
+      - name: agentless
+        host_path: /opt/wazuh/agentless
+        mount_path: /var/ossec/agentless
         create_host_dir: true
     env:
-      - { name: COLLECTIONS, value: "crowdsecurity/nginx crowdsecurity/linux" }
-      - { name: GID, value: "1000" }
-      - { name: ENROLL_KEY, value: "{{ crowdsec_enrollment_token }}" }
-      - { name: ENROLL_INSTANCE_NAME, value: "{{ crowdsec_enroll_instance_name }}" }
-      - { name: ENROLL_TAGS, value: "{{ crowdsec_enroll_tags }}" }
-    memory_request: "128Mi"
-    memory_limit: "512Mi"
-    cpu_request: "100m"
-    cpu_limit: "500m"
+      - { name: INDEXER_URL, value: "" }
+      - { name: FILEBEAT_SSL_VERIFICATION_MODE, value: "none" }
+    memory_request: "1Gi"
+    memory_limit: "2Gi"
+    cpu_request: "500m"
+    cpu_limit: "1500m"
 
   - name: authelia
     namespace: security

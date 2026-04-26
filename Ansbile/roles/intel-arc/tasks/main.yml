@@ -16,7 +16,7 @@
       deb [signed-by=/usr/share/keyrings/intel-graphics-archive-keyring.gpg]
       https://repositories.intel.com/graphics/ubuntu {{ ansible_distribution_release }} main
     state: present
-  when: ansible_distribution_release in ["jammy", "focal"]
+  when: ansible_distribution_release in ["jammy", "focal", "noble"]
 
 
 - name: Update apt cache
@@ -27,7 +27,7 @@
   ansible.builtin.apt:
     name: "{{ intel_packages }}"
     state: present
-  when: ansible_distribution_release in ["jammy", "focal"]
+  when: ansible_distribution_release in ["jammy", "focal", "noble"]
 
 
 - name: Add media user to video and render groups
