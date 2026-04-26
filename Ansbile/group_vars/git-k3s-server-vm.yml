@@ -406,7 +406,7 @@ k3s_apps_list:
     namespace: security
     image: crowdsecurity/crowdsec:latest
     port: 8080
-    node_port: 30080
+    node_port: 31080
     target_node: security-server
     config_path: /opt/crowdsec/config
     config_mount: /etc/crowdsec
