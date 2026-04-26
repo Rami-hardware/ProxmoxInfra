@@ -12,56 +12,46 @@
   delegate_to: git-k3s-server
   changed_when: false
 
-# ------------------------------------------------------------
-# Nginx bouncer — create once and save key to gateway
-# ------------------------------------------------------------
-- name: Check if nginx bouncer exists
-  ansible.builtin.command: >
-    k3s kubectl -n security exec {{ crowdsec_pod_name.stdout }}
-    -- cscli bouncers list -o json
+- name: Wait for CrowdSec LAPI to be ready inside pod
+  ansible.builtin.shell: |
+    k3s kubectl -n security exec {{ crowdsec_pod_name.stdout }} \
+      -- cscli lapi status
   delegate_to: git-k3s-server
-  register: crowdsec_bouncers_json
+  register: crowdsec_lapi_status
+  until: crowdsec_lapi_status.rc == 0
+  retries: 12
+  delay: 10
   changed_when: false
 
-- name: Set fact if nginx bouncer exists
-  ansible.builtin.set_fact:
-    crowdsec_nginx_bouncer_exists: >-
-      {{
-        (crowdsec_bouncers_json.stdout | default('[]', true) | from_json
-         | selectattr('name', 'equalto', 'nginx-ingress-bouncer')
-         | list | length) > 0
-      }}
-
-- name: Delete existing bouncer so key can be regenerated
+# ------------------------------------------------------------
+# Nginx bouncer — always recreate to ensure key is captured
+# ------------------------------------------------------------
+- name: Delete existing nginx-ingress-bouncer if present
   ansible.builtin.shell: |
     k3s kubectl -n security exec {{ crowdsec_pod_name.stdout }} \
-      -- cscli bouncers delete nginx-ingress-bouncer
+      -- cscli bouncers delete nginx-ingress-bouncer 2>/dev/null || true
   delegate_to: git-k3s-server
-  when: crowdsec_nginx_bouncer_exists
-  changed_when: true
-
-- name: Create bouncer and write key to temp file inside container
-  ansible.builtin.shell: |
-    k3s kubectl -n security exec {{ crowdsec_pod_name.stdout }} \
-      -- sh -c 'cscli bouncers add nginx-ingress-bouncer -o raw > /tmp/bouncer.key 2>&1'
-  delegate_to: git-k3s-server
-  changed_when: true
-
-- name: Read bouncer key from container temp file
-  ansible.builtin.shell: |
-    k3s kubectl -n security exec {{ crowdsec_pod_name.stdout }} \
-      -- cat /tmp/bouncer.key
-  delegate_to: git-k3s-server
-  register: crowdsec_nginx_bouncer_key_cmd
   changed_when: false
+
+- name: Create nginx-ingress-bouncer with JSON output
+  ansible.builtin.shell: |
+    k3s kubectl -n security exec {{ crowdsec_pod_name.stdout }} \
+      -- cscli bouncers add nginx-ingress-bouncer -o json
+  delegate_to: git-k3s-server
+  register: crowdsec_bouncer_json
+  changed_when: true
+
+- name: Debug bouncer JSON output
+  ansible.builtin.debug:
+    msg: "{{ crowdsec_bouncer_json.stdout }}"
 
 - name: Set nginx bouncer API key fact
   ansible.builtin.set_fact:
-    crowdsec_nginx_bouncer_key: "{{ crowdsec_nginx_bouncer_key_cmd.stdout | trim }}"
+    crowdsec_nginx_bouncer_key: "{{ (crowdsec_bouncer_json.stdout | from_json).api_key }}"
 
 - name: Fail if nginx bouncer key is missing
   ansible.builtin.fail:
-    msg: "CrowdSec bouncer key is empty — /tmp/bouncer.key contents: '{{ crowdsec_nginx_bouncer_key_cmd.stdout }}'"
+    msg: "CrowdSec bouncer key is empty — raw output: {{ crowdsec_bouncer_json.stdout }}"
   when: crowdsec_nginx_bouncer_key == ''
 
 - name: Save nginx bouncer API key to gateway
@@ -72,10 +62,3 @@
     group: root
     mode: "0600"
   delegate_to: gateway-server
-
-- name: Cleanup bouncer key temp file in container
-  ansible.builtin.shell: |
-    k3s kubectl -n security exec {{ crowdsec_pod_name.stdout }} \
-      -- rm -f /tmp/bouncer.key
-  delegate_to: git-k3s-server
-  changed_when: false
