@@ -69,16 +69,3 @@
   community.general.ufw:
     state: enabled
     policy: deny
-
-- name: Reload UFW to apply forward policy change
-  community.general.ufw:
-    state: reloaded
-  when: ufw_forward_policy.changed
-- name: Show running containers
-  ansible.builtin.shell: >
-    docker ps --format '{{ "{{.Names}}" }} - {{ "{{.Status}}" }}'
-  register: ufw_running_containers
-  changed_when: false
-- name: Output container status
-  ansible.builtin.debug:
-    var: ufw_running_containers.stdout_lines
