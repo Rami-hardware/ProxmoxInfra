@@ -63,7 +63,16 @@ spec:
             - name: FALCO_DRIVER_CHOICE
               value: "modern_bpf"
             - name: FALCO_ARGS
-              value: "-o json_output=true -o log_stderr=true"
+              value: >-
+                -o json_output=true
+                -o log_stderr=true
+                -o metrics.enabled=true
+                -o metrics.exporter.port=8765
+                -o metrics.include_maturity_level=stable
+          ports:
+            - containerPort: 8765
+              name: metrics
+              hostPort: 8765
           volumeMounts:
             - name: proc
               mountPath: /host/proc
