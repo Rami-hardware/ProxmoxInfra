@@ -58,6 +58,7 @@ spec:
           securityContext:
             privileged: true
           args:
+            - /usr/bin/falco
             - -o
             - json_output=true
             - -o
