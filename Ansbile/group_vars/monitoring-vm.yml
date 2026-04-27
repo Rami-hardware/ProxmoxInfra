@@ -117,9 +117,31 @@ prometheus_scrape_jobs:
 
   - name: falco
     targets:
+      - "{{ hostvars['gateway-server']['ansible_host'] }}:8765"
+      - "{{ hostvars['media-server']['ansible_host'] }}:8765"
+      - "{{ hostvars['monitoring-server']['ansible_host'] }}:8765"
+      - "{{ hostvars['git-k3s-server']['ansible_host'] }}:8765"
       - "{{ hostvars['security-server']['ansible_host'] }}:8765"
     relabel_configs:
-      - target_label: instance
+      - source_labels: [__address__]
+        regex: "{{ hostvars['gateway-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "gateway-server"
+      - source_labels: [__address__]
+        regex: "{{ hostvars['media-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "media-server"
+      - source_labels: [__address__]
+        regex: "{{ hostvars['monitoring-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "monitoring-server"
+      - source_labels: [__address__]
+        regex: "{{ hostvars['git-k3s-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "git-k3s-server"
+      - source_labels: [__address__]
+        regex: "{{ hostvars['security-server']['ansible_host'] }}:.*"
+        target_label: instance
         replacement: "security-server"
 
 # ── Loki ──────────────────────────────────────────────────────────────────────
