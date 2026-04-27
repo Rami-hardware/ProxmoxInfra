@@ -62,6 +62,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
       initialization,
       clone,
       hostpci,
+      cpu,
       migrate,
       on_boot,
       reboot,
