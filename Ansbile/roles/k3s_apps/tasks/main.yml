@@ -286,6 +286,18 @@
     -f {{ k3s_apps_manifest_dir }}/ingress-nginx.yml
   changed_when: true
 
+- name: Restart ingress-nginx if it exceeded its progress deadline
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      STATUS=$(k3s kubectl rollout status deployment/ingress-nginx-controller \
+        -n ingress-nginx --timeout=5s 2>&1 || true)
+      if echo "$STATUS" | grep -q "exceeded its progress deadline"; then
+        k3s kubectl rollout restart deployment/ingress-nginx-controller -n ingress-nginx
+      fi
+    executable: /bin/bash
+  changed_when: false
+
 - name: Wait for ingress-nginx controller to be ready
   ansible.builtin.command: >
     k3s kubectl rollout status deployment/ingress-nginx-controller
