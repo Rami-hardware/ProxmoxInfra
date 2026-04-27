@@ -129,7 +129,7 @@
   loop: "{{ k3s_apps_existing_manifests.files }}"
   when: >
     (item.path | basename | splitext)[0] not in
-    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac', 'ingress-nginx', 'ingress-services', 'falco', 'wazuh-agent', 'trivy-operator']
+    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac', 'ingress-nginx', 'ingress-services', 'falco', 'wazuh-agent']
   changed_when: true
 
 - name: Remove stale manifest files
@@ -139,7 +139,7 @@
   loop: "{{ k3s_apps_existing_manifests.files }}"
   when: >
     (item.path | basename | splitext)[0] not in
-    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac', 'ingress-nginx', 'ingress-services', 'falco', 'wazuh-agent', 'trivy-operator']
+    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac', 'ingress-nginx', 'ingress-services', 'falco', 'wazuh-agent']
 
 # Single template for all apps — item.* variables drive the output
 - name: Template app manifests
@@ -293,22 +293,15 @@
 # Falco disabled — requires x86-64-v2 CPU (change Proxmox VM CPU type to 'host' to enable)
 
 
-- name: Install Trivy Operator CRDs
+- name: Remove existing Trivy Operator deployment to avoid selector conflict
+  ansible.builtin.command: >
+    k3s kubectl delete deployment trivy-operator -n trivy-system --ignore-not-found
+  changed_when: false
+
+- name: Install Trivy Operator from official manifest
   ansible.builtin.command: >
     k3s kubectl apply -f
     https://raw.githubusercontent.com/aquasecurity/trivy-operator/v{{ trivy_operator_version }}/deploy/static/trivy-operator.yaml
-  changed_when: true
-
-- name: Template Trivy Operator manifest
-  ansible.builtin.template:
-    src: trivy-operator.yml.j2
-    dest: "{{ k3s_apps_manifest_dir }}/trivy-operator.yml"
-    mode: '0644'
-
-- name: Apply Trivy Operator manifest
-  ansible.builtin.command: >
-    k3s kubectl apply --server-side --force-conflicts
-    -f {{ k3s_apps_manifest_dir }}/trivy-operator.yml
   changed_when: true
 
 # ingress-nginx controller

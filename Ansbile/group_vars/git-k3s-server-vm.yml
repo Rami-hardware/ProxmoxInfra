@@ -287,9 +287,6 @@ k3s_apps_list:
     target_node: monitoring-server
     config_path: /opt/docker/grafana
     config_mount: /opt/docker/grafana
-    dns_policy: None
-    dns_nameservers:
-      - "8.8.8.8"
     replicas: 1
     extra_volumes:
       - name: provisioning
@@ -362,10 +359,6 @@ k3s_apps_list:
     node_port: 9798
     target_node: monitoring-server
     skip_pv: true
-    dns_policy: None
-    dns_nameservers:
-      - "8.8.8.8"
-      - "8.8.4.4"
     replicas: 1
     memory_request: "32Mi"
     memory_limit: "128Mi"
