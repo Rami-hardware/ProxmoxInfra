@@ -334,11 +334,6 @@ k3s_apps_list:
     replicas: 1
     args:
       - "-config.file=/etc/loki/config.yml"
-    extra_volumes:
-      - name: data
-        host_path: /opt/docker/loki/data
-        mount_path: /loki
-        create_host_dir: true
     memory_request: "128Mi"
     memory_limit: "384Mi"
     cpu_request: "50m"

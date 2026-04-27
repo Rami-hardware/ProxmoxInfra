@@ -4,8 +4,8 @@ loki_http_port: 3100
 loki_reject_old_samples: true
 loki_reject_old_samples_max_age: 168h
 loki_data_dirs:
-  - /opt/docker/loki/data/index
-  - /opt/docker/loki/data/boltdb-cache
-  - /opt/docker/loki/data/chunks
-  - /opt/docker/loki/data/compactor
-  - /opt/docker/loki/data/wal
+  - /loki/index
+  - /loki/boltdb-cache
+  - /loki/chunks
+  - /loki/compactor
+  - /loki/wal

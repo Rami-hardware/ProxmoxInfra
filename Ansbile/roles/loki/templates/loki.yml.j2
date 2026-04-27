@@ -4,7 +4,7 @@ server:
   http_listen_port: {{ loki_http_port }}
 
 common:
-  path_prefix: /loki/data
+  path_prefix: /loki
   replication_factor: 1
   ring:
     instance_addr: 127.0.0.1
@@ -13,10 +13,10 @@ common:
 
 storage_config:
   boltdb_shipper:
-    active_index_directory: /loki/data/index
-    cache_location: /loki/data/boltdb-cache
+    active_index_directory: /loki/index
+    cache_location: /loki/boltdb-cache
   filesystem:
-    directory: /loki/data/chunks
+    directory: /loki/chunks
 
 schema_config:
   configs:
