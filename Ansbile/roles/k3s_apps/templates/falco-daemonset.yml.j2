@@ -64,11 +64,15 @@ spec:
             - -o
             - log_stderr=true
             - -o
+            - webserver.enabled=true
+            - -o
+            - webserver.listen_port=8765
+            - -o
             - metrics.enabled=true
             - -o
-            - metrics.exporter.port=8765
+            - metrics.interval=15s
             - -o
-            - metrics.include_maturity_level=stable
+            - metrics.output_rule=true
           env:
             - name: HOST_ROOT
               value: /host
