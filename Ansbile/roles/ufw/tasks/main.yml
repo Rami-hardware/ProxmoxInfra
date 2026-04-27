@@ -42,6 +42,12 @@
     port: "{{ item }}"
     proto: udp
   loop: "{{ service_udp_ports | default([]) }}"
+- name: Allow Falco metrics scraping
+  community.general.ufw:
+    rule: allow
+    port: "8765"
+    proto: tcp
+
 - name: Allow K3s pod network
   community.general.ufw:
     rule: allow
