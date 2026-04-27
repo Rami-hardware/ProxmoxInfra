@@ -391,22 +391,6 @@ k3s_apps_list:
     cpu_request: "100m"
     cpu_limit: "500m"
 
-  - name: crowdsec
-    namespace: security
-    image: crowdsecurity/crowdsec:latest
-    port: 8080
-    node_port: 31080
-    target_node: security-server
-    skip_pv: true
-    replicas: 1
-    env:
-      - { name: COLLECTIONS, value: "crowdsecurity/nginx crowdsecurity/linux" }
-      - { name: GID, value: "1000" }
-    memory_request: "64Mi"
-    memory_limit: "256Mi"
-    cpu_request: "50m"
-    cpu_limit: "300m"
-
   - name: wazuh-manager
     namespace: security
     image: wazuh/wazuh-manager:4.9.0
