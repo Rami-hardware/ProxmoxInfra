@@ -259,3 +259,48 @@
   delegate_to: localhost
   become: true
   changed_when: true
+
+# ── Authelia bridge — stable ClusterIP endpoint in network namespace ──────────
+- name: Get Authelia ClusterIP from security namespace
+  ansible.builtin.command: >
+    k3s kubectl get svc authelia -n security
+    -o jsonpath='{.spec.clusterIP}'
+  delegate_to: git-k3s-server
+  register: nginx_config_authelia_cluster_ip
+  changed_when: false
+
+- name: Create Authelia bridge service in network namespace
+  ansible.builtin.command:
+    argv:
+      - k3s
+      - kubectl
+      - apply
+      - --server-side
+      - --force-conflicts
+      - -f
+      - /dev/stdin
+    stdin: |
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: authelia
+        namespace: network
+      spec:
+        clusterIP: None
+        ports:
+          - port: 9091
+            protocol: TCP
+      ---
+      apiVersion: v1
+      kind: Endpoints
+      metadata:
+        name: authelia
+        namespace: network
+      subsets:
+        - addresses:
+            - ip: {{ nginx_config_authelia_cluster_ip.stdout }}
+          ports:
+            - port: 9091
+              protocol: TCP
+  delegate_to: git-k3s-server
+  changed_when: true

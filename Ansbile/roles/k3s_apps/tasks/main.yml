@@ -129,7 +129,7 @@
   loop: "{{ k3s_apps_existing_manifests.files }}"
   when: >
     (item.path | basename | splitext)[0] not in
-    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac', 'ingress-nginx', 'ingress-services', 'falco', 'wazuh-agent']
+    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac', 'ingress-nginx', 'ingress-services']
   changed_when: true
 
 - name: Remove stale manifest files
@@ -139,7 +139,7 @@
   loop: "{{ k3s_apps_existing_manifests.files }}"
   when: >
     (item.path | basename | splitext)[0] not in
-    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac', 'ingress-nginx', 'ingress-services', 'falco', 'wazuh-agent']
+    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac', 'ingress-nginx', 'ingress-services']
 
 # Single template for all apps — item.* variables drive the output
 - name: Template app manifests
@@ -272,37 +272,6 @@
   loop_control:
     label: "{{ item.item.name }}"
 
-
-# ── Security stack ────────────────────────────────────────────────────────────
-- name: Ensure Falco config directory exists on all nodes
-  ansible.builtin.file:
-    path: "{{ falco_config_dir }}"
-    state: directory
-    mode: '0755'
-  delegate_to: "{{ k3s_node }}"
-  loop:
-    - git-k3s-server
-    - media-server
-    - monitoring-server
-    - gateway-server
-    - security-server
-  loop_control:
-    loop_var: k3s_node
-
-
-# Falco disabled — requires x86-64-v2 CPU (change Proxmox VM CPU type to 'host' to enable)
-
-
-- name: Remove existing Trivy Operator deployment to avoid selector conflict
-  ansible.builtin.command: >
-    k3s kubectl delete deployment trivy-operator -n trivy-system --ignore-not-found
-  changed_when: false
-
-- name: Install Trivy Operator from official manifest
-  ansible.builtin.command: >
-    k3s kubectl apply -f
-    https://raw.githubusercontent.com/aquasecurity/trivy-operator/v{{ trivy_operator_version }}/deploy/static/trivy-operator.yaml
-  changed_when: true
 
 # ingress-nginx controller
 - name: Template ingress-nginx manifest

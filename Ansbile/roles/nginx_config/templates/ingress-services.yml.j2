@@ -92,22 +92,6 @@ spec:
                   number: 80
 ---
 # ──────────────────────────────────────────────────────────────────────────────
-# Authelia bridge — ExternalName service so network/authelia-local ingress
-# resolves to the authelia pod running in the security namespace
-# ──────────────────────────────────────────────────────────────────────────────
-apiVersion: v1
-kind: Service
-metadata:
-  name: authelia
-  namespace: network
-spec:
-  type: ExternalName
-  externalName: authelia.security.svc.cluster.local
-  ports:
-    - port: 9091
-      protocol: TCP
----
-# ──────────────────────────────────────────────────────────────────────────────
 # Local LAN services  (HTTPS + TLS · host: <name>.<namespace>.lan)
 # ──────────────────────────────────────────────────────────────────────────────
 {% for svc in nginx_services_local %}
