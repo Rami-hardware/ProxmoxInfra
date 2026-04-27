@@ -404,21 +404,11 @@ k3s_apps_list:
     port: 8080
     node_port: 31080
     target_node: security-server
-    config_path: /opt/crowdsec/config
-    config_mount: /etc/crowdsec
+    skip_pv: true
     replicas: 1
-    extra_volumes:
-      - name: data
-        host_path: /opt/crowdsec/data
-        mount_path: /var/lib/crowdsec/data
-        create_host_dir: true
     env:
       - { name: COLLECTIONS, value: "crowdsecurity/nginx crowdsecurity/linux" }
       - { name: GID, value: "1000" }
-      - { name: DISABLE_AGENT, value: "true" }
-      - { name: ENROLL_KEY, value: "{{ crowdsec_enrollment_token }}" }
-      - { name: ENROLL_INSTANCE_NAME, value: "{{ crowdsec_enroll_instance_name }}" }
-      - { name: ENROLL_TAGS, value: "{{ crowdsec_enroll_tags }}" }
     memory_request: "64Mi"
     memory_limit: "256Mi"
     cpu_request: "50m"
