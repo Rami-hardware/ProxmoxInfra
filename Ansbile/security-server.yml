@@ -1,8 +1,6 @@
 - name: Deploy security Server Configuration
   hosts: security-server
   become: true
-  vars_files:
-    - group_vars/vault.yml
   roles:
-    # - DNS
-    # - authelia
+    - DNS
+    # - authelia (requires vault_authelia_password_hash in group_vars/all.yml)
