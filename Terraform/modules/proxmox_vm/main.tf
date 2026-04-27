@@ -11,6 +11,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
 
   cpu {
     cores = var.cores
+    type  = "host"
   }
 
   memory {
@@ -61,7 +62,6 @@ resource "proxmox_virtual_environment_vm" "vm" {
       initialization,
       clone,
       hostpci,
-      cpu,
       migrate,
       on_boot,
       reboot,

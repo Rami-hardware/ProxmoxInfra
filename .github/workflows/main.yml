@@ -291,9 +291,6 @@ jobs:
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         run: |
           terraform apply -auto-approve -parallelism=1 \
-            -target='module.proxmox_vms["gateway"]' \
-            -target='module.proxmox_vms["media"]' \
-            -target='module.proxmox_vms["monitoring"]' \
             -target='module.proxmox_vms["security"]'
 
       # ── Ansible ──────────────────────────────────────────────────────────────
@@ -354,9 +351,7 @@ jobs:
         run: |
           source venv/bin/activate
           ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/security-server.yml
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml
+
           
       - name: Cleanup secrets
         if: always()
