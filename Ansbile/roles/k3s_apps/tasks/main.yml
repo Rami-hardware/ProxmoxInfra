@@ -301,5 +301,5 @@
 - name: Wait for ingress-nginx controller to be ready
   ansible.builtin.command: >
     k3s kubectl rollout status deployment/ingress-nginx-controller
-    -n ingress-nginx --timeout=120s
+    -n ingress-nginx --timeout=300s
   changed_when: false
