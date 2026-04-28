@@ -72,6 +72,10 @@ k3s_apps_list:
     config_path: /opt/bazarr
     config_mount: /config
     replicas: 1
+    dns_policy: None
+    dns_nameservers:
+      - "8.8.8.8"
+      - "8.8.4.4"
     extra_volumes:
       - name: tv
         host_path: /mnt/media/tv
