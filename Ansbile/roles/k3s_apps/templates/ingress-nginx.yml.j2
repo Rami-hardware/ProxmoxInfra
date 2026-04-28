@@ -121,6 +121,7 @@ spec:
         app.kubernetes.io/component: controller
     spec:
       serviceAccountName: ingress-nginx
+      terminationGracePeriodSeconds: 30
       nodeSelector:
         kubernetes.io/hostname: {{ ingress_nginx_node | default('git-k3s-server') }}
       securityContext:
