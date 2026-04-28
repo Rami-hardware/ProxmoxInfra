@@ -203,6 +203,23 @@
   changed_when: true
   delegate_to: git-k3s-server
 
+- name: Remove auth annotations from public ingresses
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      for ing in $(k3s kubectl get ingress -A -o jsonpath='{range .items[?(@.metadata.name=~".*-public")]}{.metadata.namespace} {.metadata.name}{"\n"}{end}'); do
+        NS=$(echo $ing | awk '{print $1}')
+        NAME=$(echo $ing | awk '{print $2}')
+        k3s kubectl annotate ingress/$NAME -n $NS \
+          nginx.ingress.kubernetes.io/auth-url- \
+          nginx.ingress.kubernetes.io/auth-signin- \
+          nginx.ingress.kubernetes.io/auth-response-headers- \
+          --ignore-not-found 2>/dev/null || true
+      done
+    executable: /bin/bash
+  delegate_to: git-k3s-server
+  changed_when: false
+
 # ── Remove legacy ca-dist resources from cluster ─────────────────────────────
 - name: Remove legacy ca-dist k8s resources (renamed to ca-cert)
   ansible.builtin.command: >
