@@ -295,11 +295,10 @@ k3s_apps_list:
     env:
       - { name: GF_PATHS_DATA, value: /opt/docker/grafana }
       - { name: GF_FEATURE_TOGGLES_ENABLE, value: "kubernetesDashboards=false" }
-
-    memory_request: "128Mi"
-    memory_limit: "384Mi"
-    cpu_request: "50m"
-    cpu_limit: "250m"
+    memory_request: "256Mi"
+    memory_limit: "768Mi"
+    cpu_request: "100m"
+    cpu_limit: "500m"
 
   - name: prometheus
     namespace: monitoring
@@ -315,10 +314,11 @@ k3s_apps_list:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.retention.time={{ prometheus_retention_time }}"
       - "--web.enable-lifecycle"
-    memory_request: "256Mi"
-    memory_limit: "768Mi"
-    cpu_request: "100m"
-    cpu_limit: "500m"
+      - "--storage.tsdb.wal-compression"
+    memory_request: "512Mi"
+    memory_limit: "1.5Gi"
+    cpu_request: "200m"
+    cpu_limit: "1000m"
 
   - name: loki
     namespace: monitoring
@@ -396,7 +396,7 @@ k3s_apps_list:
     image: authelia/authelia:latest
     port: 9091
     node_port: 9091
-    target_node: gateway-server
+    target_node: security-server
     config_path: /opt/docker/authelia/config
     config_mount: /config
     enable_service_links: false
@@ -407,8 +407,14 @@ k3s_apps_list:
         mount_path: /data
         create_host_dir: true
     env:
-      - { name: AUTHELIA_SESSION_SECRET, value: "{{ authelia_session_secret }}" }
-      - { name: AUTHELIA_STORAGE_ENCRYPTION_KEY, value: "{{ authelia_encryption_key }}" }
+      - {
+          name: AUTHELIA_SESSION_SECRET,
+          value: "{{ authelia_session_secret }}",
+        }
+      - {
+          name: AUTHELIA_STORAGE_ENCRYPTION_KEY,
+          value: "{{ authelia_encryption_key }}",
+        }
       - { name: AUTHELIA_JWT_SECRET, value: "{{ authelia_jwt_secret }}" }
     memory_request: "128Mi"
     memory_limit: "512Mi"

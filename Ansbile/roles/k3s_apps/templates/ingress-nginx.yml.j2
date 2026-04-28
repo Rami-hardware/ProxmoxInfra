@@ -136,6 +136,8 @@ spec:
             - --ingress-class=nginx
             - --watch-ingress-without-class=false
             - --enable-annotation-validation=false
+            - --enable-metrics=true
+            - --metrics-per-host=true
           env:
             - name: POD_NAME
               valueFrom:
@@ -188,7 +190,10 @@ metadata:
 spec:
   type: LoadBalancer
   externalIPs:
+    - {{ hostvars['gateway-server']['ansible_host'] }}
+{% if (ingress_nginx_node | default('git-k3s-server')) != 'gateway-server' %}
     - {{ hostvars[ingress_nginx_node | default('git-k3s-server')]['ansible_host'] }}
+{% endif %}
   selector:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/component: controller
