@@ -22,6 +22,7 @@ prometheus_scrape_jobs:
       - "{{ hostvars['media-server']['ansible_host'] }}:9100"
       - "{{ hostvars['monitoring-server']['ansible_host'] }}:9100"
       - "{{ hostvars['git-k3s-server']['ansible_host'] }}:9100"
+      - "{{ hostvars['security-server']['ansible_host'] }}:9100"
       - "{{ hostvars['host-node']['ansible_host'] }}:9100"
     labels:
       os: linux
@@ -42,6 +43,10 @@ prometheus_scrape_jobs:
         regex: "{{ hostvars['git-k3s-server']['ansible_host'] }}:.*"
         target_label: instance
         replacement: "git-k3s-server"
+      - source_labels: [__address__]
+        regex: "{{ hostvars['security-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "security-server"
       - source_labels: [__address__]
         regex: "{{ hostvars['host-node']['ansible_host'] }}:.*"
         target_label: instance
