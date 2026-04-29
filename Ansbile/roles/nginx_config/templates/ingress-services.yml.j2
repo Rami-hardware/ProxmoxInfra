@@ -139,6 +139,7 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-hide-headers: "X-Accel-Buffering"
 {% endif %}
 {% if svc.auth | default(false) %}
     nginx.ingress.kubernetes.io/auth-url: "http://authelia.security.svc.cluster.local:9091/api/authz/auth-request"
@@ -213,6 +214,7 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-hide-headers: "X-Accel-Buffering"
 {% endif %}
 spec:
   ingressClassName: nginx

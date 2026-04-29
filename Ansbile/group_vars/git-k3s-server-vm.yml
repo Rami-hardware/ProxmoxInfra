@@ -66,6 +66,8 @@ k3s_apps_list:
       - { name: LIBVA_DRIVER_NAME, value: "iHD" }
       - { name: VAAPI_DEVICE, value: "/dev/dri/renderD128" }
       - { name: JELLYFIN_HWACCEL, value: "vaapi" }
+      - { name: JELLYFIN_CACHE_DIR, value: "/cache" }
+      - { name: DOTNET_SYSTEM_IO_DISABLEFILELOCKING, value: "true" }
     memory_request: "512Mi"
     memory_limit: "1.5Gi"
     cpu_request: "300m"
