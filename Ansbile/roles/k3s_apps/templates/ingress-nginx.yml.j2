@@ -28,8 +28,9 @@ data:
   # ── Streaming / ZFS optimizations ─────────────────────────────────────────
   # Disable proxy buffering globally — nginx passes data directly to client
   # without holding it in memory. Critical for video streaming.
-  proxy-buffering: "off"
-  proxy-request-buffering: "off"
+  proxy-buffering: "on"
+  proxy-request-buffering: "on"
+  proxy-buffer-size: "50k"
 
   # No body size limit — required for large file uploads/transcodes
   proxy-body-size: "0"
