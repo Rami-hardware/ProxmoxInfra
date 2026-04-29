@@ -274,6 +274,7 @@ k3s_apps_list:
     target_node: media-server
     config_path: /opt/sonarr
     config_mount: /config
+    dns_policy: None
     dns_nameservers:
       - "8.8.8.8"
       - "8.8.4.4"
