@@ -29,6 +29,10 @@ k3s_apps_list:
     config_path: /opt/overseer
     config_mount: /app/config
     replicas: 1
+    dns_policy: None
+    dns_nameservers:
+      - "8.8.8.8"
+      - "8.8.4.4"
     env:
       - { name: TZ, value: "Asia/Riyadh" }
     memory_request: "128Mi"
@@ -45,6 +49,10 @@ k3s_apps_list:
     config_path: /opt/jellyfin
     config_mount: /config
     replicas: 1
+    dns_policy: None
+    dns_nameservers:
+      - "8.8.8.8"
+      - "8.8.4.4"
     gpu: true
     extra_volumes:
       - name: media
@@ -173,6 +181,10 @@ k3s_apps_list:
     node_port: 8191
     target_node: media-server
     skip_pv: true
+    dns_policy: None
+    dns_nameservers:
+      - "8.8.8.8"
+      - "8.8.4.4"
     replicas: 1
     env:
       - { name: TZ, value: "Asia/Riyadh" }
@@ -304,6 +316,10 @@ k3s_apps_list:
     config_path: /opt/docker/grafana
     config_mount: /opt/docker/grafana
     replicas: 1
+    dns_policy: None
+    dns_nameservers:
+      - "8.8.8.8"
+      - "8.8.4.4"
     extra_volumes:
       - name: provisioning
         host_path: /opt/docker/grafana/provisioning
@@ -376,6 +392,10 @@ k3s_apps_list:
     target_node: monitoring-server
     skip_pv: true
     replicas: 1
+    dns_policy: None
+    dns_nameservers:
+      - "8.8.8.8"
+      - "8.8.4.4"
     memory_request: "32Mi"
     memory_limit: "128Mi"
     cpu_request: "10m"
