@@ -97,6 +97,10 @@ k3s_apps_list:
     image: linuxserver/radarr:latest
     port: 7878
     node_port: 7878
+    dns_policy: None
+    dns_nameservers:
+      - "8.8.8.8"
+      - "8.8.4.4"
     target_node: media-server
     config_path: /opt/radarr
     config_mount: /config
@@ -125,6 +129,10 @@ k3s_apps_list:
     target_node: media-server
     config_path: /opt/prowlarr
     config_mount: /config
+    dns_policy: None
+    dns_nameservers:
+      - "8.8.8.8"
+      - "8.8.4.4"
     replicas: 1
     env:
       - { name: TZ, value: "Asia/Riyadh" }
@@ -266,6 +274,9 @@ k3s_apps_list:
     target_node: media-server
     config_path: /opt/sonarr
     config_mount: /config
+    dns_nameservers:
+      - "8.8.8.8"
+      - "8.8.4.4"
     replicas: 1
     extra_volumes:
       - name: tv
