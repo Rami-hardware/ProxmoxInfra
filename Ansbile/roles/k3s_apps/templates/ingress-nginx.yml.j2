@@ -33,7 +33,7 @@ data:
   proxy-buffer-size: "50k"
 
   # No body size limit — required for large file uploads/transcodes
-  proxy-body-size: "0"
+  proxy-body-size: "50m"
 
   # TCP optimizations
   # tcp_nodelay: send packets immediately (no Nagle delay) — lower latency
@@ -51,8 +51,8 @@ data:
 
   # Worker tuning
   worker-processes: "auto"
-  worker-connections: "65536"
-  max-worker-connections: "65536"
+  worker-connections: "8192"
+  max-worker-connections: "16384"
 
   # SSL session reuse — avoids TLS handshake on every segment request
   ssl-session-cache: "shared:SSL:50m"
@@ -61,6 +61,9 @@ data:
   # HTTP/2 — multiplexes multiple requests over one connection
   # Reduces connection overhead for adaptive bitrate players (HLS/DASH)
   use-http2: "true"
+
+  sendfile: "true"
+  tcp_nopush: "true"
 ---
 # ── RBAC ──────────────────────────────────────────────────────────────────────
 apiVersion: rbac.authorization.k8s.io/v1
