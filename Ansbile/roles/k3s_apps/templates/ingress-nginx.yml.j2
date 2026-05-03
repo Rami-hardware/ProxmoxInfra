@@ -26,18 +26,13 @@ data:
   compute-full-forwarded-for: "true"
 
   # ── Streaming / ZFS optimizations ─────────────────────────────────────────
-  # Disable proxy buffering globally — nginx passes data directly to client
-  # without holding it in memory. Critical for video streaming.
-  proxy-buffering: "on"
-  proxy-request-buffering: "on"
+  proxy-buffering: "off"
+  proxy-request-buffering: "off"
   proxy-buffer-size: "50k"
 
-  # No body size limit — required for large file uploads/transcodes
-  proxy-body-size: "50m"
+  # 0 = unlimited — required for large file uploads/transcodes
+  proxy-body-size: "0"
 
-  # TCP optimizations
-  # tcp_nodelay: send packets immediately (no Nagle delay) — lower latency
-  # tcp_nopush: batch TCP packets with sendfile — higher throughput
   use-gzip: "false"
 
   # Keep connections alive for long video sessions
@@ -62,8 +57,12 @@ data:
   # Reduces connection overhead for adaptive bitrate players (HLS/DASH)
   use-http2: "true"
 
-  sendfile: "true"
-  tcp_nopush: "true"
+  # tcp_nodelay: no Nagle delay — lower latency for streaming segments
+  # tcp_nopush + sendfile: batch packets for higher throughput
+  tcp-nodelay: "on"
+  http-snippet: |
+    sendfile on;
+    tcp_nopush on;
 ---
 # ── RBAC ──────────────────────────────────────────────────────────────────────
 apiVersion: rbac.authorization.k8s.io/v1
