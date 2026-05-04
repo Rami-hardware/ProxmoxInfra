@@ -163,6 +163,48 @@ spec:
                 name: {{ svc.name }}-ext
                 port:
                   number: {{ svc.port }}
+{% if svc.cache_paths | default([]) | length > 0 %}
+---
+# {{ svc.name }} — cache ingress for static/pre-transcoded paths
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ svc.name }}-cache
+  namespace: {{ ns }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-buffering: "on"
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_cache ingress_cache;
+      proxy_cache_key "$host$request_uri";
+      proxy_cache_valid 200 {{ svc.cache_ttl | default('7d') }};
+      proxy_cache_valid 404 1m;
+      proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
+      proxy_cache_lock on;
+      proxy_ignore_headers Set-Cookie;
+      proxy_hide_header Set-Cookie;
+      proxy_cache_bypass $http_pragma;
+      add_header X-Cache-Status $upstream_cache_status;
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - {{ svc.name }}.homelab.lan
+      secretName: local-tls
+  rules:
+    - host: {{ svc.name }}.homelab.lan
+      http:
+        paths:
+{% for cache_path in svc.cache_paths %}
+          - path: {{ cache_path }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ svc.name }}-ext
+                port:
+                  number: {{ svc.port }}
+{% endfor %}
+{% endif %}
 {% endfor %}
 ---
 # ──────────────────────────────────────────────────────────────────────────────
@@ -233,4 +275,46 @@ spec:
                 name: {{ svc_name }}-ext
                 port:
                   number: {{ svc.port }}
+{% if svc.cache_paths | default([]) | length > 0 %}
+---
+# {{ svc.name }} — cache ingress for static/pre-transcoded paths (public)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ svc.name }}-cache-public
+  namespace: {{ ns }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-buffering: "on"
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_cache ingress_cache;
+      proxy_cache_key "$host$request_uri";
+      proxy_cache_valid 200 {{ svc.cache_ttl | default('7d') }};
+      proxy_cache_valid 404 1m;
+      proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
+      proxy_cache_lock on;
+      proxy_ignore_headers Set-Cookie;
+      proxy_hide_header Set-Cookie;
+      proxy_cache_bypass $http_pragma;
+      add_header X-Cache-Status $upstream_cache_status;
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - {{ svc.name }}.darkestserver.com
+      secretName: cloudflare-origin-tls
+  rules:
+    - host: {{ svc.name }}.darkestserver.com
+      http:
+        paths:
+{% for cache_path in svc.cache_paths %}
+          - path: {{ cache_path }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ svc_name }}-ext
+                port:
+                  number: {{ svc.port }}
+{% endfor %}
+{% endif %}
 {% endfor %}
