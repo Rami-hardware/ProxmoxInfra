@@ -66,6 +66,10 @@ nginx_services:
     disable_buffering: true
     streaming: true
     namespace: media
+    cache_paths:
+      - /Items
+      - /web
+    cache_ttl: "7d"
 
   - name: overseerr
     ip: 192.168.1.201
@@ -85,6 +89,10 @@ nginx_services_local:
     port: 8096
     disable_buffering: true
     streaming: true
+    cache_paths:
+      - /Items
+      - /web
+    cache_ttl: "7d"
 
   - name: overseerr
     ip: 192.168.1.201
