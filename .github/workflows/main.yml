@@ -351,7 +351,8 @@ jobs:
         run: |
           source venv/bin/activate
           ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml
-
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml
 
           
       - name: Cleanup secrets

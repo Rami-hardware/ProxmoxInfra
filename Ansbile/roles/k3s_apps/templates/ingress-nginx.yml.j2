@@ -63,17 +63,7 @@ data:
   http-snippet: |
     sendfile on;
     tcp_nopush on;
-
-    # Shared cache zone for static/pre-transcoded content (thumbnails, web UI assets).
-    # max_size=5g: nginx evicts LRU entries when full.
-    # inactive=7d: entries not accessed in 7 days are evicted regardless of TTL.
-    # use_temp_path=off: write directly to cache dir, avoids extra copy on same filesystem.
-    proxy_cache_path /var/cache/nginx/ingress
-      levels=1:2
-      keys_zone=ingress_cache:10m
-      max_size=5g
-      inactive=7d
-      use_temp_path=off;
+    proxy_cache_path /var/cache/nginx/ingress levels=1:2 keys_zone=ingress_cache:10m max_size=5g inactive=7d use_temp_path=off;
 ---
 # ── RBAC ──────────────────────────────────────────────────────────────────────
 apiVersion: rbac.authorization.k8s.io/v1
