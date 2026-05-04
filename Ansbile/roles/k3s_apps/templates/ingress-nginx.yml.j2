@@ -61,9 +61,7 @@ data:
   # tcp_nopush + sendfile: batch packets for higher throughput
   tcp-nodelay: "on"
   http-snippet: |
-    sendfile on;
-    tcp_nopush on;
-    proxy_cache_path /var/cache/nginx/ingress levels=1:2 keys_zone=ingress_cache:10m max_size=5g inactive=7d use_temp_path=off;
+    proxy_cache_path /tmp/nginx-cache levels=1:2 keys_zone=ingress_cache:10m max_size=5g inactive=7d use_temp_path=off;
 ---
 # ── RBAC ──────────────────────────────────────────────────────────────────────
 apiVersion: rbac.authorization.k8s.io/v1
