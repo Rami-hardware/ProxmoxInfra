@@ -22,7 +22,6 @@ metadata:
   namespace: ingress-nginx
 data:
   allow-snippet-annotations: "true"
-  annotations-risk-level: "Critical"
   use-forwarded-headers: "true"
   compute-full-forwarded-for: "true"
 
@@ -176,6 +175,7 @@ spec:
             - --ingress-class=nginx
             - --watch-ingress-without-class=false
             - --enable-annotation-validation=false
+            - --annotations-risk-level=Critical
             - --enable-metrics=true
             - --metrics-per-host=true
           env:
