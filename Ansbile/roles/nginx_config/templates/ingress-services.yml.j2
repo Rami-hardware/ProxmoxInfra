@@ -145,7 +145,9 @@ metadata:
     nginx.ingress.kubernetes.io/server-snippet: |
       location ~* ^/({{ svc.cache_paths | map('regex_replace', '^/', '') | join('|') }})/ {
         proxy_buffering on;
-        proxy_buffer_size 50k;
+        proxy_buffers 8 16k;
+        proxy_buffer_size 16k;
+        proxy_busy_buffers_size 32k;
         proxy_cache ingress_cache;
         proxy_cache_key "$host$request_uri";
         proxy_cache_valid 200 {{ svc.cache_ttl | default('7d') }};
@@ -242,7 +244,9 @@ metadata:
     nginx.ingress.kubernetes.io/server-snippet: |
       location ~* ^/({{ svc.cache_paths | map('regex_replace', '^/', '') | join('|') }})/ {
         proxy_buffering on;
-        proxy_buffer_size 50k;
+        proxy_buffers 8 16k;
+        proxy_buffer_size 16k;
+        proxy_busy_buffers_size 32k;
         proxy_cache ingress_cache;
         proxy_cache_key "$host$request_uri";
         proxy_cache_valid 200 {{ svc.cache_ttl | default('7d') }};
