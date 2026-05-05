@@ -70,8 +70,8 @@ k3s_apps_list:
       - { name: DOTNET_SYSTEM_IO_DISABLEFILELOCKING, value: "true" }
     memory_request: "512Mi"
     memory_limit: "1.5Gi"
-    cpu_request: "300m"
-    cpu_limit: "1500m"
+    cpu_request: "500m"
+    cpu_limit: "4000m"
 
   - name: bazarr
     namespace: media
