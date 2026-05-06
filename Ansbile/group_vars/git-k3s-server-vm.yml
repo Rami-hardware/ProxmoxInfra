@@ -70,8 +70,8 @@ k3s_apps_list:
       - { name: DOTNET_SYSTEM_IO_DISABLEFILELOCKING, value: "true" }
     memory_request: "512Mi"
     memory_limit: "1.5Gi"
-    cpu_request: "500m"
-    cpu_limit: "4000m"
+    cpu_request: "300m"
+    cpu_limit: "1500m"
 
   - name: bazarr
     namespace: media
@@ -195,34 +195,6 @@ k3s_apps_list:
     memory_limit: "512Mi"
     cpu_request: "100m"
     cpu_limit: "400m"
-
-  - name: subsyncarr
-    namespace: media
-    image: mrorbitman/subsyncarr:latest
-    target_node: media-server
-    config_path: /opt/subsyncarr
-    config_mount: /config
-    replicas: 1
-    extra_volumes:
-      - name: movies
-        host_path: /mnt/media/movies
-        mount_path: /movies
-      - name: media
-        host_path: /mnt/media/tv
-        mount_path: /tv
-    env:
-      - { name: TZ, value: "Asia/Riyadh" }
-      - { name: PUID, value: "1000" }
-      - { name: PGID, value: "1000" }
-      - { name: SCAN_PATHS, value: "/movies,/tv" }
-      - { name: MAX_CONCURRENT_SYNC_TASKS, value: 1 }
-      - { name: INCLUDE_ENGINES, value: ffsubsync }
-      - { name: DOWNLOAD_SUBS, value: false }
-      - { name: FFMPEG_HWACCEL, value: vaapi }
-    memory_request: "128Mi"
-    memory_limit: "512Mi"
-    cpu_request: "200m"
-    cpu_limit: "800m"
 
   - name: scraparr
     namespace: media
