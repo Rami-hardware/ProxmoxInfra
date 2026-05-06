@@ -22,7 +22,6 @@ prometheus_scrape_jobs:
       - "{{ hostvars['media-server']['ansible_host'] }}:9100"
       - "{{ hostvars['monitoring-server']['ansible_host'] }}:9100"
       - "{{ hostvars['git-k3s-server']['ansible_host'] }}:9100"
-      - "{{ hostvars['security-server']['ansible_host'] }}:9100"
       - "{{ hostvars['host-node']['ansible_host'] }}:9100"
     labels:
       os: linux
@@ -43,10 +42,6 @@ prometheus_scrape_jobs:
         regex: "{{ hostvars['git-k3s-server']['ansible_host'] }}:.*"
         target_label: instance
         replacement: "git-k3s-server"
-      - source_labels: [__address__]
-        regex: "{{ hostvars['security-server']['ansible_host'] }}:.*"
-        target_label: instance
-        replacement: "security-server"
       - source_labels: [__address__]
         regex: "{{ hostvars['host-node']['ansible_host'] }}:.*"
         target_label: instance
@@ -126,7 +121,6 @@ prometheus_scrape_jobs:
       - "{{ hostvars['media-server']['ansible_host'] }}:9080"
       - "{{ hostvars['monitoring-server']['ansible_host'] }}:9080"
       - "{{ hostvars['git-k3s-server']['ansible_host'] }}:9080"
-      - "{{ hostvars['security-server']['ansible_host'] }}:9080"
     relabel_configs:
       - source_labels: [__address__]
         regex: "{{ hostvars['gateway-server']['ansible_host'] }}:.*"
@@ -144,10 +138,6 @@ prometheus_scrape_jobs:
         regex: "{{ hostvars['git-k3s-server']['ansible_host'] }}:.*"
         target_label: instance
         replacement: "git-k3s-server"
-      - source_labels: [__address__]
-        regex: "{{ hostvars['security-server']['ansible_host'] }}:.*"
-        target_label: instance
-        replacement: "security-server"
 
   - name: falco
     targets:
@@ -155,7 +145,6 @@ prometheus_scrape_jobs:
       - "{{ hostvars['media-server']['ansible_host'] }}:8765"
       - "{{ hostvars['monitoring-server']['ansible_host'] }}:8765"
       - "{{ hostvars['git-k3s-server']['ansible_host'] }}:8765"
-      - "{{ hostvars['security-server']['ansible_host'] }}:8765"
     relabel_configs:
       - source_labels: [__address__]
         regex: "{{ hostvars['gateway-server']['ansible_host'] }}:.*"
@@ -173,10 +162,6 @@ prometheus_scrape_jobs:
         regex: "{{ hostvars['git-k3s-server']['ansible_host'] }}:.*"
         target_label: instance
         replacement: "git-k3s-server"
-      - source_labels: [__address__]
-        regex: "{{ hostvars['security-server']['ansible_host'] }}:.*"
-        target_label: instance
-        replacement: "security-server"
 
 # ── Loki ──────────────────────────────────────────────────────────────────────
 loki_config_dir: /opt/docker/loki
