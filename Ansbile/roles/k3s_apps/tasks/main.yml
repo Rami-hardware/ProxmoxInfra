@@ -86,7 +86,6 @@
     - monitoring-server
     - git-k3s-server
     - gateway-server
-    - security-server
   loop_control:
     loop_var: k3s_node
 
@@ -101,7 +100,6 @@
     - monitoring-server
     - git-k3s-server
     - gateway-server
-    - security-server
   loop_control:
     loop_var: k3s_node
 
@@ -316,18 +314,5 @@
     - media-server
     - monitoring-server
     - gateway-server
-    - security-server
   loop_control:
     loop_var: k3s_node
-
-- name: Template Falco DaemonSet manifest
-  ansible.builtin.template:
-    src: falco-daemonset.yml.j2
-    dest: "{{ k3s_apps_manifest_dir }}/falco.yml"
-    mode: '0644'
-
-- name: Apply Falco manifest
-  ansible.builtin.command: >
-    k3s kubectl apply --server-side --force-conflicts
-    -f {{ k3s_apps_manifest_dir }}/falco.yml
-  changed_when: true
