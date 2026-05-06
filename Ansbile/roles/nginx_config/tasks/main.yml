@@ -276,4 +276,3 @@
   delegate_to: localhost
   become: true
   changed_when: true
-
