@@ -400,33 +400,3 @@ k3s_apps_list:
     memory_limit: "512Mi"
     cpu_request: "100m"
     cpu_limit: "500m"
-
-  - name: authelia
-    namespace: security
-    image: authelia/authelia:latest
-    port: 9091
-    node_port: 9091
-    target_node: security-server
-    config_path: /opt/docker/authelia/config
-    config_mount: /config
-    enable_service_links: false
-    replicas: 1
-    extra_volumes:
-      - name: data
-        host_path: /opt/docker/authelia/data
-        mount_path: /data
-        create_host_dir: true
-    env:
-      - {
-          name: AUTHELIA_SESSION_SECRET,
-          value: "{{ authelia_session_secret }}",
-        }
-      - {
-          name: AUTHELIA_STORAGE_ENCRYPTION_KEY,
-          value: "{{ authelia_encryption_key }}",
-        }
-      - { name: AUTHELIA_JWT_SECRET, value: "{{ authelia_jwt_secret }}" }
-    memory_request: "128Mi"
-    memory_limit: "512Mi"
-    cpu_request: "100m"
-    cpu_limit: "500m"

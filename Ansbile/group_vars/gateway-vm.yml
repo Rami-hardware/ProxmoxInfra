@@ -103,54 +103,54 @@ nginx_services_local:
     ip: 192.168.1.201
     port: 7878
     namespace: media
-    auth: true
+    auth: false
 
   - name: sonarr
     ip: 192.168.1.201
     port: 8989
     namespace: media
-    auth: true
+    auth: false
 
   - name: prowlarr
     ip: 192.168.1.201
     port: 9696
     namespace: media
-    auth: true
+    auth: false
 
   - name: bazarr
     ip: 192.168.1.201
     port: 6767
     namespace: media
-    auth: true
+    auth: false
 
   - name: qbittorrent
     ip: 192.168.1.201
     port: 8080
     disable_buffering: true
     namespace: media
-    auth: true
+    auth: false
 
   - name: adguard
     ip: 192.168.1.200
     port: 8081
     namespace: network
     k8s_service: adguard-home
-    auth: true
+    auth: false
 
   - name: grafana
     ip: 192.168.1.203
     port: 3000
     namespace: monitoring
-    auth: true
+    auth: false
 
   - name: alertmanager
     ip: 192.168.1.203
     port: 9093
     namespace: monitoring
-    auth: true
+    auth: false
 
   - name: prometheus
     ip: 192.168.1.203
     port: 9090
     namespace: monitoring
-    auth: true
+    auth: false
