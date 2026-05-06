@@ -139,30 +139,6 @@ prometheus_scrape_jobs:
         target_label: instance
         replacement: "git-k3s-server"
 
-  - name: falco
-    targets:
-      - "{{ hostvars['gateway-server']['ansible_host'] }}:8765"
-      - "{{ hostvars['media-server']['ansible_host'] }}:8765"
-      - "{{ hostvars['monitoring-server']['ansible_host'] }}:8765"
-      - "{{ hostvars['git-k3s-server']['ansible_host'] }}:8765"
-    relabel_configs:
-      - source_labels: [__address__]
-        regex: "{{ hostvars['gateway-server']['ansible_host'] }}:.*"
-        target_label: instance
-        replacement: "gateway-server"
-      - source_labels: [__address__]
-        regex: "{{ hostvars['media-server']['ansible_host'] }}:.*"
-        target_label: instance
-        replacement: "media-server"
-      - source_labels: [__address__]
-        regex: "{{ hostvars['monitoring-server']['ansible_host'] }}:.*"
-        target_label: instance
-        replacement: "monitoring-server"
-      - source_labels: [__address__]
-        regex: "{{ hostvars['git-k3s-server']['ansible_host'] }}:.*"
-        target_label: instance
-        replacement: "git-k3s-server"
-
 # ── Loki ──────────────────────────────────────────────────────────────────────
 loki_config_dir: /opt/docker/loki
 loki_http_port: 3100
