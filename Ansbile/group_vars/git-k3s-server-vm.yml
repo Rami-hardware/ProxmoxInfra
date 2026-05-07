@@ -35,10 +35,10 @@ k3s_apps_list:
       - "8.8.4.4"
     env:
       - { name: TZ, value: "Asia/Riyadh" }
-    memory_request: "128Mi"
-    memory_limit: "384Mi"
+    memory_request: "256Mi"
+    memory_limit: "512Mi"
     cpu_request: "50m"
-    cpu_limit: "300m"
+    cpu_limit: "400m"
 
   - name: jellyfin
     namespace: media
@@ -68,10 +68,10 @@ k3s_apps_list:
       - { name: JELLYFIN_HWACCEL, value: "vaapi" }
       - { name: JELLYFIN_CACHE_DIR, value: "/cache" }
       - { name: DOTNET_SYSTEM_IO_DISABLEFILELOCKING, value: "true" }
-    memory_request: "512Mi"
-    memory_limit: "1.5Gi"
-    cpu_request: "300m"
-    cpu_limit: "1500m"
+    memory_request: "1Gi"
+    memory_limit: "4Gi"
+    cpu_request: "500m"
+    cpu_limit: "4000m"
 
   - name: bazarr
     namespace: media
@@ -97,10 +97,10 @@ k3s_apps_list:
       - { name: TZ, value: "Asia/Riyadh" }
       - { name: PUID, value: "1000" }
       - { name: PGID, value: "1000" }
-    memory_request: "128Mi"
-    memory_limit: "512Mi"
+    memory_request: "256Mi"
+    memory_limit: "768Mi"
     cpu_request: "100m"
-    cpu_limit: "400m"
+    cpu_limit: "500m"
 
   - name: radarr
     namespace: media
@@ -126,10 +126,10 @@ k3s_apps_list:
       - { name: TZ, value: "Asia/Riyadh" }
       - { name: PUID, value: "1000" }
       - { name: PGID, value: "1000" }
-    memory_request: "128Mi"
-    memory_limit: "512Mi"
+    memory_request: "256Mi"
+    memory_limit: "768Mi"
     cpu_request: "100m"
-    cpu_limit: "400m"
+    cpu_limit: "600m"
 
   - name: prowlarr
     namespace: media
@@ -148,10 +148,10 @@ k3s_apps_list:
       - { name: TZ, value: "Asia/Riyadh" }
       - { name: PUID, value: "1000" }
       - { name: PGID, value: "1000" }
-    memory_request: "128Mi"
-    memory_limit: "512Mi"
+    memory_request: "256Mi"
+    memory_limit: "768Mi"
     cpu_request: "100m"
-    cpu_limit: "700m"
+    cpu_limit: "800m"
 
   - name: qbittorrent
     namespace: media
@@ -172,9 +172,9 @@ k3s_apps_list:
       - { name: PGID, value: "1000" }
       - { name: WEBUI_PORT, value: "8080" }
     memory_request: "256Mi"
-    memory_limit: "768Mi"
+    memory_limit: "1Gi"
     cpu_request: "200m"
-    cpu_limit: "1000m"
+    cpu_limit: "1500m"
 
   - name: flaresolverr
     namespace: media
@@ -191,10 +191,10 @@ k3s_apps_list:
     env:
       - { name: TZ, value: "Asia/Riyadh" }
       - { name: LOG_LEVEL, value: "info" }
-    memory_request: "128Mi"
-    memory_limit: "512Mi"
+    memory_request: "256Mi"
+    memory_limit: "768Mi"
     cpu_request: "100m"
-    cpu_limit: "400m"
+    cpu_limit: "500m"
 
   - name: scraparr
     namespace: media
@@ -276,10 +276,10 @@ k3s_apps_list:
       - { name: TZ, value: "Asia/Riyadh" }
       - { name: PUID, value: "1000" }
       - { name: PGID, value: "1000" }
-    memory_request: "128Mi"
-    memory_limit: "512Mi"
+    memory_request: "256Mi"
+    memory_limit: "768Mi"
     cpu_request: "100m"
-    cpu_limit: "400m"
+    cpu_limit: "600m"
 
   - name: grafana
     namespace: monitoring
