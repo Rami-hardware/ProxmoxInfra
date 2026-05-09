@@ -234,19 +234,21 @@ k3s_apps_list:
 
   - name: qbittorrent-exporter
     namespace: monitoring
-    image: caseyscarborough/qbittorrent-exporter:latest
-    port: 17871
+    image: esanchezm/prometheus-qbittorrent-exporter:latest
+    port: 8000
     node_port: 17871
     target_node: media-server
     skip_pv: true
     replicas: 1
     env:
+      - name: QBITTORRENT_HOST
+        value: "192.168.1.201"
+      - name: QBITTORRENT_PORT
+        value: "8080"
       - name: QBITTORRENT_USERNAME
         value: "{{ qbittorrent_exporter_username }}"
       - name: QBITTORRENT_PASSWORD
         value: "{{ qbittorrent_exporter_password }}"
-      - name: QBITTORRENT_BASE_URL
-        value: "{{ qbittorrent_exporter_base_url }}"
     memory_request: "32Mi"
     memory_limit: "128Mi"
     cpu_request: "25m"
