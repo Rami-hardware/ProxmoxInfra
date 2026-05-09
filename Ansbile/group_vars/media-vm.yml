@@ -12,7 +12,7 @@ docker_apps_enabled:
   #  - promtail
   #  - cadvisor
   - node-exporter
-  #  - qbittorrent-exporter
+  - qbittorrent-exporter
   #  - docker_exporter
   #  - scraparr
   #  - intel-gpu-exporter
@@ -32,6 +32,7 @@ service_tcp_ports:
   - 32400 # Plex web & DLNA
   - 8081
   - 8282
+  - 17871 # qBittorrent exporter
 
 service_udp_ports:
   - 6881 # qBittorrent UDP
@@ -104,6 +105,11 @@ qbittorrent_ports:
   - "6881:6881/udp"
 qbittorrent_config: "/opt/qbittorrent:/config"
 qbittorrent_download: "/mnt/media/download:/downloads"
+# Settings for qBittorrent Exporter
+
+qbittorrent_exporter_username: "{{ lookup('env', 'QBITTORRENT_USERNAME') | default('', true) }}"
+qbittorrent_exporter_password: "{{ lookup('env', 'QBITTORRENT_PASSWORD') | default('', true) }}"
+qbittorrent_exporter_base_url: "http://192.168.1.201:8080"
 # Settings for Prowlarr
 
 prowlarr_ports:
