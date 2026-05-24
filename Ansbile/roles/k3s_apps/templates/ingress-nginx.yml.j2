@@ -21,7 +21,11 @@ metadata:
   name: ingress-nginx-controller
   namespace: ingress-nginx
 data:
-  allow-snippet-annotations: "false"
+  # Snippet annotations are required for per-service caching rules below.
+  # Safe in this homelab because all Ingress objects are managed via Ansible —
+  # no untrusted users can create Ingress resources. Do NOT enable in multi-tenant clusters.
+  allow-snippet-annotations: "true"
+  annotations-risk-level: "Critical"
   use-forwarded-headers: "true"
   compute-full-forwarded-for: "true"
 
