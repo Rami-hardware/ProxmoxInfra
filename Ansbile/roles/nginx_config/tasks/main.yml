@@ -56,34 +56,32 @@
     mode: "0600"
   delegate_to: git-k3s-server
 
-- name: Force-remove old cert if SAN no longer matches homelab.lan
-  ansible.builtin.shell:
-    cmd: |
-      set -o pipefail
-      openssl x509 -in /opt/k3s/local-tls/local.crt -noout -text 2>/dev/null \
-        | grep -q 'homelab.lan' || rm -f /opt/k3s/local-tls/local.crt
-    executable: /bin/bash
-  changed_when: false
-  failed_when: false
-  delegate_to: git-k3s-server
-
-- name: Check wildcard cert expiry
+- name: Inspect existing wildcard cert (if any)
   community.crypto.x509_certificate_info:
     path: /opt/k3s/local-tls/local.crt
     valid_at:
       sixty_days: "+60d"
   register: nginx_config_cert_info
   delegate_to: git-k3s-server
-  ignore_errors: true
+  failed_when: false
 
-- name: Remove wildcard cert if expiring within 60 days
+# Single decision point: regenerate if missing, wrong SAN, or expiring within 60 days.
+- name: Decide whether to regenerate wildcard cert
+  ansible.builtin.set_fact:
+    nginx_config_regen_cert: >-
+      {{
+        nginx_config_cert_info is failed
+        or nginx_config_cert_info.subject_alt_name is not defined
+        or 'DNS:*.homelab.lan' not in nginx_config_cert_info.subject_alt_name
+        or not (nginx_config_cert_info.valid_at.sixty_days | default(false))
+      }}
+
+- name: Remove stale wildcard cert
   ansible.builtin.file:
     path: /opt/k3s/local-tls/local.crt
     state: absent
   delegate_to: git-k3s-server
-  when:
-    - nginx_config_cert_info is not failed
-    - not nginx_config_cert_info.valid_at.sixty_days
+  when: nginx_config_regen_cert | bool
 
 - name: Sign local wildcard cert with local CA
   community.crypto.x509_certificate:
@@ -202,23 +200,6 @@
     -f /opt/k3s/manifests/ingress-services.yml
   changed_when: true
   delegate_to: git-k3s-server
-
-- name: Remove auth annotations from public ingresses
-  ansible.builtin.shell:
-    cmd: |
-      set -o pipefail
-      for ing in $(k3s kubectl get ingress -A -o jsonpath='{range .items[?(@.metadata.name=~".*-public")]}{.metadata.namespace} {.metadata.name}{"\n"}{end}'); do
-        NS=$(echo $ing | awk '{print $1}')
-        NAME=$(echo $ing | awk '{print $2}')
-        k3s kubectl annotate ingress/$NAME -n $NS \
-          nginx.ingress.kubernetes.io/auth-url- \
-          nginx.ingress.kubernetes.io/auth-signin- \
-          nginx.ingress.kubernetes.io/auth-response-headers- \
-          --ignore-not-found 2>/dev/null || true
-      done
-    executable: /bin/bash
-  delegate_to: git-k3s-server
-  changed_when: false
 
 # ── Remove legacy ca-dist resources from cluster ─────────────────────────────
 - name: Remove legacy ca-dist k8s resources (renamed to ca-cert)
