@@ -155,8 +155,10 @@ k3s_apps_list:
       - { name: TZ, value: "Asia/Riyadh" }
       - { name: PUID, value: "1000" }
       - { name: PGID, value: "1000" }
-    memory_request: "128Mi"
-    memory_limit: "384Mi"
+    # Prowlarr (.NET) memory grows with active indexer count + search history.
+    # 384Mi was too tight; 768Mi gives headroom for ~50 indexers.
+    memory_request: "192Mi"
+    memory_limit: "768Mi"
     cpu_request: "50m"
     cpu_limit: "400m"
 
