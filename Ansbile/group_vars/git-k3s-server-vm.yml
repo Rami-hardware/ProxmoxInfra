@@ -200,8 +200,10 @@ k3s_apps_list:
     env:
       - { name: TZ, value: "Asia/Riyadh" }
       - { name: LOG_LEVEL, value: "info" }
-    memory_request: "128Mi"
-    memory_limit: "512Mi"
+    # Flaresolverr runs a full Chromium browser — baseline 300-400MB,
+    # spikes to 600-800MB on challenge pages. 512Mi was too tight.
+    memory_request: "256Mi"
+    memory_limit: "1Gi"
     cpu_request: "50m"
     cpu_limit: "500m"
 
