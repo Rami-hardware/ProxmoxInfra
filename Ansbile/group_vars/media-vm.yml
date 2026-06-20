@@ -26,6 +26,7 @@ service_tcp_ports:
   - 8989  # Sonarr
   - 6767  # Bazarr
   - 8080  # qBittorrent Web UI
+  - 6881  # qBittorrent TCP
   - 9696  # Prowlarr
   - 9001  # Portainer Agent
   - 8191  # FlareSolverr
