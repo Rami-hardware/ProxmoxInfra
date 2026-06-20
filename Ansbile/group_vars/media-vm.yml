@@ -11,27 +11,27 @@ docker_apps_enabled:
   #  - jellyfin
   #  - promtail
   #  - cadvisor
-  - node-exporter
-  - qbittorrent-exporter
+  #  - node-exporter
+  #  - qbittorrent-exporter
   #  - docker_exporter
   #  - scraparr
   #  - intel-gpu-exporter
   #  - subsyncer
 
 service_tcp_ports:
-  - 8096 # Jellyfin HTTP
-  - 8920 # Jellyfin HTTPS
-  - 5055 # Overseer
-  - 7878 # Radarr
-  - 8989 # Sonarr
-  - 6767 # Bazarr
-  - 8080 # qBittorrent Web UI
-  - 9696 # Prowlarr
-  - 9001 # Portainer Agent
-  - 8191 # FlareSolverr
+  - 8096  # Jellyfin HTTP
+  - 8920  # Jellyfin HTTPS
+  - 5055  # Overseer
+  - 7878  # Radarr
+  - 8989  # Sonarr
+  - 6767  # Bazarr
+  - 8080  # qBittorrent Web UI
+  - 9696  # Prowlarr
+  - 9001  # Portainer Agent
+  - 8191  # FlareSolverr
   - 32400 # Plex web & DLNA
-  - 8081
-  - 8282
+  - 8081  # Sa
+  - 8282  # Plex web & DLNA
   - 17871 # qBittorrent exporter
 
 service_udp_ports:
