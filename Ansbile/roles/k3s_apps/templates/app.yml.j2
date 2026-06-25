@@ -197,7 +197,8 @@ spec:
   selector:
     app: {{ item.name }}
   ports:
-    - port: {{ item.port }}
+    - name: http
+      port: {{ item.port }}
       targetPort: {{ item.port }}
       nodePort: {{ item.node_port }}
 {% for sp in item.service_ports | default([]) %}
@@ -209,7 +210,8 @@ spec:
 {% endif %}
 {% endfor %}
 {% for ep in item.extra_ports | default([]) if ep.node_port is defined %}
-    - port: {{ ep.port }}
+    - name: {{ ep.name | default('p-' ~ ep.port ~ '-' ~ (ep.protocol | default('tcp') | lower)) }}
+      port: {{ ep.port }}
       targetPort: {{ ep.port }}
       nodePort: {{ ep.node_port }}
 {% if ep.protocol is defined %}
