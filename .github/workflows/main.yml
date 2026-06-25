@@ -7,11 +7,20 @@ on:
       - development
       - staging
       - main
+  schedule:
+    - cron: '0 3 1 * *'  # 1st of every month at 03:00 UTC — monthly redeploy (triggers cert regen as side effect)
+  workflow_dispatch:
+
+# Prevent two deploys from racing on Terraform state / Ansible runs.
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
   testing:
     name: Testing Infrastructure Code
     runs-on: self-hosted
+    timeout-minutes: 30
     environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || 'development' }}
 
     steps:
@@ -117,23 +126,19 @@ jobs:
 
       - name: Setup SSH and Vault
         shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H 192.168.1.200 >> ~/.ssh/known_hosts || true
-          ssh-keyscan -H 192.168.1.201 >> ~/.ssh/known_hosts || true
-          ssh-keyscan -H 192.168.1.203 >> ~/.ssh/known_hosts || true
-          ssh-keyscan -H 192.168.1.204 >> ~/.ssh/known_hosts || true
-          echo "${ANSIBLE_VAULT_PASSWORD}" > ~/.vault_pass
-          chmod 600 ~/.vault_pass
-        env:
-          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          echo "$ANSIBLE_VAULT_PASSWORD" > ~/.vault_pass
+          chmod 600 ~/.ssh/id_rsa ~/.vault_pass
 
       - name: Ansible syntax check
         run: |
           source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/security-server.yml --syntax-check --vault-password-file ~/.vault_pass
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --syntax-check --vault-password-file ~/.vault_pass
 
 
       - name: Ansible lint
@@ -146,7 +151,7 @@ jobs:
       - name: Ansible dry run (check + diff)
         run: |
           source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/security-server.yml --check --diff --vault-password-file ~/.vault_pass
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --check --diff --vault-password-file ~/.vault_pass
         env:
           ANSIBLE_HOST_KEY_CHECKING: 'False'
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
@@ -155,7 +160,6 @@ jobs:
           PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
           RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
           OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
 
       - name: Cleanup secrets
         if: always()
@@ -167,6 +171,7 @@ jobs:
     name: Deploy Infrastructure Code
     runs-on: self-hosted
     needs: testing
+    timeout-minutes: 60
     environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || 'development' }}
 
     steps:
@@ -226,23 +231,23 @@ jobs:
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         run: terraform init
 
-      - name: Import existing VMs into Terraform state
+      # NOTE: VM imports are intentionally NOT done in CI. Terraform state is
+      # persistent on the self-hosted runner, so imports are only needed once
+      # (first setup) or after state corruption. Run manually if needed:
+      #   terraform import 'module.proxmox_vms["NAME"].proxmox_virtual_environment_vm.vm' pve/VMID
+
+      # Clean up stale state entries from past renames/typos. Without this,
+      # Terraform tries to destroy + recreate VMs that just got renamed in code.
+      - name: Cleanup stale Terraform state entries
         working-directory: Terraform
         env:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
           TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         run: |
-          terraform import -lock=false 'module.proxmox_vms["gateway"].proxmox_virtual_environment_vm.vm'    pve/505 || echo "gateway already imported"
-          terraform import -lock=false 'module.proxmox_vms["media"].proxmox_virtual_environment_vm.vm'      pve/911 || echo "media already imported"
-          terraform import -lock=false 'module.proxmox_vms["monitoring"].proxmox_virtual_environment_vm.vm' pve/511 || echo "monitoring already imported"
-          terraform import -lock=false 'module.proxmox_vms["security"].proxmox_virtual_environment_vm.vm'   pve/619 || echo "security already imported"
-          terraform import -lock=false 'module.proxmox_vms["github"].proxmox_virtual_environment_vm.vm'     pve/115 || echo "github already imported"
-          # Remove stale state entries that are no longer managed
-          terraform state rm 'module.proxmox_vms["monitor"].proxmox_virtual_environment_vm.vm'   2>/dev/null || echo "monitor stale entry not present"
-          terraform state rm 'module.proxmox_vms["game"].proxmox_virtual_environment_vm.vm'      2>/dev/null || echo "game stale entry not present"
-          terraform state rm 'module.proxmox_vms["dev"].proxmox_virtual_environment_vm.vm'       2>/dev/null || echo "dev stale entry not present"
-          terraform state rm 'module.proxmox_vms["securtiy"].proxmox_virtual_environment_vm.vm'  2>/dev/null || echo "securtiy stale entry not present"
+          for stale in monitor game dev securtiy; do
+            terraform state rm "module.proxmox_vms[\"$stale\"].proxmox_virtual_environment_vm.vm" 2>/dev/null || true
+          done
 
       - name: Terraform plan (compare code vs server)
         id: plan
@@ -293,6 +298,7 @@ jobs:
             -target='module.proxmox_vms["media"]' \
             -target='module.proxmox_vms["monitoring"]' \
             -target='module.proxmox_vms["security"]'
+
       # ── Ansible ──────────────────────────────────────────────────────────────
       - name: Install system dependencies
         run: |
@@ -306,7 +312,7 @@ jobs:
           else
             echo "All packages already installed — skipping apt-get update."
           fi
-
+ 
       - name: Set up Python virtualenv
         run: |
           if [ ! -f venv/bin/ansible ]; then
@@ -324,18 +330,14 @@ jobs:
 
       - name: Setup SSH and Vault
         shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H 192.168.1.200 >> ~/.ssh/known_hosts || true
-          ssh-keyscan -H 192.168.1.201 >> ~/.ssh/known_hosts || true
-          ssh-keyscan -H 192.168.1.203 >> ~/.ssh/known_hosts || true
-          ssh-keyscan -H 192.168.1.204 >> ~/.ssh/known_hosts || true
-          echo "${ANSIBLE_VAULT_PASSWORD}" > ~/.vault_pass
-          chmod 600 ~/.vault_pass
-        env:
-          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          echo "$ANSIBLE_VAULT_PASSWORD" > ~/.vault_pass
+          chmod 600 ~/.ssh/id_rsa ~/.vault_pass
 
       - name: Run Ansible playbooks
         env:
@@ -347,13 +349,66 @@ jobs:
           PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
           RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
           OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         run: |
           source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/security-server.yml
-          
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml
+
       - name: Cleanup secrets
         if: always()
         run: |
           rm -f ~/.vault_pass
           rm -f ~/.ssh/id_rsa
+
+  notify:
+    name: Notify Discord
+    runs-on: self-hosted
+    needs: [testing, Deploy]
+    if: always()
+    timeout-minutes: 5
+    steps:
+      - name: Send Discord notification
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_CD_Alert_URL }}
+          TESTING_RESULT: ${{ needs.testing.result }}
+          DEPLOY_RESULT: ${{ needs.Deploy.result }}
+          BRANCH: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          ACTOR: ${{ github.actor }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # Discord embed colors: green=3066993, red=15158332, yellow=15844367, grey=9807270
+          if [ "$TESTING_RESULT" = "success" ] && [ "$DEPLOY_RESULT" = "success" ]; then
+            STATUS="✅ Success"; COLOR=3066993
+          elif [ "$TESTING_RESULT" = "cancelled" ] || [ "$DEPLOY_RESULT" = "cancelled" ]; then
+            STATUS="⏹️ Cancelled"; COLOR=9807270
+          elif [ "$TESTING_RESULT" = "skipped" ] && [ "$DEPLOY_RESULT" = "skipped" ]; then
+            STATUS="⚠️ Skipped"; COLOR=15844367
+          else
+            STATUS="❌ Failed"; COLOR=15158332
+          fi
+
+          # Truncate + JSON-escape commit message (handles quotes, newlines, etc.)
+          MSG=$(printf '%s' "${COMMIT_MSG:-no message}" | head -c 200 \
+                | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
+
+          curl -sS -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK" <<EOF
+          {
+            "embeds": [{
+              "title": "$STATUS — Homelab CI/CD",
+              "url": "$RUN_URL",
+              "color": $COLOR,
+              "fields": [
+                {"name": "Branch",  "value": "\`$BRANCH\`",      "inline": true},
+                {"name": "Author",  "value": "$ACTOR",            "inline": true},
+                {"name": "Commit",  "value": "\`${COMMIT:0:7}\`", "inline": true},
+                {"name": "Testing", "value": "$TESTING_RESULT",   "inline": true},
+                {"name": "Deploy",  "value": "$DEPLOY_RESULT",    "inline": true},
+                {"name": "Message", "value": $MSG}
+              ],
+              "footer": {"text": "GitHub Actions"}
+            }]
+          }
+          EOF

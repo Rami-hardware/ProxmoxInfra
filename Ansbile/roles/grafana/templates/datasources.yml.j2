@@ -8,4 +8,8 @@ datasources:
     access: proxy
     isDefault: {{ ds.default | default(false) | lower }}
     editable: false
+{% if ds.type == 'prometheus' %}
+    jsonData:
+      manageAlerts: false
+{% endif %}
 {% endfor %}

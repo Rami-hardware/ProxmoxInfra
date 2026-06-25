@@ -1,6 +1,24 @@
 ---
 prometheus_retention_time: 30d
 
+# ── Security stack ────────────────────────────────────────────────────────────
+falco_config_dir: /opt/falco/config
+wazuh_agent_version: "4.9.0"
+# wazuh-agent has no official Docker image — agents are installed via package on each host
+trivy_operator_version: "0.22.0"
+
+authelia_session_secret: "change_me_session_secret"
+authelia_encryption_key: "change_me_encryption_key_32chars_min"
+authelia_jwt_secret: "change_me_jwt_secret"
+
+authelia_users:
+  - username: rami
+    displayname: "Rami"
+    email: "rami@atomzstudio.com"
+    password_hash: "{{ vault_authelia_password_hash }}"
+    groups:
+      - admins
+
 k3s_apps_list:
   - name: overseerr
     namespace: media
@@ -11,12 +29,16 @@ k3s_apps_list:
     config_path: /opt/overseer
     config_mount: /app/config
     replicas: 1
+    dns_policy: None
+    dns_nameservers:
+      - "8.8.8.8"
+      - "8.8.4.4"
     env:
       - { name: TZ, value: "Asia/Riyadh" }
-    memory_request: "256Mi"
-    memory_limit: "1Gi"
-    cpu_request: "200m"
-    cpu_limit: "1000m"
+    memory_request: "128Mi"
+    memory_limit: "384Mi"
+    cpu_request: "50m"
+    cpu_limit: "300m"
 
   - name: jellyfin
     namespace: media
@@ -27,6 +49,10 @@ k3s_apps_list:
     config_path: /opt/jellyfin
     config_mount: /config
     replicas: 1
+    dns_policy: None
+    dns_nameservers:
+      - "8.8.8.8"
+      - "8.8.4.4"
     gpu: true
     extra_volumes:
       - name: media
@@ -40,10 +66,12 @@ k3s_apps_list:
       - { name: LIBVA_DRIVER_NAME, value: "iHD" }
       - { name: VAAPI_DEVICE, value: "/dev/dri/renderD128" }
       - { name: JELLYFIN_HWACCEL, value: "vaapi" }
-    memory_request: "512Mi"
-    memory_limit: "4Gi"
-    cpu_request: "500m"
-    cpu_limit: "3000m"
+      - { name: JELLYFIN_CACHE_DIR, value: "/cache" }
+      - { name: DOTNET_SYSTEM_IO_DISABLEFILELOCKING, value: "true" }
+    memory_request: "2Gi"
+    memory_limit: "5Gi"
+    cpu_request: "2000m"
+    cpu_limit: "5000m"
 
   - name: bazarr
     namespace: media
@@ -54,6 +82,13 @@ k3s_apps_list:
     config_path: /opt/bazarr
     config_mount: /config
     replicas: 1
+    dns_policy: None
+    dns_nameservers:
+      - "8.8.8.8"
+      - "8.8.4.4"
+    # GPU access enables VAAPI hwaccel for ffmpeg during audio extraction,
+    # which is what ffsubsync/subsync use to align subs to audio tracks.
+    gpu: true
     extra_volumes:
       - name: tv
         host_path: /mnt/media/tv
@@ -65,16 +100,24 @@ k3s_apps_list:
       - { name: TZ, value: "Asia/Riyadh" }
       - { name: PUID, value: "1000" }
       - { name: PGID, value: "1000" }
+      - { name: LIBVA_DRIVER_NAME, value: "iHD" }
+      - { name: VAAPI_DEVICE, value: "/dev/dri/renderD128" }
+    # Sync passes run ffmpeg + ffsubsync/subsync — CPU heavy per-file,
+    # memory grows with audio buffer length on long files.
     memory_request: "256Mi"
     memory_limit: "1Gi"
-    cpu_request: "200m"
-    cpu_limit: "1000m"
+    cpu_request: "100m"
+    cpu_limit: "1500m"
 
   - name: radarr
     namespace: media
     image: linuxserver/radarr:latest
     port: 7878
     node_port: 7878
+    dns_policy: None
+    dns_nameservers:
+      - "8.8.8.8"
+      - "8.8.4.4"
     target_node: media-server
     config_path: /opt/radarr
     config_mount: /config
@@ -90,10 +133,10 @@ k3s_apps_list:
       - { name: TZ, value: "Asia/Riyadh" }
       - { name: PUID, value: "1000" }
       - { name: PGID, value: "1000" }
-    memory_request: "256Mi"
-    memory_limit: "1Gi"
-    cpu_request: "200m"
-    cpu_limit: "1000m"
+    memory_request: "128Mi"
+    memory_limit: "512Mi"
+    cpu_request: "50m"
+    cpu_limit: "500m"
 
   - name: prowlarr
     namespace: media
@@ -103,15 +146,21 @@ k3s_apps_list:
     target_node: media-server
     config_path: /opt/prowlarr
     config_mount: /config
+    dns_policy: None
+    dns_nameservers:
+      - "8.8.8.8"
+      - "8.8.4.4"
     replicas: 1
     env:
       - { name: TZ, value: "Asia/Riyadh" }
       - { name: PUID, value: "1000" }
       - { name: PGID, value: "1000" }
-    memory_request: "128Mi"
-    memory_limit: "512Mi"
-    cpu_request: "100m"
-    cpu_limit: "500m"
+    # Prowlarr (.NET) memory grows with active indexer count + search history.
+    # 384Mi was too tight; 768Mi gives headroom for ~50 indexers.
+    memory_request: "192Mi"
+    memory_limit: "768Mi"
+    cpu_request: "50m"
+    cpu_limit: "400m"
 
   - name: qbittorrent
     namespace: media
@@ -126,13 +175,22 @@ k3s_apps_list:
       - name: downloads
         host_path: /mnt/media/download
         mount_path: /downloads
+    extra_ports:
+      - port: 6881
+        protocol: TCP
+        host_port: 6881
+        node_port: 6881
+      - port: 6881
+        protocol: UDP
+        host_port: 6881
+        node_port: 6881
     env:
       - { name: TZ, value: "Asia/Riyadh" }
       - { name: PUID, value: "1000" }
       - { name: PGID, value: "1000" }
       - { name: WEBUI_PORT, value: "8080" }
     memory_request: "256Mi"
-    memory_limit: "2Gi"
+    memory_limit: "1Gi"
     cpu_request: "200m"
     cpu_limit: "2000m"
 
@@ -143,41 +201,19 @@ k3s_apps_list:
     node_port: 8191
     target_node: media-server
     skip_pv: true
+    dns_policy: None
+    dns_nameservers:
+      - "8.8.8.8"
+      - "8.8.4.4"
     replicas: 1
     env:
       - { name: TZ, value: "Asia/Riyadh" }
       - { name: LOG_LEVEL, value: "info" }
-    memory_request: "512Mi"
-    memory_limit: "2Gi"
-    cpu_request: "200m"
-    cpu_limit: "1000m"
-
-  - name: subsyncarr
-    namespace: media
-    image: mrorbitman/subsyncarr:latest
-    target_node: media-server
-    config_path: /opt/subsyncarr
-    config_mount: /config
-    replicas: 1
-    extra_volumes:
-      - name: movies
-        host_path: /mnt/media/movies
-        mount_path: /movies
-      - name: media
-        host_path: /mnt/media/tv
-        mount_path: /tv
-    env:
-      - { name: TZ, value: "Asia/Riyadh" }
-      - { name: PUID, value: "1000" }
-      - { name: PGID, value: "1000" }
-      - { name: SCAN_PATHS, value: "/movies,/tv" }
-      - { name: MAX_CONCURRENT_SYNC_TASKS, value: 1 }
-      - { name: INCLUDE_ENGINES, value: ffsubsync }
-      - { name: DOWNLOAD_SUBS, value: false }
-      - { name: FFMPEG_HWACCEL, value: vaapi }
-    memory_request: "128Mi"
-    memory_limit: "512Mi"
-    cpu_request: "100m"
+    # Flaresolverr runs a full Chromium browser — baseline 300-400MB,
+    # spikes to 600-800MB on challenge pages. 512Mi was too tight.
+    memory_request: "256Mi"
+    memory_limit: "1Gi"
+    cpu_request: "50m"
     cpu_limit: "500m"
 
   - name: scraparr
@@ -191,10 +227,10 @@ k3s_apps_list:
     replicas: 1
     env:
       - { name: TZ, value: "Asia/Riyadh" }
-    memory_request: "128Mi"
-    memory_limit: "512Mi"
-    cpu_request: "100m"
-    cpu_limit: "500m"
+    memory_request: "64Mi"
+    memory_limit: "256Mi"
+    cpu_request: "25m"
+    cpu_limit: "200m"
 
   - name: intel-gpu-exporter
     namespace: monitoring
@@ -211,30 +247,32 @@ k3s_apps_list:
         mount_path: /dev/dri
     env:
       - { name: TZ, value: "Asia/Riyadh" }
-    memory_request: "64Mi"
-    memory_limit: "256Mi"
-    cpu_request: "50m"
-    cpu_limit: "200m"
+    memory_request: "32Mi"
+    memory_limit: "128Mi"
+    cpu_request: "25m"
+    cpu_limit: "100m"
 
   - name: qbittorrent-exporter
     namespace: monitoring
-    image: caseyscarborough/qbittorrent-exporter:latest
-    port: 17871
+    image: esanchezm/prometheus-qbittorrent-exporter:latest
+    port: 8000
     node_port: 17871
     target_node: media-server
     skip_pv: true
     replicas: 1
     env:
+      - name: QBITTORRENT_HOST
+        value: "192.168.1.201"
+      - name: QBITTORRENT_PORT
+        value: "8080"
       - name: QBITTORRENT_USERNAME
         value: "{{ qbittorrent_exporter_username }}"
       - name: QBITTORRENT_PASSWORD
         value: "{{ qbittorrent_exporter_password }}"
-      - name: QBITTORRENT_BASE_URL
-        value: "{{ qbittorrent_exporter_base_url }}"
-    memory_request: "64Mi"
-    memory_limit: "256Mi"
-    cpu_request: "50m"
-    cpu_limit: "200m"
+    memory_request: "32Mi"
+    memory_limit: "128Mi"
+    cpu_request: "25m"
+    cpu_limit: "100m"
 
   - name: sonarr
     namespace: media
@@ -244,6 +282,10 @@ k3s_apps_list:
     target_node: media-server
     config_path: /opt/sonarr
     config_mount: /config
+    dns_policy: None
+    dns_nameservers:
+      - "8.8.8.8"
+      - "8.8.4.4"
     replicas: 1
     extra_volumes:
       - name: tv
@@ -256,10 +298,10 @@ k3s_apps_list:
       - { name: TZ, value: "Asia/Riyadh" }
       - { name: PUID, value: "1000" }
       - { name: PGID, value: "1000" }
-    memory_request: "256Mi"
-    memory_limit: "1Gi"
-    cpu_request: "200m"
-    cpu_limit: "1000m"
+    memory_request: "128Mi"
+    memory_limit: "512Mi"
+    cpu_request: "50m"
+    cpu_limit: "500m"
 
   - name: grafana
     namespace: monitoring
@@ -270,6 +312,10 @@ k3s_apps_list:
     config_path: /opt/docker/grafana
     config_mount: /opt/docker/grafana
     replicas: 1
+    dns_policy: None
+    dns_nameservers:
+      - "8.8.8.8"
+      - "8.8.4.4"
     extra_volumes:
       - name: provisioning
         host_path: /opt/docker/grafana/provisioning
@@ -277,11 +323,10 @@ k3s_apps_list:
     env:
       - { name: GF_PATHS_DATA, value: /opt/docker/grafana }
       - { name: GF_FEATURE_TOGGLES_ENABLE, value: "kubernetesDashboards=false" }
-
-    memory_request: "128Mi"
-    memory_limit: "512Mi"
-    cpu_request: "50m"
-    cpu_limit: "500m"
+    memory_request: "256Mi"
+    memory_limit: "1Gi"
+    cpu_request: "100m"
+    cpu_limit: "1000m"
 
   - name: prometheus
     namespace: monitoring
@@ -297,10 +342,13 @@ k3s_apps_list:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.retention.time={{ prometheus_retention_time }}"
       - "--web.enable-lifecycle"
-    memory_request: "256Mi"
-    memory_limit: "1Gi"
-    cpu_request: "100m"
-    cpu_limit: "1000m"
+      - "--storage.tsdb.wal-compression"
+      - "--query.timeout=30s"
+      - "--query.max-concurrency=10"
+    memory_request: "512Mi"
+    memory_limit: "2Gi"
+    cpu_request: "200m"
+    cpu_limit: "2000m"
 
   - name: loki
     namespace: monitoring
@@ -314,9 +362,9 @@ k3s_apps_list:
     args:
       - "-config.file=/etc/loki/config.yml"
     memory_request: "128Mi"
-    memory_limit: "512Mi"
+    memory_limit: "384Mi"
     cpu_request: "50m"
-    cpu_limit: "500m"
+    cpu_limit: "250m"
 
   - name: alertmanager
     namespace: monitoring
@@ -329,10 +377,10 @@ k3s_apps_list:
     replicas: 1
     args:
       - "--config.file=/etc/alertmanager/config.yml"
-    memory_request: "64Mi"
-    memory_limit: "256Mi"
-    cpu_request: "25m"
-    cpu_limit: "200m"
+    memory_request: "32Mi"
+    memory_limit: "128Mi"
+    cpu_request: "10m"
+    cpu_limit: "100m"
 
   - name: speedtest-exporter
     namespace: monitoring
@@ -341,15 +389,15 @@ k3s_apps_list:
     node_port: 9798
     target_node: monitoring-server
     skip_pv: true
+    replicas: 1
     dns_policy: None
     dns_nameservers:
       - "8.8.8.8"
       - "8.8.4.4"
-    replicas: 1
-    memory_request: "64Mi"
-    memory_limit: "256Mi"
-    cpu_request: "25m"
-    cpu_limit: "200m"
+    memory_request: "32Mi"
+    memory_limit: "128Mi"
+    cpu_request: "10m"
+    cpu_limit: "100m"
 
   - name: adguard-home
     namespace: network

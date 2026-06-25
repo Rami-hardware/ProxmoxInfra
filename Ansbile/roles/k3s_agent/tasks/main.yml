@@ -52,3 +52,24 @@
     K3S_URL: "https://{{ hostvars['git-k3s-server']['ansible_host'] }}:6443"
     K3S_TOKEN: "{{ k3s_agent_token }}"
     K3S_NODE_NAME: "{{ inventory_hostname }}"
+
+- name: Fetch homelab CA cert from k3s server
+  ansible.builtin.slurp:
+    src: /opt/k3s/local-ca.crt
+  delegate_to: git-k3s-server
+  register: k3s_agent_ca_cert
+  ignore_errors: true
+
+- name: Install homelab CA cert
+  ansible.builtin.copy:
+    content: "{{ k3s_agent_ca_cert.content | b64decode }}"
+    dest: /usr/local/share/ca-certificates/homelab-local-ca.crt
+    owner: root
+    group: root
+    mode: "0644"
+  when: k3s_agent_ca_cert is not failed
+
+- name: Update CA trust store
+  ansible.builtin.command: update-ca-certificates
+  changed_when: true
+  when: k3s_agent_ca_cert is not failed

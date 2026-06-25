@@ -91,6 +91,9 @@ spec:
 {% if item.service_account is defined %}
       serviceAccountName: {{ item.service_account }}
 {% endif %}
+{% if not (item.enable_service_links | default(true)) %}
+      enableServiceLinks: false
+{% endif %}
       nodeSelector:
         kubernetes.io/hostname: {{ item.target_node }}
       containers:
@@ -194,7 +197,8 @@ spec:
   selector:
     app: {{ item.name }}
   ports:
-    - port: {{ item.port }}
+    - name: http
+      port: {{ item.port }}
       targetPort: {{ item.port }}
       nodePort: {{ item.node_port }}
 {% for sp in item.service_ports | default([]) %}
@@ -206,7 +210,8 @@ spec:
 {% endif %}
 {% endfor %}
 {% for ep in item.extra_ports | default([]) if ep.node_port is defined %}
-    - port: {{ ep.port }}
+    - name: {{ ep.name | default('p-' ~ ep.port ~ '-' ~ (ep.protocol | default('tcp') | lower)) }}
+      port: {{ ep.port }}
       targetPort: {{ ep.port }}
       nodePort: {{ ep.node_port }}
 {% if ep.protocol is defined %}

@@ -82,11 +82,24 @@
   delay: 5
   changed_when: false
 
+- name: Patch CoreDNS to forward external DNS to 8.8.8.8 directly
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      k3s kubectl get configmap coredns -n kube-system -o yaml | \
+        sed 's|forward . /etc/resolv.conf|forward . 8.8.8.8 8.8.4.4|g' | \
+        k3s kubectl apply -f -
+    executable: /bin/bash
+  register: k3s_server_coredns_patch_result
+  changed_when: "'configured' in k3s_server_coredns_patch_result.stdout"
+
 - name: Restart CoreDNS to pick up new resolv.conf
   ansible.builtin.command:
     cmd: k3s kubectl rollout restart deployment/coredns -n kube-system
   changed_when: true
-  when: k3s_server_config_result is defined and k3s_server_config_result.changed
+  when: >
+    (k3s_server_config_result is defined and k3s_server_config_result.changed)
+    or ('configured' in k3s_server_coredns_patch_result.stdout)
 
 - name: Wait for CoreDNS to be ready
   ansible.builtin.command:

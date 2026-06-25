@@ -1,4 +1,157 @@
 ---
+# ── Local TLS: self-signed CA + wildcard cert ─────────────────────────────────
+- name: Ensure local TLS working directory exists
+  ansible.builtin.file:
+    path: /opt/k3s/local-tls
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  delegate_to: git-k3s-server
+
+- name: Generate local CA private key
+  community.crypto.openssl_privatekey:
+    path: /opt/k3s/local-tls/ca.key
+    size: 4096
+    mode: "0600"
+  delegate_to: git-k3s-server
+
+- name: Generate local CA CSR
+  community.crypto.openssl_csr:
+    path: /opt/k3s/local-tls/ca.csr
+    privatekey_path: /opt/k3s/local-tls/ca.key
+    common_name: Local Homelab CA
+    organization_name: Homelab
+    basic_constraints:
+      - "CA:TRUE"
+    basic_constraints_critical: true
+    mode: "0600"
+  delegate_to: git-k3s-server
+
+- name: Generate local CA certificate
+  community.crypto.x509_certificate:
+    path: /opt/k3s/local-tls/ca.crt
+    privatekey_path: /opt/k3s/local-tls/ca.key
+    csr_path: /opt/k3s/local-tls/ca.csr
+    provider: selfsigned
+    selfsigned_not_after: "+3650d"
+    mode: "0644"
+  delegate_to: git-k3s-server
+
+- name: Generate local wildcard private key
+  community.crypto.openssl_privatekey:
+    path: /opt/k3s/local-tls/local.key
+    size: 4096
+    mode: "0600"
+  delegate_to: git-k3s-server
+
+- name: Generate local wildcard CSR
+  community.crypto.openssl_csr:
+    path: /opt/k3s/local-tls/local.csr
+    privatekey_path: /opt/k3s/local-tls/local.key
+    common_name: "*.homelab.lan"
+    subject_alt_name:
+      - "DNS:*.homelab.lan"
+      - "DNS:homelab.lan"
+    mode: "0600"
+  delegate_to: git-k3s-server
+
+- name: Inspect existing wildcard cert (if any)
+  community.crypto.x509_certificate_info:
+    path: /opt/k3s/local-tls/local.crt
+    valid_at:
+      sixty_days: "+60d"
+  register: nginx_config_cert_info
+  delegate_to: git-k3s-server
+  failed_when: false
+
+# Single decision point: regenerate if missing, wrong SAN, or expiring within 60 days.
+- name: Decide whether to regenerate wildcard cert
+  ansible.builtin.set_fact:
+    nginx_config_regen_cert: >-
+      {{
+        nginx_config_cert_info is failed
+        or nginx_config_cert_info.subject_alt_name is not defined
+        or 'DNS:*.homelab.lan' not in nginx_config_cert_info.subject_alt_name
+        or not (nginx_config_cert_info.valid_at.sixty_days | default(false))
+      }}
+
+- name: Remove stale wildcard cert
+  ansible.builtin.file:
+    path: /opt/k3s/local-tls/local.crt
+    state: absent
+  delegate_to: git-k3s-server
+  when: nginx_config_regen_cert | bool
+
+- name: Sign local wildcard cert with local CA
+  community.crypto.x509_certificate:
+    path: /opt/k3s/local-tls/local.crt
+    csr_path: /opt/k3s/local-tls/local.csr
+    ownca_path: /opt/k3s/local-tls/ca.crt
+    ownca_privatekey_path: /opt/k3s/local-tls/ca.key
+    provider: ownca
+    ownca_not_after: "+825d"
+    mode: "0644"
+  delegate_to: git-k3s-server
+
+- name: Read local CA cert
+  ansible.builtin.slurp:
+    src: /opt/k3s/local-tls/ca.crt
+  register: nginx_config_local_ca_crt
+  delegate_to: git-k3s-server
+
+- name: Read local wildcard cert
+  ansible.builtin.slurp:
+    src: /opt/k3s/local-tls/local.crt
+  register: nginx_config_local_tls_crt
+  delegate_to: git-k3s-server
+
+- name: Read local wildcard key
+  ansible.builtin.slurp:
+    src: /opt/k3s/local-tls/local.key
+  register: nginx_config_local_tls_key
+  delegate_to: git-k3s-server
+
+- name: Ensure TLS namespaces exist before applying secrets
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      k3s kubectl create namespace {{ ns_item }} --dry-run=client -o yaml | k3s kubectl apply -f -
+    executable: /bin/bash
+  delegate_to: git-k3s-server
+  changed_when: false
+  loop: >-
+    {{ (
+      nginx_services_local | map(attribute='namespace') | list +
+      nginx_services       | map(attribute='namespace') | list +
+      nginx_config_extra_namespaces | default([])
+    ) | unique | list }}
+  loop_control:
+    loop_var: ns_item
+
+- name: Template local-tls secret manifest
+  ansible.builtin.template:
+    src: local-tls-secret.yml.j2
+    dest: /opt/k3s/manifests/local-tls-secret.yml
+    owner: root
+    group: root
+    mode: "0600"
+  delegate_to: git-k3s-server
+
+- name: Apply local-tls secret
+  ansible.builtin.command: >
+    k3s kubectl apply --server-side --force-conflicts
+    -f /opt/k3s/manifests/local-tls-secret.yml
+  changed_when: true
+  delegate_to: git-k3s-server
+
+- name: Remove local-tls secret manifest (contains sensitive data)
+  ansible.builtin.file:
+    path: /opt/k3s/manifests/local-tls-secret.yml
+    state: absent
+  delegate_to: git-k3s-server
+
+# ── Cloudflare origin TLS ─────────────────────────────────────────────────────
 - name: Ensure k3s ingress manifests directory exists
   ansible.builtin.file:
     path: /opt/k3s/manifests
@@ -47,3 +200,60 @@
     -f /opt/k3s/manifests/ingress-services.yml
   changed_when: true
   delegate_to: git-k3s-server
+
+# ── Remove legacy ca-dist resources from cluster ─────────────────────────────
+- name: Remove legacy ca-dist k8s resources (renamed to ca-cert)
+  ansible.builtin.command: >
+    k3s kubectl delete --ignore-not-found
+    deployment/ca-dist service/ca-dist ingress/ca-dist configmap/local-ca-cert
+    -n network
+  delegate_to: git-k3s-server
+  changed_when: false
+
+# ── Publish CA cert to a world-readable path for easy scp/curl ───────────────
+- name: Publish CA cert to world-readable path
+  ansible.builtin.copy:
+    content: "{{ nginx_config_local_ca_crt.content | b64decode }}"
+    dest: /opt/k3s/local-ca.crt
+    owner: root
+    group: root
+    mode: "0644"
+  delegate_to: git-k3s-server
+
+# ── Distribute CA to every managed host ──────────────────────────────────────
+- name: Install CA cert on managed hosts
+  ansible.builtin.copy:
+    content: "{{ nginx_config_local_ca_crt.content | b64decode }}"
+    dest: /usr/local/share/ca-certificates/homelab-local-ca.crt
+    owner: root
+    group: root
+    mode: "0644"
+  delegate_to: "{{ nginx_config_host }}"
+  become: true
+  loop: "{{ groups['all'] | difference(['host-node']) }}"
+  loop_control:
+    loop_var: nginx_config_host
+
+- name: Update CA trust store on managed hosts
+  ansible.builtin.command: update-ca-certificates
+  delegate_to: "{{ nginx_config_host }}"
+  become: true
+  changed_when: true
+  loop: "{{ groups['all'] | difference(['host-node']) }}"
+  loop_control:
+    loop_var: nginx_config_host
+
+# ── Auto-trust CA on Ansible controller ──────────────────────────────────────
+- name: Write CA cert to controller
+  ansible.builtin.copy:
+    content: "{{ nginx_config_local_ca_crt.content | b64decode }}"
+    dest: /usr/local/share/ca-certificates/homelab-local-ca.crt
+    mode: "0644"
+  delegate_to: localhost
+  become: true
+
+- name: Update CA trust store on controller
+  ansible.builtin.command: update-ca-certificates
+  delegate_to: localhost
+  become: true
+  changed_when: true

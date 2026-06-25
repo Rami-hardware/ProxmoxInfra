@@ -10,5 +10,5 @@
     - nginx_config
     # - adguard
     # - crowdsec
-    # - ufw
+    - ufw
     # - k3s_agent

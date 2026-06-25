@@ -20,7 +20,7 @@ spec:
           effect: NoSchedule
       containers:
         - name: promtail
-          image: grafana/promtail:latest
+          image: grafana/promtail:3.4.3
           args:
             - "-config.file=/etc/promtail/config.yml"
             - "-config.expand-env=true"
@@ -33,6 +33,7 @@ spec:
                   fieldPath: spec.nodeName
           ports:
             - containerPort: 9080
+              hostPort: 9080
               name: http
           volumeMounts:
             - name: config
@@ -49,10 +50,10 @@ spec:
               readOnly: true
           resources:
             requests:
-              memory: "64Mi"
+              memory: "128Mi"
               cpu: "10m"
             limits:
-              memory: "256Mi"
+              memory: "512Mi"
               cpu: "200m"
       volumes:
         - name: config

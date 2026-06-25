@@ -1,63 +1,64 @@
-- name: Ensure CrowdSec container is running
+- name: Get CrowdSec pod name
   ansible.builtin.command: >
-    docker inspect -f '{{ "{{.State.Running}}" }}' crowdsec
-  register: crowdsec_running
-  failed_when: crowdsec_running.stdout != "true"
+    k3s kubectl -n security get pod -l app=crowdsec -o jsonpath='{.items[0].metadata.name}'
+  delegate_to: git-k3s-server
+  register: crowdsec_pod_name
+  changed_when: false
+
+- name: Wait for CrowdSec pod to be ready
+  ansible.builtin.command: >
+    k3s kubectl -n security wait pod/{{ crowdsec_pod_name.stdout }}
+    --for=condition=Ready --timeout=120s
+  delegate_to: git-k3s-server
+  changed_when: false
+
+- name: Wait for CrowdSec LAPI to be ready inside pod
+  ansible.builtin.shell: |
+    k3s kubectl -n security exec {{ crowdsec_pod_name.stdout }} \
+      -- cscli lapi status
+  delegate_to: git-k3s-server
+  register: crowdsec_lapi_status
+  until: crowdsec_lapi_status.rc == 0
+  retries: 12
+  delay: 10
   changed_when: false
 
 # ------------------------------------------------------------
-# Ensure CrowdSec CAPI is registered
+# Nginx bouncer — always recreate to ensure key is captured
 # ------------------------------------------------------------
-- name: Check if CAPI credentials exist
-  ansible.builtin.stat:
-    path: /etc/crowdsec/online_api_credentials.yaml
-  register: crowdsec_capi_file
-
-- name: Register CrowdSec CAPI if missing
-  ansible.builtin.command: docker exec crowdsec cscli capi register
-  when: not crowdsec_capi_file.stat.exists
-  changed_when: true
-
-# ------------------------------------------------------------
-# Check and create Nginx bouncer
-# ------------------------------------------------------------
-- name: Check if nginx bouncer exists
-  ansible.builtin.command: docker exec crowdsec cscli bouncers list -o json
-  register: crowdsec_bouncers_json
+- name: Delete existing nginx-ingress-bouncer if present
+  ansible.builtin.shell: |
+    k3s kubectl -n security exec {{ crowdsec_pod_name.stdout }} \
+      -- cscli bouncers delete nginx-ingress-bouncer 2>/dev/null || true
+  delegate_to: git-k3s-server
   changed_when: false
 
-- name: Set fact if nginx bouncer exists
-  ansible.builtin.set_fact:
-    crowdsec_nginx_bouncer_exists: >-
-      {{
-        (crowdsec_bouncers_json.stdout | from_json
-         | selectattr('name', 'equalto', 'nginx-bouncer')
-         | list | length) > 0
-      }}
-
-- name: Create nginx bouncer and get API key
-  ansible.builtin.command: docker exec crowdsec cscli bouncers add nginx-bouncer -o raw
-  register: crowdsec_nginx_bouncer_key_cmd
-  when: not crowdsec_nginx_bouncer_exists
+- name: Create nginx-ingress-bouncer with JSON output
+  ansible.builtin.shell: |
+    k3s kubectl -n security exec {{ crowdsec_pod_name.stdout }} \
+      -- cscli bouncers add nginx-ingress-bouncer -o json
+  delegate_to: git-k3s-server
+  register: crowdsec_bouncer_json
   changed_when: true
+
+- name: Debug bouncer JSON output
+  ansible.builtin.debug:
+    msg: "{{ crowdsec_bouncer_json.stdout }}"
 
 - name: Set nginx bouncer API key fact
   ansible.builtin.set_fact:
-    crowdsec_nginx_bouncer_key: "{{ crowdsec_nginx_bouncer_key_cmd.stdout | trim }}"
-  when: not crowdsec_nginx_bouncer_exists
+    crowdsec_nginx_bouncer_key: "{{ (crowdsec_bouncer_json.stdout | from_json).api_key }}"
 
 - name: Fail if nginx bouncer key is missing
   ansible.builtin.fail:
-    msg: "CrowdSec nginx bouncer API key could not be created!"
-  when:
-    - not crowdsec_nginx_bouncer_exists
-    - crowdsec_nginx_bouncer_key | default('') == ''
+    msg: "CrowdSec bouncer key is empty — raw output: {{ crowdsec_bouncer_json.stdout }}"
+  when: crowdsec_nginx_bouncer_key == ''
 
-- name: Save nginx bouncer API key to file
+- name: Save nginx bouncer API key to gateway
   ansible.builtin.copy:
-    dest: /opt/docker/crowdsec/nginx-bouncer.key
+    dest: /opt/docker/crowdsec/nginx-ingress-bouncer.key
     content: "{{ crowdsec_nginx_bouncer_key }}"
     owner: root
     group: root
     mode: "0600"
-  when: not crowdsec_nginx_bouncer_exists
+  delegate_to: gateway-server

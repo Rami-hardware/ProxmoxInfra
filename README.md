@@ -1,6 +1,6 @@
 # Homelab Infrastructure
 
-A fully automated homelab running on Proxmox, provisioned with Terraform, configured with Ansible, and monitored end-to-end with Prometheus, Grafana, and Loki — all running as K3s workloads.
+A fully automated homelab running on Proxmox, provisioned with Terraform, configured with Ansible, and monitored end-to-end with Prometheus, Grafana, and Loki.
 
 ---
 
@@ -14,68 +14,66 @@ A fully automated homelab running on Proxmox, provisioned with Terraform, config
 
 ### Virtual Machines
 
-| VM                | IP            | VMID | Cores | RAM   | Role                                      |
-| :---------------- | :------------ | :--- | :---- | :---- | :---------------------------------------- |
-| gateway-server    | 192.168.1.200 | 505  | 1     | 3 GB  | Reverse proxy, firewall, DNS, K3s worker  |
-| media-server      | 192.168.1.201 | 911  | 4     | 10 GB | Media stack, K3s worker                   |
-| security-server   | 192.168.1.202 | 619  | 2     | 3 GB  | Security tooling, K3s worker              |
-| monitoring-server | 192.168.1.203 | 511  | 1     | 5 GB  | Observability stack, K3s worker           |
-| git-k3s-server    | 192.168.1.204 | 115  | 3     | 7 GB  | GitHub Actions runner, K3s control plane  |
+| VM                | IP            | Cores | RAM  | Role                                      |
+| :---------------- | :------------ | :---- | :--- | :---------------------------------------- |
+| gateway-server    | 192.168.1.200 | 1     | 2 GB | Reverse proxy, firewall, DNS              |
+| media-server      | 192.168.1.201 | 3     | 8 GB | Media stack — K3s worker                  |
+| monitoring-server | 192.168.1.203 | 1     | 2 GB | Observability stack — K3s worker          |
+| git-k3s-server    | 192.168.1.204 | 4     | 8 GB | GitHub Actions runner + K3s control plane |
+| dev-server        | 192.168.1.205 | 2     | 1 GB | Development                               |
 
 ---
 
 ## Services
 
-### Gateway (192.168.1.200) — K3s worker
+### Media (192.168.1.201) — K3s worker, namespace: `media`
 
-- **Nginx** — reverse proxy for all internal services
-- **AdGuard Home** — local DNS + ad blocking (K3s, `host_network` mode)
+| App          | URL                                    | Port  | Notes                                         |
+| :----------- | :------------------------------------- | :---- | :-------------------------------------------- |
+| Jellyfin     | <https://jellyfin.homelab.lan>         | 8096  | Intel Arc GPU transcoding (VAAPI)             |
+| Radarr       | <https://radarr.homelab.lan>           | 7878  | Movie automation                              |
+| Sonarr       | <https://sonarr.homelab.lan>           | 8989  | TV automation                                 |
+| Bazarr       | <https://bazarr.homelab.lan>           | 6767  | Subtitle automation (GPU-accelerated ffmpeg)  |
+| Overseerr    | <https://overseerr.homelab.lan>        | 5055  | Media request management                      |
+| qBittorrent  | <https://qbittorrent.homelab.lan>      | 8080  | Torrent client — BT port 6881 TCP/UDP         |
+| Prowlarr     | <https://prowlarr.homelab.lan>         | 9696  | Indexer management                            |
+| FlareSolverr | —                                      | 8191  | Cloudflare bypass (stateless, Chromium-based) |
+| Scraparr     | —                                      | 7100  | Prometheus metrics exporter for arr apps      |
 
-### Media (192.168.1.201) — K3s worker
+### Monitoring (192.168.1.203) — K3s worker, namespace: `monitoring`
 
-| App                  | Port  | Description                                    |
-| :------------------- | :---- | :--------------------------------------------- |
-| Jellyfin             | 8096  | Media server with Intel Arc GPU transcoding    |
-| Radarr               | 7878  | Movie automation                               |
-| Sonarr               | 8989  | TV automation                                  |
-| Bazarr               | 6767  | Subtitle automation                            |
-| Overseerr            | 5055  | Media request management                       |
-| qBittorrent          | 8080  | Torrent client                                 |
-| Prowlarr             | 9696  | Indexer management                             |
-| FlareSolverr         | 8191  | Cloudflare bypass (stateless)                  |
-| Subsyncarr           | —     | Subtitle sync with VAAPI hardware acceleration |
-| Scraparr             | 7100  | Metrics exporter for arr apps                  |
-| intel-gpu-exporter   | 8082  | Intel Arc GPU metrics                          |
-| qbittorrent-exporter | 17871 | qBittorrent metrics                            |
+| App                  | URL                                    | Port  | Notes                              |
+| :------------------- | :------------------------------------- | :---- | :--------------------------------- |
+| Grafana              | <https://grafana.homelab.lan>          | 3000  | Dashboards                         |
+| Prometheus           | <https://prometheus.homelab.lan>       | 9090  | Metrics collection, 30d retention  |
+| Loki                 | —                                      | 3100  | Log aggregation                    |
+| Alertmanager         | <https://alertmanager.homelab.lan>     | 9093  | Alert routing                      |
+| Speedtest Exporter   | —                                      | 9798  | ISP bandwidth tracking             |
+| qBittorrent Exporter | —                                      | 17871 | qBittorrent metrics for Prometheus |
+| Intel GPU Exporter   | —                                      | 8082  | Arc GPU utilization metrics        |
 
-### Security (192.168.1.202) — K3s worker
+### Network (192.168.1.200) — K3s worker, namespace: `network`
 
-- DNS configuration
-- K3s agent node
+| App      | URL                              | Port | Notes                           |
+| :------- | :------------------------------- | :--- | :------------------------------ |
+| AdGuard  | <https://adguard.homelab.lan>    | 8081 | DNS + ad blocking (hostNetwork) |
+| Authelia | <https://auth.homelab.lan>       | 9091 | SSO / 2FA                       |
 
-### Monitoring (192.168.1.203) — K3s worker
+Gateway also runs: **Nginx** (reverse proxy + TLS), **CrowdSec** (IDS + nginx bouncer), **UFW** (host firewall).
 
-| App                | Port | Description                           |
-| :----------------- | :--- | :------------------------------------ |
-| Prometheus         | 9090 | Metrics collection (30d retention)    |
-| Grafana            | 3000 | Dashboards                            |
-| Loki               | 3100 | Log aggregation                       |
-| Alertmanager       | 9093 | Alert routing                         |
-| Speedtest Exporter | 9798 | ISP bandwidth tracking (10m interval) |
+### Git / K3s (192.168.1.204)
 
-### Git / K3s (192.168.1.204) — K3s control plane
-
-- **GitHub Actions self-hosted runner** — executes CI/CD pipeline
 - **K3s control plane** — Kubernetes API server
-- **kube-state-metrics** — Kubernetes object metadata for dashboards
+- **GitHub Actions self-hosted runner** — executes CI/CD pipeline
+- **kube-state-metrics** — Kubernetes object metadata exported to Prometheus
 
-### Observability (cluster-wide DaemonSets)
+### Cluster-wide DaemonSets
 
-| Component        | Nodes                                          | Description                   |
-| :--------------- | :--------------------------------------------- | :---------------------------- |
-| node-exporter    | media, monitoring, security, git-k3s-server    | Host-level metrics            |
-| Promtail         | media, monitoring, gateway, git-k3s-server     | Log shipping to Loki          |
-| kubelet-cadvisor | media, monitoring, security, git-k3s-server    | Container metrics via kubelet |
+| Component        | Nodes                             | Description                            |
+| :--------------- | :-------------------------------- | :------------------------------------- |
+| node-exporter    | media, monitoring, git-k3s-server | Host-level CPU / memory / disk metrics |
+| Promtail         | media, monitoring, git-k3s-server | Log shipping to Loki                   |
+| kubelet-cAdvisor | media, monitoring, git-k3s-server | Container metrics via kubelet API      |
 
 ---
 
@@ -83,14 +81,12 @@ A fully automated homelab running on Proxmox, provisioned with Terraform, config
 
 ### Terraform
 
-- Provider: `bpg/proxmox` v0.70.1
+- Provider: `bpg/proxmox`
 - All VMs defined as a `map(object)` in `terraform.tfvars` — add/change a VM by editing one block
 - Module at `modules/proxmox_vm/` handles all VM resources
-- `lifecycle.ignore_changes` covers `disk`, `initialization`, `clone`, `hostpci`, `cpu`, all timeout attributes, `agent`, `operating_system`, `migrate`, `on_boot`, `reboot`, `stop_on_destroy`
+- `lifecycle.ignore_changes` covers `disk`, `initialization`, `clone`, `hostpci`, `cpu`
 - State tracked per VMID — map keys must never be renamed (would destroy the VM)
 - `parallelism=1` required on self-hosted runner to avoid Proxmox API race conditions
-- `git-k3s-server` is intentionally excluded from CI apply targets (managed manually)
-- Sensitive variables (`pm_api_url`, `pm_api_token`, `ssh_public_key`) passed via `TF_VAR_*` environment variables
 
 ### Ansible
 
@@ -102,7 +98,7 @@ A fully automated homelab running on Proxmox, provisioned with Terraform, config
 
 ### K3s App Pattern
 
-One generic template (`app.yml.j2`) renders Namespace + PV + PVC + Deployment + NodePort Service. Adding a new app requires only a new entry in `group_vars/git-k3s-server-vm.yml`:
+One generic template (`app.yml.j2`) renders Namespace + PV + PVC + Deployment + NodePort Service for every app. Adding a new app only requires a new entry in `group_vars/git-k3s-server-vm.yml`:
 
 ```yaml
 k3s_apps_list:
@@ -112,7 +108,7 @@ k3s_apps_list:
     port: 8080
     node_port: 8080
     target_node: media-server
-    config_path: /opt/myapp         # omit + set skip_pv: true for stateless apps
+    config_path: /opt/myapp
     config_mount: /config
     replicas: 1
     env:
@@ -125,28 +121,30 @@ k3s_apps_list:
 
 **Supported flags:**
 
-| Flag              | Description                                          |
-| :---------------- | :--------------------------------------------------- |
-| `skip_pv`         | Skip PV/PVC creation for stateless apps              |
-| `gpu`             | Mount `/dev/dri` + privileged for Intel GPU access   |
-| `privileged`      | Run container as privileged (no GPU mount)           |
-| `host_pid`        | Enable `hostPID: true`                               |
-| `host_network`    | Enable `hostNetwork: true` with `dnsPolicy: Default` |
-| `service_account` | Attach a named ServiceAccount to the pod             |
-| `dns_policy`      | Override DNS policy (e.g. `None`)                    |
-| `dns_nameservers` | Custom nameservers when `dns_policy: None`           |
-| `args`            | Container CLI arguments                              |
-| `extra_volumes`   | Additional hostPath volume mounts                    |
-| `external_ip`     | Expose service on a specific host IP                 |
+| Flag              | Description                                                      |
+| :---------------- | :--------------------------------------------------------------- |
+| `skip_pv`         | Skip PV/PVC creation for stateless apps                          |
+| `gpu`             | Mount `/dev/dri` + privileged for Intel Arc GPU access           |
+| `privileged`      | Run container as privileged (no GPU mount)                       |
+| `host_pid`        | Enable `hostPID: true`                                           |
+| `host_network`    | Enable `hostNetwork: true` (used by AdGuard for DNS port 53)     |
+| `external_ip`     | Bind Service to a specific host IP via `externalIPs`             |
+| `service_account` | Attach a named ServiceAccount to the pod                         |
+| `dns_policy`      | Override DNS policy (e.g. `None` for custom nameservers)         |
+| `dns_nameservers` | Custom nameservers when `dns_policy: None`                       |
+| `args`            | Container CLI arguments                                          |
+| `extra_volumes`   | Additional hostPath volume mounts                                |
+| `extra_ports`     | Additional Service + hostPort entries (e.g. qBittorrent BT port) |
 
-**Special apps deployed as static manifests (not via generic template):**
+**Special manifests deployed outside the generic template:**
 
-| Manifest                 | Type       | Description                           |
-| :----------------------- | :--------- | :------------------------------------ |
-| `node-exporter.yml`      | DaemonSet  | Runs on all K3s nodes                 |
-| `promtail.yml`           | DaemonSet  | Runs on all K3s nodes                 |
-| `kube-state-metrics.yml` | Deployment | K8s metadata metrics on control plane |
-| `prometheus-rbac.yml`    | RBAC       | Allows Prometheus to scrape kubelet   |
+| Template                         | Type       | Description                                     |
+| :------------------------------- | :--------- | :---------------------------------------------- |
+| `node-exporter-daemonset.yml.j2` | DaemonSet  | Runs on all K3s nodes                           |
+| `promtail-daemonset.yml.j2`      | DaemonSet  | Runs on all K3s nodes                           |
+| `kube-state-metrics.yml.j2`      | Deployment | K8s object metadata on control plane            |
+| `prometheus-rbac.yml.j2`         | RBAC       | ServiceAccount + ClusterRole for kubelet scrape |
+| `ingress-nginx.yml.j2`           | Deployment | Ingress controller (gzip, 1h timeout)           |
 
 ---
 
@@ -156,77 +154,70 @@ Triggered on push to `development`, `staging`, or `main`.
 
 ```text
 Testing job
-├── Install system dependencies (idempotent — skips if already present)
-├── Configure Terraform filesystem provider mirror (offline-safe)
-├── Seed provider mirror (bpg/proxmox v0.70.1)
-├── Terraform init (no backend)
-├── Terraform fmt check
 ├── Terraform validate
-├── Install ansible-lint in virtualenv (idempotent)
-├── Install Ansible collections
-├── Ansible syntax-check (security-server.yml)
-├── Ansible lint
-└── Ansible dry run --check --diff (security-server.yml)
+├── Ansible syntax-check (all playbooks, with vault password)
+└── Ansible lint
 
 Deploy job
-├── Configure Terraform filesystem provider mirror
-├── Seed provider mirror
 ├── Terraform init
-├── Import existing VMs into state (gateway, media, monitoring, security, github)
-├── Remove stale state entries (monitor, game, dev, securtiy typo)
-├── Terraform plan -detailed-exitcode (saved to tfplan)
+├── Import existing VMs into state
+├── Terraform plan (saved to tfplan)
 ├── Destroy check — fails pipeline if any VM would be destroyed or replaced
-├── Terraform apply -parallelism=1 (gateway, media, monitoring, security only)
-└── Ansible playbook: security-server.yml
+├── Terraform apply -parallelism=1 (targeted per VM)
+└── Ansible playbooks (gateway → monitoring → media → git-k3s-server)
 ```
 
 The destroy guard parses the saved plan and blocks apply if `will be destroyed` or `must be replaced` is detected.
-
-The provider mirror is seeded from GitHub Releases on first run and cached on the runner — `terraform init` never contacts `registry.terraform.io`.
 
 ---
 
 ## Observability
 
-### Prometheus Scrape Design
+### Prometheus Scrape Jobs
 
-- `nodes` job groups all node-exporters with `relabel_configs` — instance label shows hostname, not IP
-- `kubelet-cadvisor` job scrapes `/metrics/cadvisor` from each kubelet over HTTPS with bearer token auth
-- `kube-state-metrics` provides Kubernetes object labels (namespace, pod, container) to enrich container metrics
-- `intel-gpu-exporter` exposes Intel Arc GPU utilization and memory from the media node
-- `qbittorrent-exporter` exposes download/upload/peer metrics from qBittorrent
-- Scrape targets reference `hostvars` IPs — no duplication with inventory
+| Job                  | Target                             | Notes                                       |
+| :------------------- | :--------------------------------- | :------------------------------------------ |
+| `nodes`              | node-exporter on all VMs           | `relabel_configs` maps IP → hostname        |
+| `kubelet-cadvisor`   | kubelet `/metrics/cadvisor`        | HTTPS + bearer token auth                   |
+| `kube-state-metrics` | kube-state-metrics pod             | Adds k8s labels to container metrics        |
+| `loki`               | Loki on monitoring-server          | Internal metrics                            |
+| `qbittorrent`        | qbittorrent-exporter               | Torrent download/upload/ratio metrics       |
+| `scraparr`           | Scraparr on media-server           | Arr app queue/health metrics                |
+| `intel-gpu`          | intel-gpu-exporter on media-server | Arc GPU utilization                         |
+| `speedtest`          | speedtest-exporter                 | ISP bandwidth, ping, jitter (10m interval)  |
+| `ingress-nginx`      | ingress-nginx controller           | Request rate, latency, 5xx rate per service |
+| `zfs`                | zfs-exporter on Proxmox host       | Pool health, IO, capacity                   |
+| `promtail`           | Promtail pods                      | Log pipeline health                         |
 
 ### Loki + Promtail
 
-- Promtail runs as a DaemonSet on all K3s nodes
-- `${NODE_NAME}` injected via downward API — each pod labels logs with its actual node name
-- Scrapes: K3s container logs, Docker container logs, system logs
+- Promtail runs as DaemonSet on all K3s nodes
+- `${NODE_NAME}` injected via downward API — each pod labels logs with its node name
+- Scrapes: K3s container logs (`/var/log/pods`), Docker container logs, system logs (`/var/log`)
 
 ### Grafana
 
-- Prometheus and Loki datasources auto-provisioned at `/etc/grafana/provisioning/datasources/`
+- Prometheus and Loki datasources auto-provisioned from `/etc/grafana/provisioning/datasources/`
+- Alerts routed via Alertmanager → webhook to notification server at `192.168.1.203:3002`
 
 ---
 
 ## Technologies
 
-| Category | Tools |
-| :--- | :--- |
-| Virtualization | Proxmox VE |
-| IaC | Terraform (bpg/proxmox provider v0.70.1) |
-| Configuration | Ansible |
-| Containers | Docker, Docker Compose |
-| Orchestration | K3s (Kubernetes) |
-| CI/CD | GitHub Actions (self-hosted runner) |
-| Metrics | Prometheus, node-exporter, kubelet-cadvisor, kube-state-metrics, intel-gpu-exporter, qbittorrent-exporter, scraparr |
-| Visualization | Grafana |
-| Logging | Loki, Promtail |
-| Alerting | Alertmanager |
-| Reverse Proxy | Nginx |
-| Security | CrowdSec, Authelia, UFW, Ansible Vault |
-| DNS | AdGuard Home |
-| Media | Jellyfin, Radarr, Sonarr, Bazarr, Overseerr, qBittorrent, Subsyncarr |
+| Category       | Tools                                                                      |
+| :------------- | :------------------------------------------------------------------------- |
+| Virtualization | Proxmox VE                                                                 |
+| IaC            | Terraform (`bpg/proxmox` provider)                                         |
+| Configuration  | Ansible                                                                    |
+| Orchestration  | K3s (Kubernetes)                                                           |
+| CI/CD          | GitHub Actions (self-hosted runner on git-k3s-server)                      |
+| Metrics        | Prometheus, node-exporter, kubelet-cAdvisor, kube-state-metrics, Scraparr  |
+| Visualization  | Grafana                                                                    |
+| Logging        | Loki, Promtail                                                             |
+| Alerting       | Alertmanager                                                               |
+| Reverse Proxy  | Nginx (gateway) + ingress-nginx (K3s)                                      |
+| DNS            | AdGuard Home                                                               |
+| Media          | Jellyfin, Radarr, Sonarr, Bazarr, Overseerr, qBittorrent, Prowlarr         |
 
 ---
 

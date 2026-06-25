@@ -57,6 +57,8 @@ crowdsec_nginx_env:
 crowdsec_online_api_key: a7c65c19d023489a88b70036e3a10397nmDvrI0bzgfqoUau
 crowdsec_online_api_secret: K6yiJt6KCOfj0AeXbeWQ4BptCGhEYfdCwrNwrr3NoStJ3BOGyoov7JCgbW467u3v
 
+authelia_cluster_ip: 10.43.20.164
+
 nginx_services:
   - name: jellyfin
     ip: 192.168.1.201
@@ -64,21 +66,14 @@ nginx_services:
     disable_buffering: true
     streaming: true
     namespace: media
+    cache_paths:
+      - /Items
+      - /web
+    cache_ttl: "7d"
 
   - name: overseerr
     ip: 192.168.1.201
     port: 5055
-    namespace: media
-
-  - name: bazarr
-    ip: 192.168.1.201
-    port: 6767
-    namespace: media
-
-  - name: qbittorrent
-    ip: 192.168.1.201
-    port: 8080
-    disable_buffering: true
     namespace: media
 
   - name: adguard
@@ -94,40 +89,68 @@ nginx_services_local:
     port: 8096
     disable_buffering: true
     streaming: true
+    cache_paths:
+      - /Items
+      - /web
+    cache_ttl: "7d"
 
   - name: overseerr
     ip: 192.168.1.201
     port: 5055
     namespace: media
 
+  - name: radarr
+    ip: 192.168.1.201
+    port: 7878
+    namespace: media
+    auth: false
+
+  - name: sonarr
+    ip: 192.168.1.201
+    port: 8989
+    namespace: media
+    auth: false
+
+  - name: prowlarr
+    ip: 192.168.1.201
+    port: 9696
+    namespace: media
+    auth: false
+
   - name: bazarr
     ip: 192.168.1.201
     port: 6767
     namespace: media
+    auth: false
 
   - name: qbittorrent
     ip: 192.168.1.201
     port: 8080
     disable_buffering: true
     namespace: media
+    auth: false
 
   - name: adguard
     ip: 192.168.1.200
     port: 8081
     namespace: network
     k8s_service: adguard-home
+    auth: false
 
   - name: grafana
     ip: 192.168.1.203
     port: 3000
     namespace: monitoring
+    auth: false
 
   - name: alertmanager
     ip: 192.168.1.203
     port: 9093
     namespace: monitoring
+    auth: false
 
   - name: prometheus
     ip: 192.168.1.203
     port: 9090
     namespace: monitoring
+    auth: false

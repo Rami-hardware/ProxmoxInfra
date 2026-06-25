@@ -101,6 +101,12 @@ prometheus_scrape_jobs:
     relabel_configs:
       - target_label: instance
         replacement: host-node
+  - name: ingress-nginx
+    targets: ["{{ hostvars['git-k3s-server']['ansible_host'] }}:10254"]
+    relabel_configs:
+      - target_label: instance
+        replacement: git-k3s-server
+
   - name: speedtest
     targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:9798"]
     scrape_interval: 10m
@@ -108,6 +114,30 @@ prometheus_scrape_jobs:
     relabel_configs:
       - target_label: instance
         replacement: monitoring-server
+
+  - name: promtail
+    targets:
+      - "{{ hostvars['gateway-server']['ansible_host'] }}:9080"
+      - "{{ hostvars['media-server']['ansible_host'] }}:9080"
+      - "{{ hostvars['monitoring-server']['ansible_host'] }}:9080"
+      - "{{ hostvars['git-k3s-server']['ansible_host'] }}:9080"
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: "{{ hostvars['gateway-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "gateway-server"
+      - source_labels: [__address__]
+        regex: "{{ hostvars['media-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "media-server"
+      - source_labels: [__address__]
+        regex: "{{ hostvars['monitoring-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "monitoring-server"
+      - source_labels: [__address__]
+        regex: "{{ hostvars['git-k3s-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "git-k3s-server"
 
 # ── Loki ──────────────────────────────────────────────────────────────────────
 loki_config_dir: /opt/docker/loki

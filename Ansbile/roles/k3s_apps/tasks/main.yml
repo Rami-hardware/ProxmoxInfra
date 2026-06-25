@@ -18,6 +18,35 @@
     loop_var: app
     label: "{{ app.name }}"
 
+# Create host directories for extra_volumes that explicitly set create_host_dir: true
+- name: Ensure extra volume host directories exist on target nodes
+  ansible.builtin.file:
+    path: "{{ item.1.host_path }}"
+    state: directory
+    mode: '0755'
+  delegate_to: "{{ item.0.target_node }}"
+  loop: "{{ k3s_apps_list | selectattr('extra_volumes', 'defined') | list | subelements('extra_volumes') }}"
+  loop_control:
+    label: "{{ item.0.name }}: {{ item.1.host_path }}"
+  when: item.1.create_host_dir | default(false)
+
+# Deploy authelia configuration files to its config directory on the target node
+- name: Deploy authelia configuration.yml
+  ansible.builtin.template:
+    src: configuration.yml.j2
+    dest: "{{ (k3s_apps_list | selectattr('name', 'equalto', 'authelia') | list | first | default({'config_path': '/tmp'})).config_path }}/configuration.yml"
+    mode: '0600'
+  delegate_to: "{{ (k3s_apps_list | selectattr('name', 'equalto', 'authelia') | list | first | default({'target_node': inventory_hostname})).target_node }}"
+  when: k3s_apps_list | selectattr('name', 'equalto', 'authelia') | list | length > 0
+
+- name: Deploy authelia users_database.yml
+  ansible.builtin.template:
+    src: users_database.yml.j2
+    dest: "{{ (k3s_apps_list | selectattr('name', 'equalto', 'authelia') | list | first | default({'config_path': '/tmp'})).config_path }}/users_database.yml"
+    mode: '0600'
+  delegate_to: "{{ (k3s_apps_list | selectattr('name', 'equalto', 'authelia') | list | first | default({'target_node': inventory_hostname})).target_node }}"
+  when: k3s_apps_list | selectattr('name', 'equalto', 'authelia') | list | length > 0
+
 # Prometheus RBAC — allows scraping kubelet /metrics/cadvisor
 - name: Template Prometheus RBAC manifest
   ansible.builtin.template:
@@ -166,16 +195,20 @@
     cmd: "k3s kubectl get nodes -o wide"
   changed_when: false
 
-- name: Apply all K3s app manifests
-  ansible.builtin.command:
-    cmd: "k3s kubectl apply --server-side --force-conflicts -f {{ k3s_apps_manifest_dir }}"
-  changed_when: true
-  register: k3s_apps_apply_result
+- name: Find manifests to apply
+  ansible.builtin.find:
+    paths: "{{ k3s_apps_manifest_dir }}"
+    patterns: "*.yml"
+  register: k3s_apps_manifests_to_apply
   when: k3s_apps_list | length > 0
 
-- name: Show apply output
-  ansible.builtin.debug:
-    msg: "{{ k3s_apps_apply_result.stdout_lines }}"
+- name: Apply K3s app manifests one by one
+  ansible.builtin.command:
+    cmd: "k3s kubectl apply --server-side --force-conflicts -f {{ item.path }}"
+  loop: "{{ k3s_apps_manifests_to_apply.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  changed_when: true
   when: k3s_apps_list | length > 0
 
 # Force a rollout restart so ProgressDeadlineExceeded from prior failed runs doesn't
@@ -251,8 +284,35 @@
     -f {{ k3s_apps_manifest_dir }}/ingress-nginx.yml
   changed_when: true
 
+- name: Restart ingress-nginx if it exceeded its progress deadline
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      STATUS=$(k3s kubectl rollout status deployment/ingress-nginx-controller \
+        -n ingress-nginx --timeout=5s 2>&1 || true)
+      if echo "$STATUS" | grep -q "exceeded its progress deadline"; then
+        k3s kubectl rollout restart deployment/ingress-nginx-controller -n ingress-nginx
+      fi
+    executable: /bin/bash
+  changed_when: false
+
 - name: Wait for ingress-nginx controller to be ready
   ansible.builtin.command: >
     k3s kubectl rollout status deployment/ingress-nginx-controller
-    -n ingress-nginx --timeout=120s
+    -n ingress-nginx --timeout=300s
   changed_when: false
+
+# ── Security stack ────────────────────────────────────────────────────────────
+- name: Ensure Falco config directory exists on all nodes
+  ansible.builtin.file:
+    path: "{{ falco_config_dir }}"
+    state: directory
+    mode: '0755'
+  delegate_to: "{{ k3s_node }}"
+  loop:
+    - git-k3s-server
+    - media-server
+    - monitoring-server
+    - gateway-server
+  loop_control:
+    loop_var: k3s_node
