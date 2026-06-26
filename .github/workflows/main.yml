@@ -285,19 +285,19 @@ jobs:
           fi
           echo "No destroys detected — safe to proceed."
 
-      - name: Terraform apply
-        if: steps.plan.outputs.has_changes == 'true'
-        working-directory: Terraform
-        env:
-          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-          TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
-          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-        run: |
-          terraform apply -auto-approve -parallelism=1 \
-            -target='module.proxmox_vms["gateway"]' \
-            -target='module.proxmox_vms["media"]' \
-            -target='module.proxmox_vms["monitoring"]' \
-            -target='module.proxmox_vms["security"]'
+      #- name: Terraform apply
+      #  if: steps.plan.outputs.has_changes == 'true'
+      #  working-directory: Terraform
+      #  env:
+      #    TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
+      #    TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
+      #    TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+      #  run: |
+      #    terraform apply -auto-approve -parallelism=1 \
+      #      -target='module.proxmox_vms["gateway"]' \
+      #      -target='module.proxmox_vms["media"]' \
+      #      -target='module.proxmox_vms["monitoring"]' \
+      #      -target='module.proxmox_vms["security"]'
 
       # ── Ansible ──────────────────────────────────────────────────────────────
       - name: Install system dependencies
