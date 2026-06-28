@@ -2,7 +2,16 @@
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
-  name: homelab-ca-issuer
+  name: letsencrypt-cloudflare
 spec:
-  ca:
-    secretName: homelab-ca-secret
+  acme:
+    email: {{ vault_cloudflare_acme_email | default('ramidannah5@gmail.com') }}
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-cloudflare-key
+    solvers:
+      - dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token
+              key: api-token
