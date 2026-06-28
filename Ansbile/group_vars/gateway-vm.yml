@@ -154,3 +154,9 @@ nginx_services_local:
     port: 9090
     namespace: monitoring
     auth: false
+
+  - name: router
+    ip: 192.168.1.1
+    port: 80
+    namespace: network
+    auth: false
