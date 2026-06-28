@@ -161,3 +161,11 @@ nginx_services_local:
     namespace: network
     auth: false
     disable_buffering: true
+
+  - name: f1hls
+    ip: 192.168.1.201
+    port: 8765
+    namespace: media
+    auth: false
+    disable_buffering: true
+    streaming: true
