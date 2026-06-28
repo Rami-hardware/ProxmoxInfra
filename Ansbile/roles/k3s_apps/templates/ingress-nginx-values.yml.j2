@@ -1,0 +1,88 @@
+---
+controller:
+  replicaCount: 1
+
+  nodeSelector:
+    kubernetes.io/hostname: {{ ingress_nginx_node | default('git-k3s-server') }}
+
+  priorityClassName: system-cluster-critical
+
+  image:
+    tag: "v1.12.1"
+
+  config:
+    allow-snippet-annotations: "true"
+    annotations-risk-level: "Critical"
+    use-forwarded-headers: "true"
+    compute-full-forwarded-for: "true"
+    use-gzip: "true"
+    gzip-level: "5"
+    gzip-types: "application/javascript application/json application/rss+xml application/vnd.ms-fontobject application/x-javascript application/xhtml+xml application/xml font/opentype image/svg+xml image/x-icon text/css text/javascript text/plain text/xml"
+    upstream-keepalive-connections: "50"
+    upstream-keepalive-time: "1h"
+    upstream-keepalive-requests: "10000"
+    proxy-buffering: "off"
+    proxy-request-buffering: "off"
+    proxy-buffer-size: "50k"
+    proxy-body-size: "0"
+    keep-alive: "75"
+    keep-alive-requests: "10000"
+    proxy-read-timeout: "3600"
+    proxy-send-timeout: "3600"
+    proxy-connect-timeout: "10"
+    worker-processes: "auto"
+    worker-connections: "8192"
+    max-worker-connections: "16384"
+    ssl-session-cache: "shared:SSL:50m"
+    ssl-session-timeout: "10m"
+    ssl-protocols: "TLSv1.2 TLSv1.3"
+    ssl-ciphers: "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305"
+    use-http2: "true"
+    tcp-nodelay: "on"
+    enable-real-ip: "true"
+    forwarded-for-header: "CF-Connecting-IP"
+    proxy-real-ip-cidr: "173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22"
+    hsts: "true"
+    hsts-max-age: "31536000"
+    hsts-include-subdomains: "false"
+    http-snippet: |
+      proxy_cache_path /tmp/nginx-cache levels=1:2 keys_zone=ingress_cache:10m max_size=5g inactive=7d use_temp_path=off;
+
+  containerPort:
+    http: 80
+    https: 443
+    metrics: 10254
+
+  hostPort:
+    enabled: false
+
+  metrics:
+    enabled: true
+    port: 10254
+
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "256Mi"
+    limits:
+      cpu: "2000m"
+      memory: "1Gi"
+
+  service:
+    type: LoadBalancer
+    externalIPs:
+      - {{ hostvars['gateway-server']['ansible_host'] }}
+{% if (ingress_nginx_node | default('git-k3s-server')) != 'gateway-server' %}
+      - {{ hostvars[ingress_nginx_node | default('git-k3s-server')]['ansible_host'] }}
+{% endif %}
+    ports:
+      http: 80
+      https: 443
+
+  ingressClassResource:
+    name: nginx
+    enabled: true
+    default: false
+
+  watchIngressWithoutClass: false
+  enableAnnotationValidation: true

@@ -1,4 +1,21 @@
 ---
+# ── Helm Repos ────────────────────────────────────────────────────────────────
+- name: Add ingress-nginx Helm repo
+  ansible.builtin.command:
+    cmd: helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: k3s_apps_helm_repo_add
+  changed_when: "'already exists' not in k3s_apps_helm_repo_add.stdout"
+  failed_when: k3s_apps_helm_repo_add.rc != 0 and 'already exists' not in k3s_apps_helm_repo_add.stdout
+
+- name: Update Helm repos
+  ansible.builtin.command:
+    cmd: helm repo update
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: false
+
 - name: Ensure K3s manifests directory exists
   ansible.builtin.file:
     path: "{{ k3s_apps_manifest_dir }}"
@@ -127,7 +144,7 @@
   loop: "{{ k3s_apps_existing_manifests.files }}"
   when: >
     (item.path | basename | splitext)[0] not in
-    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac', 'ingress-nginx', 'ingress-services']
+    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac', 'ingress-services']
   changed_when: true
 
 - name: Remove stale manifest files
@@ -137,7 +154,7 @@
   loop: "{{ k3s_apps_existing_manifests.files }}"
   when: >
     (item.path | basename | splitext)[0] not in
-    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac', 'ingress-nginx', 'ingress-services']
+    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac', 'ingress-services']
 
 # Single template for all apps — item.* variables drive the output
 - name: Template app manifests
@@ -271,36 +288,30 @@
     label: "{{ item.item.name }}"
 
 
-# ingress-nginx controller
-- name: Template ingress-nginx manifest
+# ── ingress-nginx via Helm ────────────────────────────────────────────────────
+- name: Template ingress-nginx Helm values
   ansible.builtin.template:
-    src: ingress-nginx.yml.j2
-    dest: "{{ k3s_apps_manifest_dir }}/ingress-nginx.yml"
-    mode: "0644"
+    src: ingress-nginx-values.yml.j2
+    dest: /tmp/ingress-nginx-values.yml
+    mode: '0600'
 
-- name: Apply ingress-nginx manifest
-  ansible.builtin.command: >
-    k3s kubectl apply --server-side --force-conflicts
-    -f {{ k3s_apps_manifest_dir }}/ingress-nginx.yml
+- name: Deploy ingress-nginx via Helm
+  ansible.builtin.command:
+    cmd: >
+      helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx
+      --namespace ingress-nginx
+      --create-namespace
+      --values /tmp/ingress-nginx-values.yml
+      --wait
+      --timeout 5m
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   changed_when: true
 
-- name: Restart ingress-nginx if it exceeded its progress deadline
-  ansible.builtin.shell:
-    cmd: |
-      set -o pipefail
-      STATUS=$(k3s kubectl rollout status deployment/ingress-nginx-controller \
-        -n ingress-nginx --timeout=5s 2>&1 || true)
-      if echo "$STATUS" | grep -q "exceeded its progress deadline"; then
-        k3s kubectl rollout restart deployment/ingress-nginx-controller -n ingress-nginx
-      fi
-    executable: /bin/bash
-  changed_when: false
-
-- name: Wait for ingress-nginx controller to be ready
-  ansible.builtin.command: >
-    k3s kubectl rollout status deployment/ingress-nginx-controller
-    -n ingress-nginx --timeout=300s
-  changed_when: false
+- name: Remove ingress-nginx values tempfile
+  ansible.builtin.file:
+    path: /tmp/ingress-nginx-values.yml
+    state: absent
 
 # ── Security stack ────────────────────────────────────────────────────────────
 - name: Ensure Falco config directory exists on all nodes
