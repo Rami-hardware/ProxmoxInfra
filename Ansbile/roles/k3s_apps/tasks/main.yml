@@ -24,6 +24,17 @@
   changed_when: "'already exists' not in k3s_apps_helm_repo_nginx.stdout"
   failed_when: k3s_apps_helm_repo_nginx.rc != 0 and 'already exists' not in k3s_apps_helm_repo_nginx.stdout
 
+- name: Add cert-manager Helm repo
+  ansible.builtin.command:
+    cmd: helm repo add jetstack https://charts.jetstack.io
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  register: k3s_apps_helm_repo_certmanager
+  changed_when: "'already exists' not in k3s_apps_helm_repo_certmanager.stdout"
+  failed_when: k3s_apps_helm_repo_certmanager.rc != 0 and 'already exists' not in k3s_apps_helm_repo_certmanager.stdout
+
 - name: Add MetalLB Helm repo
   ansible.builtin.command:
     cmd: helm repo add metallb https://metallb.github.io/metallb
@@ -334,6 +345,53 @@
   loop_control:
     label: "{{ item.item.name }}"
 
+
+# ── cert-manager via Helm ────────────────────────────────────────────────────
+- name: Deploy cert-manager via Helm
+  ansible.builtin.command:
+    cmd: >
+      helm upgrade --install cert-manager jetstack/cert-manager
+      --namespace cert-manager
+      --create-namespace
+      --set crds.enabled=true
+      --wait
+      --timeout 5m
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  changed_when: true
+
+- name: Create cert-manager CA secret from local CA
+  ansible.builtin.shell:
+    cmd: |
+      k3s kubectl create secret tls homelab-ca-secret \
+        --cert=/opt/k3s/local-tls/ca.crt \
+        --key=/opt/k3s/local-tls/ca.key \
+        --namespace=cert-manager \
+        --dry-run=client -o yaml | k3s kubectl apply -f -
+    executable: /bin/bash
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+
+- name: Template cert-manager ClusterIssuer
+  ansible.builtin.template:
+    src: cert-manager-issuer.yml.j2
+    dest: /tmp/cert-manager-issuer.yml
+    mode: '0600'
+
+- name: Apply cert-manager ClusterIssuer
+  ansible.builtin.command:
+    cmd: k3s kubectl apply -f /tmp/cert-manager-issuer.yml
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+
+- name: Remove cert-manager issuer tempfile
+  ansible.builtin.file:
+    path: /tmp/cert-manager-issuer.yml
+    state: absent
 
 # ── MetalLB via Helm ─────────────────────────────────────────────────────────
 - name: Deploy MetalLB via Helm
