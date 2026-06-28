@@ -1,10 +1,19 @@
 ---
 # ── Helm Repos ────────────────────────────────────────────────────────────────
+# Use a system-wide repo config so all users (root, github, etc.) share the same repos
+- name: Ensure system-wide Helm config directory exists
+  ansible.builtin.file:
+    path: /etc/helm
+    state: directory
+    mode: '0755'
+
 - name: Add ingress-nginx Helm repo
   ansible.builtin.command:
     cmd: helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
   register: k3s_apps_helm_repo_add
   changed_when: "'already exists' not in k3s_apps_helm_repo_add.stdout"
   failed_when: k3s_apps_helm_repo_add.rc != 0 and 'already exists' not in k3s_apps_helm_repo_add.stdout
@@ -14,6 +23,8 @@
     cmd: helm repo update
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
   changed_when: false
 
 - name: Ensure K3s manifests directory exists
@@ -336,6 +347,8 @@
       --timeout 5m
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
   changed_when: true
 
 - name: Remove ingress-nginx values tempfile

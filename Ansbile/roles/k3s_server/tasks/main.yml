@@ -140,6 +140,20 @@
     regexp: '^KUBECONFIG='
     state: present
 
+- name: Set HELM_REPOSITORY_CONFIG for all users via /etc/environment
+  ansible.builtin.lineinfile:
+    path: /etc/environment
+    line: 'HELM_REPOSITORY_CONFIG=/etc/helm/repositories.yaml'
+    regexp: '^HELM_REPOSITORY_CONFIG='
+    state: present
+
+- name: Set HELM_REPOSITORY_CACHE for all users via /etc/environment
+  ansible.builtin.lineinfile:
+    path: /etc/environment
+    line: 'HELM_REPOSITORY_CACHE=/etc/helm/cache'
+    regexp: '^HELM_REPOSITORY_CACHE='
+    state: present
+
 - name: Ensure helm binary is in system PATH for all users
   ansible.builtin.file:
     src: /usr/local/bin/helm
