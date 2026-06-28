@@ -51,6 +51,8 @@ controller:
   metrics:
     enabled: true
     port: 10254
+    portName: metrics
+    hostPort: 10254
     service:
       annotations:
         prometheus.io/scrape: "true"
