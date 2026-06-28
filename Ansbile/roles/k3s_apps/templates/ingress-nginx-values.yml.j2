@@ -51,12 +51,19 @@ controller:
   metrics:
     enabled: true
     port: 10254
-    portName: metrics
-    hostPort: 10254
     service:
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "10254"
+
+  hostNetwork: true
+
+  hostPort:
+    enabled: true
+    ports:
+      http: 80
+      https: 443
+      metrics: 10254
 
   resources:
     requests:
