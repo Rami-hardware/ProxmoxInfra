@@ -230,6 +230,7 @@
     mode: "0644"
   delegate_to: "{{ nginx_config_host }}"
   become: true
+  ignore_unreachable: true
   loop: "{{ groups['all'] | difference(['host-node']) }}"
   loop_control:
     loop_var: nginx_config_host
@@ -239,6 +240,7 @@
   delegate_to: "{{ nginx_config_host }}"
   become: true
   changed_when: true
+  ignore_unreachable: true
   loop: "{{ groups['all'] | difference(['host-node']) }}"
   loop_control:
     loop_var: nginx_config_host
