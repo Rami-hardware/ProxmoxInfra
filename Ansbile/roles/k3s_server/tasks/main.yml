@@ -106,6 +106,38 @@
     cmd: k3s kubectl rollout status deployment/coredns -n kube-system --timeout=60s
   changed_when: false
 
+# ── Helm Install ─────────────────────────────────────────────────────────────
+- name: Check if Helm is already installed
+  ansible.builtin.command: helm version --short
+  register: k3s_server_helm_check
+  changed_when: false
+  failed_when: false
+
+- name: Download Helm install script
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+    dest: /tmp/get-helm-3.sh
+    mode: '0755'
+  when: k3s_server_helm_check.rc != 0
+
+- name: Install Helm
+  ansible.builtin.command:
+    cmd: /tmp/get-helm-3.sh
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  when: k3s_server_helm_check.rc != 0
+  changed_when: true
+
+- name: Verify Helm installation
+  ansible.builtin.command: helm version --short
+  register: k3s_server_helm_version
+  changed_when: false
+
+- name: Show Helm version
+  ansible.builtin.debug:
+    msg: "Helm installed: {{ k3s_server_helm_version.stdout }}"
+
+
 # ── Token (used by k3s_agent role) ───────────────────────────────────────────
 - name: Check if node token exists
   ansible.builtin.stat:
