@@ -20,9 +20,20 @@
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
     HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
     HELM_REPOSITORY_CACHE: /etc/helm/cache
-  register: k3s_apps_helm_repo_add
-  changed_when: "'already exists' not in k3s_apps_helm_repo_add.stdout"
-  failed_when: k3s_apps_helm_repo_add.rc != 0 and 'already exists' not in k3s_apps_helm_repo_add.stdout
+  register: k3s_apps_helm_repo_nginx
+  changed_when: "'already exists' not in k3s_apps_helm_repo_nginx.stdout"
+  failed_when: k3s_apps_helm_repo_nginx.rc != 0 and 'already exists' not in k3s_apps_helm_repo_nginx.stdout
+
+- name: Add MetalLB Helm repo
+  ansible.builtin.command:
+    cmd: helm repo add metallb https://metallb.github.io/metallb
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  register: k3s_apps_helm_repo_metallb
+  changed_when: "'already exists' not in k3s_apps_helm_repo_metallb.stdout"
+  failed_when: k3s_apps_helm_repo_metallb.rc != 0 and 'already exists' not in k3s_apps_helm_repo_metallb.stdout
 
 - name: Ensure Helm repositories file is world-readable
   ansible.builtin.file:
@@ -323,6 +334,39 @@
   loop_control:
     label: "{{ item.item.name }}"
 
+
+# ── MetalLB via Helm ─────────────────────────────────────────────────────────
+- name: Deploy MetalLB via Helm
+  ansible.builtin.command:
+    cmd: >
+      helm upgrade --install metallb metallb/metallb
+      --namespace metallb-system
+      --create-namespace
+      --wait
+      --timeout 5m
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  changed_when: true
+
+- name: Template MetalLB IP pool config
+  ansible.builtin.template:
+    src: metallb-config.yml.j2
+    dest: /tmp/metallb-config.yml
+    mode: '0600'
+
+- name: Apply MetalLB IP pool config
+  ansible.builtin.command:
+    cmd: k3s kubectl apply -f /tmp/metallb-config.yml
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+
+- name: Remove MetalLB config tempfile
+  ansible.builtin.file:
+    path: /tmp/metallb-config.yml
+    state: absent
 
 # ── ingress-nginx via Helm ────────────────────────────────────────────────────
 # Remove old manually-applied resources so Helm can take ownership
