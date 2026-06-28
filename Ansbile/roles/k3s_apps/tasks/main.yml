@@ -295,6 +295,30 @@
 
 
 # ── ingress-nginx via Helm ────────────────────────────────────────────────────
+# Remove old manually-applied resources so Helm can take ownership
+- name: Check if ingress-nginx was previously managed without Helm
+  ansible.builtin.command:
+    cmd: k3s kubectl get service ingress-nginx-controller -n ingress-nginx -o jsonpath={.metadata.labels.app\.kubernetes\.io/managed-by}
+  register: k3s_apps_ingress_managed_by
+  failed_when: false
+  changed_when: false
+
+- name: Delete old ingress-nginx resources (not Helm-managed)
+  ansible.builtin.shell:
+    cmd: |
+      k3s kubectl delete deployment ingress-nginx-controller -n ingress-nginx --ignore-not-found
+      k3s kubectl delete service ingress-nginx-controller -n ingress-nginx --ignore-not-found
+      k3s kubectl delete serviceaccount ingress-nginx -n ingress-nginx --ignore-not-found
+      k3s kubectl delete configmap ingress-nginx-controller -n ingress-nginx --ignore-not-found
+      k3s kubectl delete clusterrole ingress-nginx --ignore-not-found
+      k3s kubectl delete clusterrolebinding ingress-nginx --ignore-not-found
+      k3s kubectl delete role ingress-nginx -n ingress-nginx --ignore-not-found
+      k3s kubectl delete rolebinding ingress-nginx -n ingress-nginx --ignore-not-found
+      k3s kubectl delete ingressclass nginx --ignore-not-found
+    executable: /bin/bash
+  when: k3s_apps_ingress_managed_by.stdout != "Helm"
+  changed_when: k3s_apps_ingress_managed_by.stdout != "Helm"
+
 - name: Template ingress-nginx Helm values
   ansible.builtin.template:
     src: ingress-nginx-values.yml.j2
