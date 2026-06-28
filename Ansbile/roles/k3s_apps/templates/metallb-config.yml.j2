@@ -6,7 +6,7 @@ metadata:
   namespace: metallb-system
 spec:
   addresses:
-    - {{ metallb_ip_range | default('192.168.1.210-192.168.1.220') }}
+    - {{ k3s_apps_metallb_ip_range | default('192.168.1.210-192.168.1.220') }}
 ---
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement

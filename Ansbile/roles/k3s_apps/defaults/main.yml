@@ -1,7 +1,7 @@
 ---
 k3s_apps_manifest_dir: /opt/k3s/manifests
-metallb_ip_range: "192.168.1.210-192.168.1.220"
-ingress_nginx_ip: "192.168.1.210"
+k3s_apps_metallb_ip_range: "192.168.1.210-192.168.1.220"
+k3s_apps_ingress_nginx_ip: "192.168.1.210"
 
 # k3s_apps is a list of app dicts defined in group_vars/github-vm.yml.
 # Each dict must have:
