@@ -160,3 +160,4 @@ nginx_services_local:
     port: 80
     namespace: network
     auth: false
+    disable_buffering: true
