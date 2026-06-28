@@ -132,6 +132,12 @@
     mode: '0644'
 
 # Remove manifests for apps that were deleted from k3s_apps_list
+# ingress-nginx is now managed by Helm — delete old manifest file if it exists
+- name: Remove old ingress-nginx manifest (now managed by Helm)
+  ansible.builtin.file:
+    path: "{{ k3s_apps_manifest_dir }}/ingress-nginx.yml"
+    state: absent
+
 - name: Find existing app manifests on disk
   ansible.builtin.find:
     paths: "{{ k3s_apps_manifest_dir }}"
