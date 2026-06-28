@@ -106,6 +106,7 @@
     cmd: k3s kubectl rollout status deployment/coredns -n kube-system --timeout=60s
   changed_when: false
 
+
 # ── Helm Install ─────────────────────────────────────────────────────────────
 - name: Check if Helm is already installed
   ansible.builtin.command: helm version --short
