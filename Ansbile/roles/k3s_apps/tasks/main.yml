@@ -365,6 +365,7 @@
 - name: Create cert-manager CA secret from local CA
   ansible.builtin.shell:
     cmd: |
+      set -o pipefail
       k3s kubectl create secret tls homelab-ca-secret \
         --cert=/opt/k3s/local-tls/ca.crt \
         --key=/opt/k3s/local-tls/ca.key \
