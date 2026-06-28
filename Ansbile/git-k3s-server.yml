@@ -5,5 +5,5 @@
   vars_files:
     - group_vars/vault.yml
   roles:
-    # - k3s_server
-    - k3s_apps
+    - k3s_server
+    # - k3s_apps
