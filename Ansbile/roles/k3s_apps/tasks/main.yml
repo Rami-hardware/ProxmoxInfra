@@ -362,19 +362,19 @@
     HELM_REPOSITORY_CACHE: /etc/helm/cache
   changed_when: true
 
-- name: Create Cloudflare API token secret for cert-manager
+- name: Create cert-manager CA secret from local CA
   ansible.builtin.shell:
     cmd: |
       set -o pipefail
-      k3s kubectl create secret generic cloudflare-api-token \
-        --from-literal=api-token={{ vault_cloudflare_api_token }} \
+      k3s kubectl create secret tls homelab-ca-secret \
+        --cert=/opt/k3s/local-tls/ca.crt \
+        --key=/opt/k3s/local-tls/ca.key \
         --namespace=cert-manager \
         --dry-run=client -o yaml | k3s kubectl apply -f -
     executable: /bin/bash
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   changed_when: true
-  no_log: true
 
 - name: Template cert-manager ClusterIssuer
   ansible.builtin.template:

@@ -127,7 +127,7 @@ metadata:
   name: {{ svc.name }}
   namespace: {{ ns }}
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+    cert-manager.io/cluster-issuer: homelab-ca-issuer
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
 {% if svc.disable_buffering | default(false) %}
     nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
