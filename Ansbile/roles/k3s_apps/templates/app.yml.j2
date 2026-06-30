@@ -75,6 +75,11 @@ spec:
     metadata:
       labels:
         app: {{ item.name }}
+{% if item.istio_exclude_ports is defined %}
+      annotations:
+        traffic.sidecar.istio.io/excludeInboundPorts: "{{ item.istio_exclude_ports | join(',') }}"
+        traffic.sidecar.istio.io/excludeOutboundPorts: "{{ item.istio_exclude_ports | join(',') }}"
+{% endif %}
     spec:
 {% if item.host_network | default(false) %}
       hostNetwork: true

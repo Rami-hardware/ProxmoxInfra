@@ -187,6 +187,8 @@ k3s_apps_list:
       - port: 6881
         protocol: UDP
         host_port: 6881
+    istio_exclude_ports:
+      - 6881
     env:
       - { name: TZ, value: "Asia/Riyadh" }
       - { name: PUID, value: "1000" }
