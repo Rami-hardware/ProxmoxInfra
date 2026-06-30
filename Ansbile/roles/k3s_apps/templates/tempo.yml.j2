@@ -51,7 +51,7 @@ spec:
         kubernetes.io/hostname: {{ ingress_nginx_node | default('git-k3s-server') }}
       containers:
         - name: tempo
-          image: grafana/tempo:latest
+          image: grafana/tempo:2.6.1
           args:
             - "-config.file=/etc/tempo/tempo.yaml"
           ports:
