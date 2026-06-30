@@ -155,12 +155,6 @@ nginx_services_local:
     namespace: monitoring
     auth: false
 
-  - name: router
-    ip: 192.168.1.1
-    port: 80
-    namespace: network
-    auth: false
-
   - name: server
     ip: 192.168.1.250
     port: 8006
