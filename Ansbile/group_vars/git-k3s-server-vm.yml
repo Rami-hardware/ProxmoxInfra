@@ -348,6 +348,7 @@ k3s_apps_list:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.retention.time={{ prometheus_retention_time }}"
       - "--web.enable-lifecycle"
+      - "--web.enable-remote-write-receiver"
       - "--storage.tsdb.wal-compression"
       - "--query.timeout=30s"
       - "--query.max-concurrency=10"

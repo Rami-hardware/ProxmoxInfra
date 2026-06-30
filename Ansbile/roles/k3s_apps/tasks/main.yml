@@ -286,6 +286,16 @@
   changed_when: true
   when: k3s_apps_list | length > 0
 
+# Re-assert Istio injection labels directly with kubectl label, as the final word
+# on namespace labels. Multiple app manifests each declaring the same Namespace
+# object via server-side apply can lose ownership of the labels field to
+# whichever applier ran last without it — a direct label call always wins.
+- name: Ensure Istio injection label on managed namespaces
+  ansible.builtin.command:
+    cmd: "k3s kubectl label namespace {{ item }} istio-injection=enabled --overwrite"
+  loop: "{{ k3s_apps_istio_injected_namespaces | default([]) }}"
+  changed_when: true
+
 # Force a rollout restart so ProgressDeadlineExceeded from prior failed runs doesn't
 # cause an immediate 0-second failure on the next run.
 - name: Restart deployments that have exceeded their progress deadline
@@ -344,31 +354,6 @@
   loop: "{{ k3s_apps_rollout.results }}"
   loop_control:
     label: "{{ item.item.name }}"
-
-# ── Prometheus Kubernetes service-discovery token ─────────────────────────────
-# Long-lived SA token (from prometheus-rbac.yml.j2) so off-cluster Prometheus
-# can authenticate to the k3s API server for kubernetes_sd_configs.
-- name: Wait for prometheus-token secret to be populated
-  ansible.builtin.command:
-    cmd: k3s kubectl get secret prometheus-token -n monitoring -o jsonpath={.data.token}
-  register: k3s_apps_prometheus_token_check
-  until: k3s_apps_prometheus_token_check.stdout | length > 0
-  retries: 10
-  delay: 3
-  changed_when: false
-
-- name: Read prometheus SA token
-  ansible.builtin.command:
-    cmd: k3s kubectl get secret prometheus-token -n monitoring -o jsonpath={.data.token}
-  register: k3s_apps_prometheus_token
-  changed_when: false
-
-- name: Decode and copy prometheus token to monitoring-server
-  ansible.builtin.copy:
-    content: "{{ k3s_apps_prometheus_token.stdout | b64decode }}"
-    dest: "{{ hostvars['monitoring-server']['prometheus_config_dir'] }}/k3s-sa-token"
-    mode: '0600'
-  delegate_to: monitoring-server
 
 # ── cert-manager via Helm ────────────────────────────────────────────────────
 - name: Deploy cert-manager via Helm
