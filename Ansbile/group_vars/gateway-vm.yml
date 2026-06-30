@@ -161,3 +161,9 @@ nginx_services_local:
     namespace: network
     auth: false
     backend_protocol: HTTPS
+
+  - name: jaeger
+    ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
+    port: 30686
+    namespace: istio-system
+    auth: false

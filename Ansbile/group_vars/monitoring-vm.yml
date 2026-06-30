@@ -106,6 +106,29 @@ prometheus_scrape_jobs:
     relabel_configs:
       - target_label: instance
         replacement: git-k3s-server
+  - name: istio-mesh
+    metrics_path: /stats/prometheus
+    kubernetes_sd_configs:
+      - role: pod
+        api_server: "https://{{ hostvars['git-k3s-server']['ansible_host'] }}:6443"
+        bearer_token_file: /etc/prometheus/k3s-sa-token
+        insecure_skip_verify: true
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_container_name]
+        action: keep
+        regex: istio-proxy
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: "true"
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: '([^:]+)(?::\d+)?;(\d+)'
+        replacement: '$1:$2'
+        target_label: __address__
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
 
   - name: speedtest
     targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:9798"]

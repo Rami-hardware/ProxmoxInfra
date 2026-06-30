@@ -345,6 +345,30 @@
   loop_control:
     label: "{{ item.item.name }}"
 
+# ── Prometheus Kubernetes service-discovery token ─────────────────────────────
+# Long-lived SA token (from prometheus-rbac.yml.j2) so off-cluster Prometheus
+# can authenticate to the k3s API server for kubernetes_sd_configs.
+- name: Wait for prometheus-token secret to be populated
+  ansible.builtin.command:
+    cmd: k3s kubectl get secret prometheus-token -n monitoring -o jsonpath={.data.token}
+  register: k3s_apps_prometheus_token_check
+  until: k3s_apps_prometheus_token_check.stdout | length > 0
+  retries: 10
+  delay: 3
+  changed_when: false
+
+- name: Read prometheus SA token
+  ansible.builtin.command:
+    cmd: k3s kubectl get secret prometheus-token -n monitoring -o jsonpath={.data.token}
+  register: k3s_apps_prometheus_token
+  changed_when: false
+
+- name: Decode and copy prometheus token to monitoring-server
+  ansible.builtin.copy:
+    content: "{{ k3s_apps_prometheus_token.stdout | b64decode }}"
+    dest: "{{ hostvars['monitoring-server']['prometheus_config_dir'] }}/k3s-sa-token"
+    mode: '0600'
+  delegate_to: monitoring-server
 
 # ── cert-manager via Helm ────────────────────────────────────────────────────
 - name: Deploy cert-manager via Helm
@@ -513,6 +537,27 @@
     HELM_REPOSITORY_CACHE: /etc/helm/cache
   changed_when: true
 
+# ── Jaeger (tracing backend) ──────────────────────────────────────────────────
+- name: Template Jaeger manifest
+  ansible.builtin.template:
+    src: jaeger.yml.j2
+    dest: "{{ k3s_apps_manifest_dir }}/jaeger.yml"
+    mode: '0644'
+
+- name: Apply Jaeger manifest
+  ansible.builtin.command:
+    cmd: "k3s kubectl apply --server-side --force-conflicts -f {{ k3s_apps_manifest_dir }}/jaeger.yml"
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+
+- name: Wait for Jaeger deployment to be ready
+  ansible.builtin.command:
+    cmd: "k3s kubectl rollout status deployment/jaeger -n istio-system --timeout=120s"
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: false
+
 - name: Deploy Istiod via Helm
   ansible.builtin.command:
     cmd: >
@@ -523,6 +568,8 @@
       --set global.proxy.resources.requests.memory=64Mi
       --set global.proxy.resources.limits.cpu=200m
       --set global.proxy.resources.limits.memory=128Mi
+      --set meshConfig.defaultConfig.tracing.zipkin.address=jaeger-collector.istio-system.svc.cluster.local:9411
+      --set meshConfig.enableTracing=true
       --wait
       --timeout 5m
   environment:

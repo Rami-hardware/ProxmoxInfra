@@ -32,6 +32,24 @@ scrape_configs:
       insecure_skip_verify: {{ job.tls_config.insecure_skip_verify | lower }}
 {% endif %}
 {% endif %}
+{% if job.kubernetes_sd_configs is defined %}
+    kubernetes_sd_configs:
+{% for sd in job.kubernetes_sd_configs %}
+      - role: {{ sd.role }}
+        api_server: "{{ sd.api_server }}"
+        bearer_token_file: "{{ sd.bearer_token_file }}"
+        tls_config:
+          ca_file: "{{ sd.ca_file | default(omit) }}"
+          insecure_skip_verify: {{ sd.insecure_skip_verify | default(true) | lower }}
+{% if sd.namespaces is defined %}
+        namespaces:
+          names:
+{% for ns in sd.namespaces %}
+            - {{ ns }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% else %}
     static_configs:
       - targets:
 {% for target in job.targets %}
@@ -43,15 +61,27 @@ scrape_configs:
           {{ key }}: "{{ value }}"
 {% endfor %}
 {% endif %}
+{% endif %}
 {% if job.relabel_configs is defined %}
     relabel_configs:
 {% for rule in job.relabel_configs %}
-      - target_label: {{ rule.target_label }}
 {% if rule.source_labels is defined %}
-        source_labels: [{{ rule.source_labels | join(', ') }}]
+      - source_labels: [{{ rule.source_labels | join(', ') }}]
+{% else %}
+      -
+{% endif %}
+{% if rule.regex is defined %}
         regex: '{{ rule.regex }}'
 {% endif %}
+{% if rule.action is defined %}
+        action: {{ rule.action }}
+{% endif %}
+{% if rule.target_label is defined %}
+        target_label: {{ rule.target_label }}
+{% endif %}
+{% if rule.replacement is defined %}
         replacement: "{{ rule.replacement }}"
+{% endif %}
 {% endfor %}
 {% endif %}
 {% endfor %}
