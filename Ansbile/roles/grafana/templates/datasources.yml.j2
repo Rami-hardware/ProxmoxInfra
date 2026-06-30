@@ -4,6 +4,7 @@ datasources:
 {% for ds in grafana_datasources %}
   - name: {{ ds.name }}
     type: {{ ds.type }}
+    uid: {{ ds.name | lower }}
     url: {{ ds.url }}
     access: proxy
     isDefault: {{ ds.default | default(false) | lower }}
@@ -11,5 +12,11 @@ datasources:
 {% if ds.type == 'prometheus' %}
     jsonData:
       manageAlerts: false
+{% elif ds.type == 'tempo' %}
+    jsonData:
+      tracesToMetrics:
+        datasourceUid: prometheus
+      serviceMap:
+        datasourceUid: prometheus
 {% endif %}
 {% endfor %}

@@ -162,8 +162,8 @@ nginx_services_local:
     auth: false
     backend_protocol: HTTPS
 
-  - name: jaeger
+  - name: tempo
     ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
-    port: 30686
+    port: 30320
     namespace: istio-system
     auth: false
