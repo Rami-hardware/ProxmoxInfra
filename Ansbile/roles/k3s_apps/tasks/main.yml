@@ -404,63 +404,39 @@
     state: absent
 
 # ── MetalLB via Helm ─────────────────────────────────────────────────────────
-- name: Deploy MetalLB via Helm
-  ansible.builtin.command:
-    cmd: >
-      helm upgrade --install metallb metallb/metallb
-      --namespace metallb-system
-      --create-namespace
-      --wait
-      --timeout 5m
-  environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
-    HELM_REPOSITORY_CACHE: /etc/helm/cache
-  changed_when: true
-
-- name: Template MetalLB IP pool config
-  ansible.builtin.template:
-    src: metallb-config.yml.j2
-    dest: /tmp/metallb-config.yml
-    mode: '0600'
-
-- name: Apply MetalLB IP pool config
-  ansible.builtin.command:
-    cmd: k3s kubectl apply -f /tmp/metallb-config.yml
-  environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-  changed_when: true
-
-- name: Remove MetalLB config tempfile
-  ansible.builtin.file:
-    path: /tmp/metallb-config.yml
-    state: absent
-
+# - name: Deploy MetalLB via Helm
+#   ansible.builtin.command:
+#     cmd: >
+#       helm upgrade --install metallb metallb/metallb
+#       --namespace metallb-system
+#       --create-namespace
+#       --wait
+#       --timeout 5m
+#   environment:
+#     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+#     HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+#     HELM_REPOSITORY_CACHE: /etc/helm/cache
+#   changed_when: true
+#
+# - name: Template MetalLB IP pool config
+#   ansible.builtin.template:
+#     src: metallb-config.yml.j2
+#     dest: /tmp/metallb-config.yml
+#     mode: '0600'
+#
+# - name: Apply MetalLB IP pool config
+#   ansible.builtin.command:
+#     cmd: k3s kubectl apply -f /tmp/metallb-config.yml
+#   environment:
+#     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+#   changed_when: true
+#
+# - name: Remove MetalLB config tempfile
+#   ansible.builtin.file:
+#     path: /tmp/metallb-config.yml
+#     state: absent
+#
 # ── ingress-nginx via Helm ────────────────────────────────────────────────────
-# Remove old manually-applied resources so Helm can take ownership
-- name: Check if ingress-nginx was previously managed without Helm
-  ansible.builtin.command:
-    cmd: k3s kubectl get service ingress-nginx-controller -n ingress-nginx -o jsonpath={.metadata.labels.app\.kubernetes\.io/managed-by}
-  register: k3s_apps_ingress_managed_by
-  failed_when: false
-  changed_when: false
-
-- name: Delete old ingress-nginx resources (not Helm-managed)
-  ansible.builtin.shell:
-    cmd: |
-      k3s kubectl delete deployment ingress-nginx-controller -n ingress-nginx --ignore-not-found
-      k3s kubectl delete service ingress-nginx-controller -n ingress-nginx --ignore-not-found
-      k3s kubectl delete serviceaccount ingress-nginx -n ingress-nginx --ignore-not-found
-      k3s kubectl delete configmap ingress-nginx-controller -n ingress-nginx --ignore-not-found
-      k3s kubectl delete clusterrole ingress-nginx --ignore-not-found
-      k3s kubectl delete clusterrolebinding ingress-nginx --ignore-not-found
-      k3s kubectl delete role ingress-nginx -n ingress-nginx --ignore-not-found
-      k3s kubectl delete rolebinding ingress-nginx -n ingress-nginx --ignore-not-found
-      k3s kubectl delete ingressclass nginx --ignore-not-found
-    executable: /bin/bash
-  when: k3s_apps_ingress_managed_by.stdout != "Helm"
-  changed_when: k3s_apps_ingress_managed_by.stdout != "Helm"
-
 - name: Template ingress-nginx Helm values
   ansible.builtin.template:
     src: ingress-nginx-values.yml.j2
