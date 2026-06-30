@@ -41,6 +41,8 @@ data:
         remote_write:
           - url: "http://prometheus.monitoring.svc.cluster.local:9090/api/v1/write"
             send_exemplars: true
+      traces_storage:
+        path: /var/tempo/generator/traces
 
     overrides:
       metrics_generator_processors:
