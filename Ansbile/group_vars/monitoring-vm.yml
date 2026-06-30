@@ -187,6 +187,10 @@ grafana_datasources:
     type: loki
     url: http://192.168.1.203:3100
     default: false
+  - name: Jaeger
+    type: jaeger
+    url: "http://{{ hostvars['git-k3s-server']['ansible_host'] }}:30686"
+    default: false
 
 # ── Promtail ──────────────────────────────────────────────────────────────────
 promtail_config_dir: /opt/services/promtail
