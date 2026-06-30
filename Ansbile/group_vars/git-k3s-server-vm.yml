@@ -31,6 +31,7 @@ k3s_apps_list:
     replicas: 1
     dns_policy: None
     dns_nameservers:
+      - "10.43.0.10"
       - "8.8.8.8"
       - "8.8.4.4"
     env:
@@ -51,6 +52,7 @@ k3s_apps_list:
     replicas: 1
     dns_policy: None
     dns_nameservers:
+      - "10.43.0.10"
       - "8.8.8.8"
       - "8.8.4.4"
     gpu: true
@@ -84,6 +86,7 @@ k3s_apps_list:
     replicas: 1
     dns_policy: None
     dns_nameservers:
+      - "10.43.0.10"
       - "8.8.8.8"
       - "8.8.4.4"
     # GPU access enables VAAPI hwaccel for ffmpeg during audio extraction,
@@ -116,6 +119,7 @@ k3s_apps_list:
     node_port: 7878
     dns_policy: None
     dns_nameservers:
+      - "10.43.0.10"
       - "8.8.8.8"
       - "8.8.4.4"
     target_node: media-server
@@ -148,6 +152,7 @@ k3s_apps_list:
     config_mount: /config
     dns_policy: None
     dns_nameservers:
+      - "10.43.0.10"
       - "8.8.8.8"
       - "8.8.4.4"
     replicas: 1
@@ -201,6 +206,7 @@ k3s_apps_list:
     skip_pv: true
     dns_policy: None
     dns_nameservers:
+      - "10.43.0.10"
       - "8.8.8.8"
       - "8.8.4.4"
     replicas: 1
@@ -282,6 +288,7 @@ k3s_apps_list:
     config_mount: /config
     dns_policy: None
     dns_nameservers:
+      - "10.43.0.10"
       - "8.8.8.8"
       - "8.8.4.4"
     replicas: 1
@@ -312,6 +319,7 @@ k3s_apps_list:
     replicas: 1
     dns_policy: None
     dns_nameservers:
+      - "10.43.0.10"
       - "8.8.8.8"
       - "8.8.4.4"
     extra_volumes:
@@ -390,6 +398,7 @@ k3s_apps_list:
     replicas: 1
     dns_policy: None
     dns_nameservers:
+      - "10.43.0.10"
       - "8.8.8.8"
       - "8.8.4.4"
     memory_request: "32Mi"
@@ -405,6 +414,7 @@ k3s_apps_list:
     host_network: true
     dns_policy: None
     dns_nameservers:
+      - "10.43.0.10"
       - "8.8.8.8"
       - "8.8.4.4"
     replicas: 1
