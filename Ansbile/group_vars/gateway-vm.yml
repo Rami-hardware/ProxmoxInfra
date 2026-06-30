@@ -166,3 +166,4 @@ nginx_services_local:
     port: 8006
     namespace: network
     auth: false
+    backend_protocol: HTTPS

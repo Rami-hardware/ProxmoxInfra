@@ -129,6 +129,9 @@ metadata:
   annotations:
     cert-manager.io/cluster-issuer: homelab-ca-issuer
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+{% if svc.backend_protocol | default(false) %}
+    nginx.ingress.kubernetes.io/backend-protocol: "{{ svc.backend_protocol }}"
+{% endif %}
 {% if svc.disable_buffering | default(false) %}
     nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
