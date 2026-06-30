@@ -478,6 +478,55 @@
     path: /tmp/ingress-nginx-values.yml
     state: absent
 
+# ── Istio service mesh via Helm ───────────────────────────────────────────────
+- name: Add Istio Helm repo
+  ansible.builtin.command:
+    cmd: helm repo add istio https://istio-release.storage.googleapis.com/charts
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  register: k3s_apps_helm_repo_istio
+  changed_when: "'already exists' not in k3s_apps_helm_repo_istio.stdout"
+  failed_when: k3s_apps_helm_repo_istio.rc != 0 and 'already exists' not in k3s_apps_helm_repo_istio.stdout
+
+- name: Update Helm repos (Istio)
+  ansible.builtin.command:
+    cmd: helm repo update
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  changed_when: false
+
+- name: Deploy Istio base (CRDs) via Helm
+  ansible.builtin.command:
+    cmd: >
+      helm upgrade --install istio-base istio/base
+      --namespace istio-system
+      --create-namespace
+      --wait
+      --timeout 5m
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  changed_when: true
+
+- name: Deploy Istiod via Helm
+  ansible.builtin.command:
+    cmd: >
+      helm upgrade --install istiod istio/istiod
+      --namespace istio-system
+      --set meshConfig.enablePrometheusMerge=true
+      --wait
+      --timeout 5m
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  changed_when: true
+
 # ── Security stack ────────────────────────────────────────────────────────────
 - name: Ensure Falco config directory exists on all nodes
   ansible.builtin.file:
