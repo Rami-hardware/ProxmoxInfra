@@ -3,6 +3,12 @@ k3s_apps_manifest_dir: /opt/k3s/manifests
 k3s_apps_metallb_ip_range: "192.168.1.210-192.168.1.220"
 k3s_apps_ingress_nginx_ip: "192.168.1.210"
 
+# Namespaces that should have Istio sidecar injection enabled.
+# Applied as a label on the Namespace object in app.yml.j2 so it survives
+# every playbook re-apply (manual `kubectl label` does not persist).
+k3s_apps_istio_injected_namespaces:
+  - media
+
 # k3s_apps is a list of app dicts defined in group_vars/github-vm.yml.
 # Each dict must have:
 #   name         - used as Deployment name, Namespace, and manifest filename

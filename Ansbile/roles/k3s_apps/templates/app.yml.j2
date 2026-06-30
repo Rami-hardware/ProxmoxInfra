@@ -8,9 +8,15 @@ metadata:
   ) or (
     k3s_apps_list | selectattr('namespace', 'equalto', item.namespace) | selectattr('privileged', 'defined') | selectattr('privileged') | list | length > 0
   ) %}
-{% if ns_needs_privileged %}
+{% set ns_needs_istio = item.namespace in (k3s_apps_istio_injected_namespaces | default([])) %}
+{% if ns_needs_privileged or ns_needs_istio %}
   labels:
+{% if ns_needs_privileged %}
     pod-security.kubernetes.io/enforce: privileged
+{% endif %}
+{% if ns_needs_istio %}
+    istio-injection: enabled
+{% endif %}
 {% endif %}
 {% if not (item.skip_pv | default(false)) %}
 ---

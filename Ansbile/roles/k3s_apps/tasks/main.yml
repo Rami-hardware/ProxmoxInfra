@@ -570,6 +570,7 @@
       --set global.proxy.resources.limits.memory=128Mi
       --set meshConfig.defaultConfig.tracing.zipkin.address=jaeger-collector.istio-system.svc.cluster.local:9411
       --set meshConfig.enableTracing=true
+      --set meshConfig.defaultConfig.tracing.sampling=100
       --wait
       --timeout 5m
   environment:
