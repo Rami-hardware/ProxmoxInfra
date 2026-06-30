@@ -81,6 +81,10 @@ spec:
 {% for ns in item.dns_nameservers %}
           - "{{ ns }}"
 {% endfor %}
+        searches:
+          - "{{ item.namespace }}.svc.cluster.local"
+          - "svc.cluster.local"
+          - "cluster.local"
 {% endif %}
 {% elif item.host_network | default(false) %}
       dnsPolicy: ClusterFirstWithHostNet
