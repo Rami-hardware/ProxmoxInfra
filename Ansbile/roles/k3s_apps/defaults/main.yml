@@ -8,6 +8,8 @@ k3s_apps_ingress_nginx_ip: "192.168.1.210"
 # every playbook re-apply (manual `kubectl label` does not persist).
 k3s_apps_istio_injected_namespaces:
   - media
+  - monitoring
+  - network
 
 # k3s_apps is a list of app dicts defined in group_vars/github-vm.yml.
 # Each dict must have:
