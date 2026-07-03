@@ -66,30 +66,6 @@ vms = {
   }
 
 
-  security = {
-    name       = "security-server"
-    vmid       = 619
-    ip         = "192.168.1.202/24"
-    cores      = 2
-    memory     = 3072
-    balloon    = 1536
-    ciuser     = "security"
-    cipassword = "security@123"
-    hostpcis   = []
-    disks = [
-      {
-        datastore_id = "local-lvm"
-        interface    = "scsi0"
-        size         = 50
-        file_format  = "raw"
-        file_id      = ""
-        iothread     = true
-        discard      = "on"
-      }
-    ]
-  }
-
-
   github = {
     name       = "git-k3s-server"
     vmid       = 115
