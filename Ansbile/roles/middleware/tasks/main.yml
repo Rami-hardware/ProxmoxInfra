@@ -38,15 +38,26 @@
           return `**Alert:** ${summary}\nStatus: ${status}\n${description}`;
         });
 
-        const payload = {
-          content: messages.join('\n\n')
-        };
+        // Chunk messages to stay under Discord's 2000 char limit per message
+        const chunks = [];
+        let current = '';
+        for (const msg of messages) {
+          if ((current + '\n\n' + msg).length > 1900) {
+            chunks.push(current);
+            current = msg;
+          } else {
+            current = current ? current + '\n\n' + msg : msg;
+          }
+        }
+        if (current) chunks.push(current);
 
         try {
-          console.log('Sending payload to Discord:', payload.content);
-          await axios.post(DISCORD_WEBHOOK_URL, payload, {
-            headers: { 'Content-Type': 'application/json' }
-          });
+          for (const chunk of chunks) {
+            await axios.post(DISCORD_WEBHOOK_URL, { content: chunk }, {
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+          console.log(`Sent ${chunks.length} chunk(s) to Discord`);
           res.status(200).send('Alert forwarded to Discord');
         } catch (error) {
           console.error('Error sending alert to Discord:', error.response?.data || error.message);
