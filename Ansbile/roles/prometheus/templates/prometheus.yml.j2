@@ -36,11 +36,17 @@ scrape_configs:
     kubernetes_sd_configs:
 {% for sd in job.kubernetes_sd_configs %}
       - role: {{ sd.role }}
+{% if sd.api_server is defined %}
         api_server: "{{ sd.api_server }}"
+{% endif %}
+{% if sd.bearer_token_file is defined %}
         bearer_token_file: "{{ sd.bearer_token_file }}"
+{% endif %}
+{% if sd.api_server is defined or sd.bearer_token_file is defined %}
         tls_config:
           ca_file: "{{ sd.ca_file | default(omit) }}"
           insecure_skip_verify: {{ sd.insecure_skip_verify | default(true) | lower }}
+{% endif %}
 {% if sd.namespaces is defined %}
         namespaces:
           names:
