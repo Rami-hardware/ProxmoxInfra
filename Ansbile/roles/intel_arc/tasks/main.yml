@@ -25,7 +25,7 @@
 
 - name: Install Intel Arc packages
   ansible.builtin.apt:
-    name: "{{ intel_packages }}"
+    name: "{{ intel_arc_packages }}"
     state: present
   when: ansible_distribution_release in ["jammy", "focal", "noble"]
 

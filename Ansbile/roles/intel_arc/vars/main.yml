@@ -1,4 +1,4 @@
-intel_packages:
+intel_arc_packages:
   - intel-media-va-driver-non-free
   - libze-intel-gpu1
   - libze1
