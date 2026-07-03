@@ -2,5 +2,5 @@
   hosts: security-server
   become: true
   roles:
-    - DNS
+    - dns
     # - authelia (requires vault_authelia_password_hash in group_vars/all.yml)
