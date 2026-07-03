@@ -78,6 +78,7 @@ spec:
         app: kube-state-metrics
     spec:
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       serviceAccountName: kube-state-metrics
       nodeSelector:
         kubernetes.io/hostname: git-k3s-server

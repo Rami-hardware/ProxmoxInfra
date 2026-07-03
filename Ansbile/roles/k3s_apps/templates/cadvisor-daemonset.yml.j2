@@ -56,6 +56,7 @@ spec:
         app: cadvisor
     spec:
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       hostPID: true
       serviceAccountName: cadvisor
       tolerations:

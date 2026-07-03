@@ -48,6 +48,7 @@ spec:
     spec:
       serviceAccountName: falco
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       hostPID: true
       tolerations:
         - key: node-role.kubernetes.io/control-plane
