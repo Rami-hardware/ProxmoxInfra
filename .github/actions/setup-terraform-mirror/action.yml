@@ -1,0 +1,53 @@
+name: Setup Terraform provider mirror
+description: >
+  Points Terraform at a local filesystem mirror and seeds it with provider zips
+  from GitHub releases, so it never contacts registry.terraform.io (unreachable
+  from the self-hosted runner).
+
+runs:
+  using: composite
+  steps:
+    # Point Terraform at a local filesystem mirror so it never contacts
+    # registry.terraform.io (unreachable from the self-hosted runner).
+    - name: Configure Terraform provider mirror
+      shell: bash
+      run: |
+        mkdir -p ~/.terraform.d/tf-mirror
+        {
+          echo 'provider_installation {'
+          echo '  filesystem_mirror {'
+          echo "    path    = \"$HOME/.terraform.d/tf-mirror\""
+          echo '    include = ["registry.terraform.io/*/*"]'
+          echo '  }'
+          echo '  direct {'
+          echo '    exclude = ["registry.terraform.io/*/*"]'
+          echo '  }'
+          echo '}'
+        } > ~/.terraformrc
+
+    # Download provider zips from GitHub releases into the mirror on first run;
+    # unzip -t validates the zip so a corrupt/partial file from a prior run
+    # triggers a fresh download rather than silently failing at terraform init.
+    - name: Seed Terraform provider mirror
+      shell: bash
+      run: |
+        seed() {
+          local host=$1 ns=$2 type=$3 version=$4 url=$5
+          local dest="$HOME/.terraform.d/tf-mirror/${host}/${ns}/${type}"
+          local zip="$dest/terraform-provider-${type}_${version}_linux_amd64.zip"
+          mkdir -p "$dest"
+          if ! unzip -t "$zip" > /dev/null 2>&1; then
+            echo "Downloading ${ns}/${type} v${version}..."
+            curl -fSL --retry 3 --retry-delay 5 -o "$zip" "$url" || {
+              echo "ERROR: Could not download ${ns}/${type} v${version}."
+              echo "Seed the mirror manually on the runner:"
+              echo "  cd Terraform && terraform providers mirror ~/.terraform.d/tf-mirror"
+              exit 1
+            }
+            unzip -t "$zip" > /dev/null || { echo "Downloaded zip is corrupt."; exit 1; }
+          else
+            echo "${ns}/${type} v${version} already in mirror."
+          fi
+        }
+        seed registry.terraform.io bpg proxmox 0.70.1 "https://github.com/bpg/terraform-provider-proxmox/releases/download/v0.70.1/terraform-provider-proxmox_0.70.1_linux_amd64.zip"
+        seed registry.terraform.io telmate proxmox 2.9.14 "https://github.com/Telmate/terraform-provider-proxmox/releases/download/v2.9.14/terraform-provider-proxmox_2.9.14_linux_amd64.zip"

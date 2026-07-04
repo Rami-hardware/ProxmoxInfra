@@ -19,499 +19,57 @@ concurrency:
 jobs:
   build-image:
     name: Build & Scan Docker Image & Files
-    runs-on: self-hosted
-    timeout-minutes: 20
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build image (local, for scanning)
-        uses: docker/build-push-action@v6
-        with:
-          context: Ansbile/apps/alert-forwarder
-          push: false
-          load: true
-          tags: alert-forwarder:scan
-
-      # Runs Trivy itself inside a throwaway container instead of aquasecurity/trivy-action,
-      # which caches its vulnerability DB under ~/.cache/trivy on the runner's own disk.
-      # Here the DB lives only inside the container's ephemeral filesystem — nothing is
-      # bind-mounted from the host, so it's gone the moment the container exits.
-      - name: Scan image for CVEs
-        run: |
-          sudo docker run --rm \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            -v "$PWD":/workspace \
-            -e TRIVY_SKIP_JAVA_DB_UPDATE=true \
-            aquasec/trivy:0.70.0 image \
-            --severity CRITICAL,HIGH \
-            --ignore-unfixed \
-            --format json \
-            --output /workspace/trivy-results.json \
-            --exit-code 0 \
-            alert-forwarder:scan
-          # container runs as root, so it writes root-owned output — reclaim it for later steps/cleanup
-          sudo chown "$(id -u):$(id -g)" trivy-results.json
-
-      - name: Check for CVEs and notify Discord
-        env:
-          WEBHOOK: ${{ secrets.DISCORD_CD_Alert_URL }}
-        run: |
-          COUNT=$(jq '[.Results[]?.Vulnerabilities[]?] | length' trivy-results.json)
-          echo "Found $COUNT CRITICAL/HIGH vulnerabilities"
-          if [ "$COUNT" -eq 0 ]; then
-            echo "No CVEs found — skipping notification."
-            exit 0
-          fi
-
-          SUMMARY=$(jq -r '
-            [.Results[]?.Vulnerabilities[]? |
-              "\(.Severity): \(.PkgName) \(.VulnerabilityID) (\(.InstalledVersion) -> \(.FixedVersion // "no fix"))"
-            ] | .[0:15] | join("\n")
-          ' trivy-results.json)
-
-          MSG=$(printf '%s' "$SUMMARY" | head -c 3500 \
-                | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
-
-          curl -sS -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK" <<EOF
-          {
-            "embeds": [{
-              "title": "⚠️ alert-forwarder image: $COUNT CRITICAL/HIGH CVE(s) found",
-              "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-              "color": 15158332,
-              "fields": [
-                {"name": "Branch", "value": "\`${{ github.ref_name }}\`", "inline": true},
-                {"name": "Commit", "value": "\`${{ github.sha }}\`", "inline": true},
-                {"name": "Findings (top 15)", "value": $MSG}
-              ],
-              "footer": {"text": "Trivy scan — build continues, image still pushed"}
-            }]
-          }
-          EOF
-
-      - name: Log in to GHCR
-        if: github.ref_name == 'main' || github.ref_name == 'staging' || github.ref_name == 'development'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push image
-        uses: docker/build-push-action@v6
-        with:
-          context: Ansbile/apps/alert-forwarder
-          push: true
-          tags: |
-            ghcr.io/rami-hardware/alert-forwarder:${{ github.sha }}
-            ghcr.io/rami-hardware/alert-forwarder:latest
-
-      # Runner has a small disk — unused image layers accumulate run over run
-      # and can fill it (previously caused CI to fail with ENOSPC).
-      - name: Prune unused Docker images
-        if: always()
-        run: sudo docker image prune -af
+    uses: ./.github/workflows/build-image.yml
+    secrets:
+      DISCORD_CD_Alert_URL: ${{ secrets.DISCORD_CD_Alert_URL }}
 
   testing:
     name: Testing Infrastructure Code
-    runs-on: self-hosted
     needs: build-image
-    timeout-minutes: 30
-    environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || 'development' }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install system dependencies
-        run: |
-          need_install=false
-          for pkg in unzip curl git ansible python3-venv python3-pip; do
-            dpkg -s "$pkg" &>/dev/null || { need_install=true; break; }
-          done
-          if $need_install; then
-            sudo apt-get update -o Acquire::Retries=3
-            sudo apt-get install -y unzip curl git ansible python3-venv python3-pip
-          else
-            echo "All packages already installed — skipping apt-get update."
-          fi
-
-      - name: Verify installations
-        run: |
-          unzip -v
-          git --version
-          curl --version
-
-      # ── Terraform ────────────────────────────────────────────────────────────
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.6.0
-          terraform_wrapper: false  # wrapper intercepts exit codes; breaks -detailed-exitcode
-
-      # Point Terraform at a local filesystem mirror so it never contacts
-      # registry.terraform.io (unreachable from the self-hosted runner).
-      - name: Configure Terraform provider mirror
-        run: |
-          mkdir -p ~/.terraform.d/tf-mirror
-          {
-            echo 'provider_installation {'
-            echo '  filesystem_mirror {'
-            echo "    path    = \"$HOME/.terraform.d/tf-mirror\""
-            echo '    include = ["registry.terraform.io/*/*"]'
-            echo '  }'
-            echo '  direct {'
-            echo '    exclude = ["registry.terraform.io/*/*"]'
-            echo '  }'
-            echo '}'
-          } > ~/.terraformrc
-
-      # Download provider zips from GitHub releases into the mirror on first run;
-      # unzip -t validates the zip so a corrupt/partial file from a prior run
-      # triggers a fresh download rather than silently failing at terraform init.
-      - name: Seed Terraform provider mirror
-        run: |
-          seed() {
-            local host=$1 ns=$2 type=$3 version=$4 url=$5
-            local dest="$HOME/.terraform.d/tf-mirror/${host}/${ns}/${type}"
-            local zip="$dest/terraform-provider-${type}_${version}_linux_amd64.zip"
-            mkdir -p "$dest"
-            if ! unzip -t "$zip" > /dev/null 2>&1; then
-              echo "Downloading ${ns}/${type} v${version}..."
-              curl -fSL --retry 3 --retry-delay 5 -o "$zip" "$url" || {
-                echo "ERROR: Could not download ${ns}/${type} v${version}."
-                echo "Seed the mirror manually on the runner:"
-                echo "  cd Terraform && terraform providers mirror ~/.terraform.d/tf-mirror"
-                exit 1
-              }
-              unzip -t "$zip" > /dev/null || { echo "Downloaded zip is corrupt."; exit 1; }
-            else
-              echo "${ns}/${type} v${version} already in mirror."
-            fi
-          }
-          seed registry.terraform.io bpg proxmox 0.70.1 "https://github.com/bpg/terraform-provider-proxmox/releases/download/v0.70.1/terraform-provider-proxmox_0.70.1_linux_amd64.zip"
-          seed registry.terraform.io telmate proxmox 2.9.14 "https://github.com/Telmate/terraform-provider-proxmox/releases/download/v2.9.14/terraform-provider-proxmox_2.9.14_linux_amd64.zip"
-
-      - name: Terraform init (no backend)
-        working-directory: Terraform
-        run: terraform init -backend=false
-
-      - name: Terraform format check
-        working-directory: Terraform
-        run: terraform fmt -check -recursive
-
-      - name: Terraform validate
-        working-directory: Terraform
-        run: terraform validate
-
-      # ── Ansible ──────────────────────────────────────────────────────────────
-      - name: Install Ansible lint in virtualenv
-        run: |
-          if [ ! -f venv/bin/ansible-lint ]; then
-            python3 -m venv venv
-            source venv/bin/activate
-            pip install --quiet ansible-lint
-          else
-            echo "ansible-lint already installed — skipping."
-          fi
-
-      - name: Install Ansible collections
-        run: |
-          source venv/bin/activate
-          ansible-galaxy collection install -r Ansbile/requirements.yml
-
-      - name: Setup SSH and Vault
-        shell: bash
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-          echo "$ANSIBLE_VAULT_PASSWORD" > ~/.vault_pass
-          chmod 600 ~/.ssh/id_rsa ~/.vault_pass
-
-      - name: Ansible syntax check
-        run: |
-          source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --syntax-check --vault-password-file ~/.vault_pass
-
-
-      - name: Ansible lint
-        run: |
-          source venv/bin/activate
-          ansible-lint Ansbile/
-
-      # gateway and media use Docker command/shell tasks that break in check mode
-      # --check is limited to template-driven playbooks only
-      - name: Ansible dry run (check + diff)
-        run: |
-          source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --check --diff --vault-password-file ~/.vault_pass
-        env:
-          ANSIBLE_HOST_KEY_CHECKING: 'False'
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          SONARR_API_KEY: ${{ secrets.SONARR_API_KEY }}
-          BAZARR_API_KEY: ${{ secrets.BAZARR_API_KEY }}
-          PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
-          RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
-          OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
-
-      - name: Cleanup secrets
-        if: always()
-        run: |
-          rm -f ~/.vault_pass
-          rm -f ~/.ssh/id_rsa
+    uses: ./.github/workflows/testing.yml
+    secrets:
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      SONARR_API_KEY: ${{ secrets.SONARR_API_KEY }}
+      BAZARR_API_KEY: ${{ secrets.BAZARR_API_KEY }}
+      PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
+      RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
+      OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
 
   Deploy:
     name: Deploy Infrastructure Code
-    runs-on: self-hosted
     needs: testing
-    timeout-minutes: 60
-    environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || 'development' }}
+    uses: ./.github/workflows/deploy.yml
+    secrets:
+      PM_API_URL: ${{ secrets.PM_API_URL }}
+      PM_API_TOKEN: ${{ secrets.PM_API_TOKEN }}
+      SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      SONARR_API_KEY: ${{ secrets.SONARR_API_KEY }}
+      BAZARR_API_KEY: ${{ secrets.BAZARR_API_KEY }}
+      PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
+      RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
+      OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # ── Terraform ────────────────────────────────────────────────────────────
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.6.0
-          terraform_wrapper: false  # wrapper intercepts exit codes; breaks -detailed-exitcode
-
-      - name: Configure Terraform provider mirror
-        run: |
-          mkdir -p ~/.terraform.d/tf-mirror
-          {
-            echo 'provider_installation {'
-            echo '  filesystem_mirror {'
-            echo "    path    = \"$HOME/.terraform.d/tf-mirror\""
-            echo '    include = ["registry.terraform.io/*/*"]'
-            echo '  }'
-            echo '  direct {'
-            echo '    exclude = ["registry.terraform.io/*/*"]'
-            echo '  }'
-            echo '}'
-          } > ~/.terraformrc
-
-      - name: Seed Terraform provider mirror
-        run: |
-          seed() {
-            local host=$1 ns=$2 type=$3 version=$4 url=$5
-            local dest="$HOME/.terraform.d/tf-mirror/${host}/${ns}/${type}"
-            local zip="$dest/terraform-provider-${type}_${version}_linux_amd64.zip"
-            mkdir -p "$dest"
-            if ! unzip -t "$zip" > /dev/null 2>&1; then
-              echo "Downloading ${ns}/${type} v${version}..."
-              curl -fSL --retry 3 --retry-delay 5 -o "$zip" "$url" || {
-                echo "ERROR: Could not download ${ns}/${type} v${version}."
-                echo "Seed the mirror manually on the runner:"
-                echo "  cd Terraform && terraform providers mirror ~/.terraform.d/tf-mirror"
-                exit 1
-              }
-              unzip -t "$zip" > /dev/null || { echo "Downloaded zip is corrupt."; exit 1; }
-            else
-              echo "${ns}/${type} v${version} already in mirror."
-            fi
-          }
-          seed registry.terraform.io bpg proxmox 0.70.1 "https://github.com/bpg/terraform-provider-proxmox/releases/download/v0.70.1/terraform-provider-proxmox_0.70.1_linux_amd64.zip"
-          seed registry.terraform.io telmate proxmox 2.9.14 "https://github.com/Telmate/terraform-provider-proxmox/releases/download/v2.9.14/terraform-provider-proxmox_2.9.14_linux_amd64.zip"
-
-      - name: Terraform init
-        working-directory: Terraform
-        env:
-          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-          TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
-          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-        run: terraform init
-
-      # NOTE: VM imports are intentionally NOT done in CI. Terraform state is
-      # persistent on the self-hosted runner, so imports are only needed once
-      # (first setup) or after state corruption. Run manually if needed:
-      #   terraform import 'module.proxmox_vms["NAME"].proxmox_virtual_environment_vm.vm' pve/VMID
-
-      # Clean up stale state entries from past renames/typos. Without this,
-      # Terraform tries to destroy + recreate VMs that just got renamed in code.
-      - name: Cleanup stale Terraform state entries
-        working-directory: Terraform
-        env:
-          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-          TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
-          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-        run: |
-          for stale in monitor game dev securtiy; do
-            terraform state rm "module.proxmox_vms[\"$stale\"].proxmox_virtual_environment_vm.vm" 2>/dev/null || true
-          done
-
-      - name: Terraform plan (compare code vs server)
-        id: plan
-        working-directory: Terraform
-        env:
-          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-          TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
-          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-        run: |
-          set +e
-          terraform plan -input=false -no-color -detailed-exitcode -out=tfplan
-          EXIT_CODE=$?
-          set -e
-          if [ $EXIT_CODE -eq 1 ]; then
-            echo "Terraform plan failed."
-            exit 1
-          elif [ $EXIT_CODE -eq 2 ]; then
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "Changes detected — will apply."
-          else
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "No changes — skipping apply."
-          fi
-
-      - name: Fail if any VM would be destroyed
-        if: steps.plan.outputs.has_changes == 'true'
-        working-directory: Terraform
-        run: |
-          terraform show tfplan > plan_output.txt
-          cat plan_output.txt
-          if grep -qE "will be destroyed|must be replaced" plan_output.txt; then
-            echo "ERROR: Destroy or replace detected — blocking pipeline."
-            grep -E "will be destroyed|must be replaced" plan_output.txt
-            exit 1
-          fi
-          echo "No destroys detected — safe to proceed."
-
-      #- name: Terraform apply
-      #  if: steps.plan.outputs.has_changes == 'true'
-      #  working-directory: Terraform
-      #  env:
-      #    TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-      #    TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
-      #    TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-      #  run: |
-      #    terraform apply -auto-approve -parallelism=1 \
-      #      -target='module.proxmox_vms["gateway"]' \
-      #      -target='module.proxmox_vms["media"]' \
-      #      -target='module.proxmox_vms["monitoring"]' \
-      #      -target='module.proxmox_vms["security"]'
-
-      # ── Ansible ──────────────────────────────────────────────────────────────
-      - name: Install system dependencies
-        run: |
-          need_install=false
-          for pkg in ansible python3-venv python3-pip; do
-            dpkg -s "$pkg" &>/dev/null || { need_install=true; break; }
-          done
-          if $need_install; then
-            sudo apt-get update -o Acquire::Retries=3
-            sudo apt-get install -y ansible python3-venv python3-pip
-          else
-            echo "All packages already installed — skipping apt-get update."
-          fi
- 
-      - name: Set up Python virtualenv
-        run: |
-          if [ ! -f venv/bin/ansible ]; then
-            python3 -m venv venv
-            source venv/bin/activate
-            pip install --quiet ansible
-          else
-            echo "ansible already installed — skipping."
-          fi
-
-      - name: Install Ansible collections
-        run: |
-          source venv/bin/activate
-          ansible-galaxy collection install -r Ansbile/requirements.yml
-
-      - name: Setup SSH and Vault
-        shell: bash
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-          echo "$ANSIBLE_VAULT_PASSWORD" > ~/.vault_pass
-          chmod 600 ~/.ssh/id_rsa ~/.vault_pass
-
-      - name: Run Ansible playbooks
-        env:
-          ANSIBLE_VAULT_PASSWORD_FILE: ~/.vault_pass
-          ANSIBLE_HOST_KEY_CHECKING: 'False'
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          SONARR_API_KEY: ${{ secrets.SONARR_API_KEY }}
-          BAZARR_API_KEY: ${{ secrets.BAZARR_API_KEY }}
-          PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
-          RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
-          OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
-        run: |
-          source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml --vault-password-file ~/.vault_pass
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml --vault-password-file ~/.vault_pass
-
-
-      - name: Cleanup secrets
-        if: always()
-        run: |
-          rm -f ~/.vault_pass
-          rm -f ~/.ssh/id_rsa
+  security:
+    name: Security Scan
+    needs: Deploy
+    if: always()
+    uses: ./.github/workflows/security.yml
+    secrets:
+      DISCORD_CD_Alert_URL: ${{ secrets.DISCORD_CD_Alert_URL }}
 
   notify:
     name: Notify Discord
-    runs-on: self-hosted
-    needs: [testing, Deploy]
+    needs: [testing, Deploy, security]
     if: always()
-    timeout-minutes: 5
-    steps:
-      - name: Send Discord notification
-        env:
-          WEBHOOK: ${{ secrets.DISCORD_CD_Alert_URL }}
-          TESTING_RESULT: ${{ needs.testing.result }}
-          DEPLOY_RESULT: ${{ needs.Deploy.result }}
-          BRANCH: ${{ github.ref_name }}
-          COMMIT: ${{ github.sha }}
-          COMMIT_MSG: ${{ github.event.head_commit.message }}
-          ACTOR: ${{ github.actor }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          # Discord embed colors: green=3066993, red=15158332, yellow=15844367, grey=9807270
-          if [ "$TESTING_RESULT" = "success" ] && [ "$DEPLOY_RESULT" = "success" ]; then
-            STATUS="✅ Success"; COLOR=3066993
-          elif [ "$TESTING_RESULT" = "cancelled" ] || [ "$DEPLOY_RESULT" = "cancelled" ]; then
-            STATUS="⏹️ Cancelled"; COLOR=9807270
-          elif [ "$TESTING_RESULT" = "skipped" ] && [ "$DEPLOY_RESULT" = "skipped" ]; then
-            STATUS="⚠️ Skipped"; COLOR=15844367
-          else
-            STATUS="❌ Failed"; COLOR=15158332
-          fi
-
-          # Truncate + JSON-escape commit message (handles quotes, newlines, etc.)
-          MSG=$(printf '%s' "${COMMIT_MSG:-no message}" | head -c 200 \
-                | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
-
-          curl -sS -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK" <<EOF
-          {
-            "embeds": [{
-              "title": "$STATUS — Homelab CI/CD",
-              "url": "$RUN_URL",
-              "color": $COLOR,
-              "fields": [
-                {"name": "Branch",  "value": "\`$BRANCH\`",      "inline": true},
-                {"name": "Author",  "value": "$ACTOR",            "inline": true},
-                {"name": "Commit",  "value": "\`${COMMIT:0:7}\`", "inline": true},
-                {"name": "Testing", "value": "$TESTING_RESULT",   "inline": true},
-                {"name": "Deploy",  "value": "$DEPLOY_RESULT",    "inline": true},
-                {"name": "Message", "value": $MSG}
-              ],
-              "footer": {"text": "GitHub Actions"}
-            }]
-          }
-          EOF
+    uses: ./.github/workflows/notify.yml
+    with:
+      testing_result: ${{ needs.testing.result }}
+      deploy_result: ${{ needs.Deploy.result }}
+      security_result: ${{ needs.security.result }}
+    secrets:
+      DISCORD_CD_Alert_URL: ${{ secrets.DISCORD_CD_Alert_URL }}

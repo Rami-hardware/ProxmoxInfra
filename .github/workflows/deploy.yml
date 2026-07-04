@@ -1,0 +1,178 @@
+name: Deploy Infrastructure Code
+
+on:
+  workflow_call:
+    secrets:
+      PM_API_URL:
+        required: true
+      PM_API_TOKEN:
+        required: true
+      SSH_PUBLIC_KEY:
+        required: true
+      SSH_PRIVATE_KEY:
+        required: true
+      ANSIBLE_VAULT_PASSWORD:
+        required: true
+      DISCORD_WEBHOOK_URL:
+        required: true
+      SONARR_API_KEY:
+        required: true
+      BAZARR_API_KEY:
+        required: true
+      PROWLARR_API_KEY:
+        required: true
+      RADARR_API_KEY:
+        required: true
+      OVERSEERR_API_KEY:
+        required: true
+
+jobs:
+  Deploy:
+    name: Deploy Infrastructure Code
+    runs-on: self-hosted
+    timeout-minutes: 60
+    environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || 'development' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── Terraform ────────────────────────────────────────────────────────────
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+          terraform_wrapper: false  # wrapper intercepts exit codes; breaks -detailed-exitcode
+
+      - name: Setup Terraform provider mirror
+        uses: ./.github/actions/setup-terraform-mirror
+
+      - name: Terraform init
+        working-directory: Terraform
+        env:
+          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
+          TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
+          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+        run: terraform init
+
+      # NOTE: VM imports are intentionally NOT done in CI. Terraform state is
+      # persistent on the self-hosted runner, so imports are only needed once
+      # (first setup) or after state corruption. Run manually if needed:
+      #   terraform import 'module.proxmox_vms["NAME"].proxmox_virtual_environment_vm.vm' pve/VMID
+
+      # Clean up stale state entries from past renames/typos. Without this,
+      # Terraform tries to destroy + recreate VMs that just got renamed in code.
+      - name: Cleanup stale Terraform state entries
+        working-directory: Terraform
+        env:
+          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
+          TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
+          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+        run: |
+          for stale in monitor game dev securtiy; do
+            terraform state rm "module.proxmox_vms[\"$stale\"].proxmox_virtual_environment_vm.vm" 2>/dev/null || true
+          done
+
+      - name: Terraform plan (compare code vs server)
+        id: plan
+        working-directory: Terraform
+        env:
+          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
+          TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
+          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+        run: |
+          set +e
+          terraform plan -input=false -no-color -detailed-exitcode -out=tfplan
+          EXIT_CODE=$?
+          set -e
+          if [ $EXIT_CODE -eq 1 ]; then
+            echo "Terraform plan failed."
+            exit 1
+          elif [ $EXIT_CODE -eq 2 ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected — will apply."
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes — skipping apply."
+          fi
+
+      - name: Fail if any VM would be destroyed
+        if: steps.plan.outputs.has_changes == 'true'
+        working-directory: Terraform
+        run: |
+          terraform show tfplan > plan_output.txt
+          cat plan_output.txt
+          if grep -qE "will be destroyed|must be replaced" plan_output.txt; then
+            echo "ERROR: Destroy or replace detected — blocking pipeline."
+            grep -E "will be destroyed|must be replaced" plan_output.txt
+            exit 1
+          fi
+          echo "No destroys detected — safe to proceed."
+
+      #- name: Terraform apply
+      #  if: steps.plan.outputs.has_changes == 'true'
+      #  working-directory: Terraform
+      #  env:
+      #    TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
+      #    TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
+      #    TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+      #  run: |
+      #    terraform apply -auto-approve -parallelism=1 \
+      #      -target='module.proxmox_vms["gateway"]' \
+      #      -target='module.proxmox_vms["media"]' \
+      #      -target='module.proxmox_vms["monitoring"]' \
+      #      -target='module.proxmox_vms["security"]'
+
+      # ── Ansible ──────────────────────────────────────────────────────────────
+      - name: Install system dependencies
+        run: |
+          need_install=false
+          for pkg in ansible python3-venv python3-pip; do
+            dpkg -s "$pkg" &>/dev/null || { need_install=true; break; }
+          done
+          if $need_install; then
+            sudo apt-get update -o Acquire::Retries=3
+            sudo apt-get install -y ansible python3-venv python3-pip
+          else
+            echo "All packages already installed — skipping apt-get update."
+          fi
+
+      - name: Set up Python virtualenv
+        run: |
+          if [ ! -f venv/bin/ansible ]; then
+            python3 -m venv venv
+            source venv/bin/activate
+            pip install --quiet ansible
+          else
+            echo "ansible already installed — skipping."
+          fi
+
+      - name: Install Ansible collections
+        run: |
+          source venv/bin/activate
+          ansible-galaxy collection install -r Ansbile/requirements.yml
+
+      - name: Setup SSH and Vault
+        uses: ./.github/actions/setup-ssh-vault
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+
+      - name: Run Ansible playbooks
+        env:
+          ANSIBLE_VAULT_PASSWORD_FILE: ~/.vault_pass
+          ANSIBLE_HOST_KEY_CHECKING: 'False'
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          SONARR_API_KEY: ${{ secrets.SONARR_API_KEY }}
+          BAZARR_API_KEY: ${{ secrets.BAZARR_API_KEY }}
+          PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
+          RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
+          OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
+        run: |
+          source venv/bin/activate
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml --vault-password-file ~/.vault_pass
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml --vault-password-file ~/.vault_pass
+
+      - name: Cleanup secrets
+        if: always()
+        uses: ./.github/actions/cleanup-secrets

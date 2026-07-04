@@ -1,0 +1,124 @@
+name: Testing Infrastructure Code
+
+on:
+  workflow_call:
+    secrets:
+      SSH_PRIVATE_KEY:
+        required: true
+      ANSIBLE_VAULT_PASSWORD:
+        required: true
+      DISCORD_WEBHOOK_URL:
+        required: true
+      SONARR_API_KEY:
+        required: true
+      BAZARR_API_KEY:
+        required: true
+      PROWLARR_API_KEY:
+        required: true
+      RADARR_API_KEY:
+        required: true
+      OVERSEERR_API_KEY:
+        required: true
+
+jobs:
+  testing:
+    name: Testing Infrastructure Code
+    runs-on: self-hosted
+    timeout-minutes: 30
+    environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || 'development' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          need_install=false
+          for pkg in unzip curl git ansible python3-venv python3-pip; do
+            dpkg -s "$pkg" &>/dev/null || { need_install=true; break; }
+          done
+          if $need_install; then
+            sudo apt-get update -o Acquire::Retries=3
+            sudo apt-get install -y unzip curl git ansible python3-venv python3-pip
+          else
+            echo "All packages already installed — skipping apt-get update."
+          fi
+
+      - name: Verify installations
+        run: |
+          unzip -v
+          git --version
+          curl --version
+
+      # ── Terraform ────────────────────────────────────────────────────────────
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+          terraform_wrapper: false  # wrapper intercepts exit codes; breaks -detailed-exitcode
+
+      - name: Setup Terraform provider mirror
+        uses: ./.github/actions/setup-terraform-mirror
+
+      - name: Terraform init (no backend)
+        working-directory: Terraform
+        run: terraform init -backend=false
+
+      - name: Terraform format check
+        working-directory: Terraform
+        run: terraform fmt -check -recursive
+
+      - name: Terraform validate
+        working-directory: Terraform
+        run: terraform validate
+
+      # ── Ansible ──────────────────────────────────────────────────────────────
+      - name: Install Ansible lint in virtualenv
+        run: |
+          if [ ! -f venv/bin/ansible-lint ]; then
+            python3 -m venv venv
+            source venv/bin/activate
+            pip install --quiet ansible-lint
+          else
+            echo "ansible-lint already installed — skipping."
+          fi
+
+      - name: Install Ansible collections
+        run: |
+          source venv/bin/activate
+          ansible-galaxy collection install -r Ansbile/requirements.yml
+
+      - name: Setup SSH and Vault
+        uses: ./.github/actions/setup-ssh-vault
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+
+      - name: Ansible syntax check
+        run: |
+          source venv/bin/activate
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --syntax-check --vault-password-file ~/.vault_pass
+
+      - name: Ansible lint
+        run: |
+          source venv/bin/activate
+          ansible-lint Ansbile/
+
+      # gateway and media use Docker command/shell tasks that break in check mode
+      # --check is limited to template-driven playbooks only
+      - name: Ansible dry run (check + diff)
+        run: |
+          source venv/bin/activate
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --check --diff --vault-password-file ~/.vault_pass
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: 'False'
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          SONARR_API_KEY: ${{ secrets.SONARR_API_KEY }}
+          BAZARR_API_KEY: ${{ secrets.BAZARR_API_KEY }}
+          PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
+          RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
+          OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
+
+      - name: Cleanup secrets
+        if: always()
+        uses: ./.github/actions/cleanup-secrets

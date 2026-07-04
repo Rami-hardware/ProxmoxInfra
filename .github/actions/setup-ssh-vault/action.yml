@@ -1,0 +1,19 @@
+name: Setup SSH and Ansible Vault
+description: Writes the SSH private key and Ansible Vault password to disk for the runner.
+
+inputs:
+  ssh-private-key:
+    required: true
+  ansible-vault-password:
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Setup SSH and Vault
+      shell: bash
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ inputs.ssh-private-key }}" > ~/.ssh/id_rsa
+        echo "${{ inputs.ansible-vault-password }}" > ~/.vault_pass
+        chmod 600 ~/.ssh/id_rsa ~/.vault_pass

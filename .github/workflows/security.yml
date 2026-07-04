@@ -1,0 +1,83 @@
+name: Security Scan
+
+on:
+  workflow_call:
+    secrets:
+      DISCORD_CD_Alert_URL:
+        required: true
+
+jobs:
+  security:
+    name: Security Scan
+    runs-on: self-hosted
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Scans the repo filesystem for misconfigurations (Terraform, Ansible, Dockerfiles),
+      # known-secret patterns, and vulnerable/CVE-affected dependencies (e.g. requirements.txt,
+      # collections). Runs in a throwaway container like the image scan in build-image.yml,
+      # so the vuln DB never touches the runner's disk.
+      - name: Scan repo for misconfigurations, secrets, and CVEs
+        run: |
+          sudo docker run --rm \
+            -v "$PWD":/workspace \
+            -e TRIVY_SKIP_JAVA_DB_UPDATE=true \
+            aquasec/trivy:0.70.0 fs \
+            --scanners misconfig,secret,vuln \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --format json \
+            --output /workspace/trivy-fs-results.json \
+            --exit-code 0 \
+            /workspace
+          sudo chown "$(id -u):$(id -g)" trivy-fs-results.json
+
+      - name: Check findings and notify Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_CD_Alert_URL }}
+        run: |
+          COUNT=$(jq '[.Results[]? | (.Misconfigurations // [])[], (.Secrets // [])[], (.Vulnerabilities // [])[]] | length' trivy-fs-results.json)
+          echo "Found $COUNT CRITICAL/HIGH security findings"
+
+          if [ "$COUNT" -eq 0 ]; then
+            echo "No findings — skipping notification."
+            exit 0
+          fi
+
+          SUMMARY=$(jq -r '
+            [.Results[]? |
+              ( (.Misconfigurations // [])[] | "MISCONFIG \(.Severity): \(.ID) \(.Title)" ),
+              ( (.Secrets // [])[] | "SECRET \(.Severity): \(.RuleID) in \(.Title // "file")" ),
+              ( (.Vulnerabilities // [])[] | "CVE \(.Severity): \(.PkgName) \(.VulnerabilityID) (\(.InstalledVersion) -> \(.FixedVersion // "no fix"))" )
+            ] | .[0:15] | join("\n")
+          ' trivy-fs-results.json)
+
+          MSG=$(printf '%s' "$SUMMARY" | head -c 3500 \
+                | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
+
+          curl -sS -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK" <<EOF
+          {
+            "embeds": [{
+              "title": "⚠️ Security scan: $COUNT CRITICAL/HIGH finding(s)",
+              "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              "color": 15158332,
+              "fields": [
+                {"name": "Branch", "value": "\`${{ github.ref_name }}\`", "inline": true},
+                {"name": "Commit", "value": "\`${{ github.sha }}\`", "inline": true},
+                {"name": "Findings (top 15)", "value": $MSG}
+              ],
+              "footer": {"text": "Trivy fs scan — misconfig + secrets + CVEs"}
+            }]
+          }
+          EOF
+
+      # Runner has a small disk — the results file and the Trivy image itself
+      # (pulled fresh each run) accumulate over time and can fill it.
+      - name: Cleanup scan results and Trivy image
+        if: always()
+        run: |
+          rm -f trivy-fs-results.json
+          sudo docker rmi aquasec/trivy:0.70.0 || true

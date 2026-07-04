@@ -1,0 +1,70 @@
+name: Notify Discord
+
+on:
+  workflow_call:
+    inputs:
+      testing_result:
+        required: true
+        type: string
+      deploy_result:
+        required: true
+        type: string
+      security_result:
+        required: true
+        type: string
+    secrets:
+      DISCORD_CD_Alert_URL:
+        required: true
+
+jobs:
+  notify:
+    name: Notify Discord
+    runs-on: self-hosted
+    timeout-minutes: 5
+    steps:
+      - name: Send Discord notification
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_CD_Alert_URL }}
+          TESTING_RESULT: ${{ inputs.testing_result }}
+          DEPLOY_RESULT: ${{ inputs.deploy_result }}
+          SECURITY_RESULT: ${{ inputs.security_result }}
+          BRANCH: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          ACTOR: ${{ github.actor }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # Discord embed colors: green=3066993, red=15158332, yellow=15844367, grey=9807270
+          if [ "$TESTING_RESULT" = "success" ] && [ "$DEPLOY_RESULT" = "success" ] && [ "$SECURITY_RESULT" = "success" ]; then
+            STATUS="✅ Success"; COLOR=3066993
+          elif [ "$TESTING_RESULT" = "cancelled" ] || [ "$DEPLOY_RESULT" = "cancelled" ] || [ "$SECURITY_RESULT" = "cancelled" ]; then
+            STATUS="⏹️ Cancelled"; COLOR=9807270
+          elif [ "$TESTING_RESULT" = "skipped" ] && [ "$DEPLOY_RESULT" = "skipped" ] && [ "$SECURITY_RESULT" = "skipped" ]; then
+            STATUS="⚠️ Skipped"; COLOR=15844367
+          else
+            STATUS="❌ Failed"; COLOR=15158332
+          fi
+
+          # Truncate + JSON-escape commit message (handles quotes, newlines, etc.)
+          MSG=$(printf '%s' "${COMMIT_MSG:-no message}" | head -c 200 \
+                | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
+
+          curl -sS -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK" <<EOF
+          {
+            "embeds": [{
+              "title": "$STATUS — Homelab CI/CD",
+              "url": "$RUN_URL",
+              "color": $COLOR,
+              "fields": [
+                {"name": "Branch",  "value": "\`$BRANCH\`",      "inline": true},
+                {"name": "Author",  "value": "$ACTOR",            "inline": true},
+                {"name": "Commit",  "value": "\`${COMMIT:0:7}\`", "inline": true},
+                {"name": "Testing", "value": "$TESTING_RESULT",   "inline": true},
+                {"name": "Deploy",  "value": "$DEPLOY_RESULT",    "inline": true},
+                {"name": "Security","value": "$SECURITY_RESULT",  "inline": true},
+                {"name": "Message", "value": $MSG}
+              ],
+              "footer": {"text": "GitHub Actions"}
+            }]
+          }
+          EOF

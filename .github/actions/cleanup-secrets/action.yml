@@ -1,0 +1,11 @@
+name: Cleanup secrets
+description: Removes the SSH private key and Ansible Vault password written to disk for this job.
+
+runs:
+  using: composite
+  steps:
+    - name: Cleanup secrets
+      shell: bash
+      run: |
+        rm -f ~/.vault_pass
+        rm -f ~/.ssh/id_rsa

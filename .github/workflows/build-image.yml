@@ -1,0 +1,110 @@
+name: Build & Scan Docker Image & Files
+
+on:
+  workflow_call:
+    secrets:
+      DISCORD_CD_Alert_URL:
+        required: true
+
+jobs:
+  build-image:
+    name: Build & Scan Docker Image & Files
+    runs-on: self-hosted
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image (local, for scanning)
+        uses: docker/build-push-action@v6
+        with:
+          context: Ansbile/apps/alert-forwarder
+          push: false
+          load: true
+          tags: alert-forwarder:scan
+
+      # Runs Trivy itself inside a throwaway container instead of aquasecurity/trivy-action,
+      # which caches its vulnerability DB under ~/.cache/trivy on the runner's own disk.
+      # Here the DB lives only inside the container's ephemeral filesystem — nothing is
+      # bind-mounted from the host, so it's gone the moment the container exits.
+      - name: Scan image for CVEs
+        run: |
+          sudo docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD":/workspace \
+            -e TRIVY_SKIP_JAVA_DB_UPDATE=true \
+            aquasec/trivy:0.70.0 image \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --format json \
+            --output /workspace/trivy-results.json \
+            --exit-code 0 \
+            alert-forwarder:scan
+          # container runs as root, so it writes root-owned output — reclaim it for later steps/cleanup
+          sudo chown "$(id -u):$(id -g)" trivy-results.json
+
+      - name: Check for CVEs and notify Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_CD_Alert_URL }}
+        run: |
+          COUNT=$(jq '[.Results[]?.Vulnerabilities[]?] | length' trivy-results.json)
+          echo "Found $COUNT CRITICAL/HIGH vulnerabilities"
+          if [ "$COUNT" -eq 0 ]; then
+            echo "No CVEs found — skipping notification."
+            exit 0
+          fi
+
+          SUMMARY=$(jq -r '
+            [.Results[]?.Vulnerabilities[]? |
+              "\(.Severity): \(.PkgName) \(.VulnerabilityID) (\(.InstalledVersion) -> \(.FixedVersion // "no fix"))"
+            ] | .[0:15] | join("\n")
+          ' trivy-results.json)
+
+          MSG=$(printf '%s' "$SUMMARY" | head -c 3500 \
+                | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
+
+          curl -sS -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK" <<EOF
+          {
+            "embeds": [{
+              "title": "⚠️ alert-forwarder image: $COUNT CRITICAL/HIGH CVE(s) found",
+              "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              "color": 15158332,
+              "fields": [
+                {"name": "Branch", "value": "\`${{ github.ref_name }}\`", "inline": true},
+                {"name": "Commit", "value": "\`${{ github.sha }}\`", "inline": true},
+                {"name": "Findings (top 15)", "value": $MSG}
+              ],
+              "footer": {"text": "Trivy scan — build continues, image still pushed"}
+            }]
+          }
+          EOF
+
+      - name: Log in to GHCR
+        if: github.ref_name == 'main' || github.ref_name == 'staging' || github.ref_name == 'development'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: Ansbile/apps/alert-forwarder
+          push: true
+          tags: |
+            ghcr.io/rami-hardware/alert-forwarder:${{ github.sha }}
+            ghcr.io/rami-hardware/alert-forwarder:latest
+
+      # Runner has a small disk — unused image layers accumulate run over run
+      # and can fill it (previously caused CI to fail with ENOSPC).
+      - name: Prune unused Docker images
+        if: always()
+        run: sudo docker image prune -af
