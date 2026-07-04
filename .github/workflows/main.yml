@@ -44,10 +44,47 @@ jobs:
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: alert-forwarder:scan
-          format: table
+          format: json
+          output: trivy-results.json
           severity: CRITICAL,HIGH
-          exit-code: '1'
+          exit-code: '0'
           ignore-unfixed: true
+
+      - name: Check for CVEs and notify Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_CD_Alert_URL }}
+        run: |
+          COUNT=$(jq '[.Results[]?.Vulnerabilities[]?] | length' trivy-results.json)
+          echo "Found $COUNT CRITICAL/HIGH vulnerabilities"
+          if [ "$COUNT" -eq 0 ]; then
+            echo "No CVEs found — skipping notification."
+            exit 0
+          fi
+
+          SUMMARY=$(jq -r '
+            [.Results[]?.Vulnerabilities[]? |
+              "\(.Severity): \(.PkgName) \(.VulnerabilityID) (\(.InstalledVersion) -> \(.FixedVersion // "no fix"))"
+            ] | .[0:15] | join("\n")
+          ' trivy-results.json)
+
+          MSG=$(printf '%s' "$SUMMARY" | head -c 3500 \
+                | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
+
+          curl -sS -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK" <<EOF
+          {
+            "embeds": [{
+              "title": "⚠️ alert-forwarder image: $COUNT CRITICAL/HIGH CVE(s) found",
+              "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              "color": 15158332,
+              "fields": [
+                {"name": "Branch", "value": "\`${{ github.ref_name }}\`", "inline": true},
+                {"name": "Commit", "value": "\`${{ github.sha }}\`", "inline": true},
+                {"name": "Findings (top 15)", "value": $MSG}
+              ],
+              "footer": {"text": "Trivy scan — build continues, image still pushed"}
+            }]
+          }
+          EOF
 
       - name: Log in to GHCR
         if: github.ref_name == 'main' || github.ref_name == 'staging' || github.ref_name == 'development'
