@@ -103,6 +103,12 @@ jobs:
             ghcr.io/rami-hardware/alert-forwarder:${{ github.sha }}
             ghcr.io/rami-hardware/alert-forwarder:latest
 
+      # Runner has a small disk — unused image layers accumulate run over run
+      # and can fill it (previously caused CI to fail with ENOSPC).
+      - name: Prune unused Docker images
+        if: always()
+        run: sudo docker image prune -af
+
   testing:
     name: Testing Infrastructure Code
     runs-on: self-hosted
