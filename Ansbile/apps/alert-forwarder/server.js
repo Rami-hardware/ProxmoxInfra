@@ -9,6 +9,13 @@ if (!DISCORD_WEBHOOK_URL) {
   console.error('DISCORD_WEBHOOK_URL is not set');
   process.exit(1);
 }
+// discordapp.com is Discord's deprecated legacy domain — webhooks created or copied
+// from old docs/tools sometimes still use it, and posts to it can silently no-op
+// instead of failing loudly, making misconfiguration hard to notice.
+if (!/^https:\/\/discord\.com\/api\/webhooks\//.test(DISCORD_WEBHOOK_URL)) {
+  console.error('DISCORD_WEBHOOK_URL does not look like a valid Discord webhook URL (expected https://discord.com/api/webhooks/...)');
+  process.exit(1);
+}
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
