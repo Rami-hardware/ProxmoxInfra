@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   build-image:
-    name: Build & Scan alert-forwarder Image
+    name: Build & Scan Docker Image & Files
     runs-on: self-hosted
     timeout-minutes: 20
     permissions:
@@ -41,7 +41,7 @@ jobs:
           tags: alert-forwarder:scan
 
       - name: Scan image for CVEs
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: alert-forwarder:scan
           format: table

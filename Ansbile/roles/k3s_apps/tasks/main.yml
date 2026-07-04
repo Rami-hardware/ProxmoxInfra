@@ -190,6 +190,12 @@
     path: "{{ k3s_apps_manifest_dir }}/ingress-nginx.yml"
     state: absent
 
+# alert-forwarder is now managed by Helm — delete old manifest file if it exists
+- name: Remove old alert-forwarder manifest (now managed by Helm)
+  ansible.builtin.file:
+    path: "{{ k3s_apps_manifest_dir }}/alert-forwarder.yml"
+    state: absent
+
 - name: Find existing app manifests on disk
   ansible.builtin.find:
     paths: "{{ k3s_apps_manifest_dir }}"
@@ -202,7 +208,7 @@
   loop: "{{ k3s_apps_existing_manifests.files }}"
   when: >
     (item.path | basename | splitext)[0] not in
-    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac', 'ingress-services']
+    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac', 'ingress-services', 'alert-forwarder']
   changed_when: true
 
 - name: Remove stale manifest files
@@ -212,7 +218,7 @@
   loop: "{{ k3s_apps_existing_manifests.files }}"
   when: >
     (item.path | basename | splitext)[0] not in
-    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac', 'ingress-services']
+    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac', 'ingress-services', 'alert-forwarder']
 
 # Single template for all apps — item.* variables drive the output
 - name: Template app manifests
@@ -462,6 +468,25 @@
   ansible.builtin.file:
     path: /tmp/ingress-nginx-values.yml
     state: absent
+
+# ── alert-forwarder via Helm ──────────────────────────────────────────────────
+- name: Deploy alert-forwarder via Helm
+  ansible.builtin.command:
+    cmd: >
+      helm upgrade --install alert-forwarder
+      {{ playbook_dir }}/apps/alert-forwarder/chart
+      --namespace monitoring
+      --create-namespace
+      --set image.tag={{ alert_forwarder_image_tag | default('latest') }}
+      --set-string discordWebhookUrl={{ lookup('env', 'DISCORD_WEBHOOK_URL') | quote }}
+      --wait
+      --timeout 5m
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  changed_when: true
+  no_log: true
 
 # ── Istio service mesh via Helm ───────────────────────────────────────────────
 - name: Add Istio Helm repo

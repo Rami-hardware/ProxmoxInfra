@@ -1,0 +1,22 @@
+image:
+  repository: ghcr.io/rami-hardware/alert-forwarder
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicas: 1
+
+port: 3002
+
+nodePort: 30302
+
+targetNode: monitoring-server
+
+discordWebhookUrl: ""
+
+resources:
+  requests:
+    memory: "64Mi"
+    cpu: "50m"
+  limits:
+    memory: "256Mi"
+    cpu: "300m"

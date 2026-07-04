@@ -20,21 +20,6 @@ authelia_users:
       - admins
 
 k3s_apps_list:
-  - name: alert-forwarder
-    namespace: monitoring
-    image: ghcr.io/rami-hardware/alert-forwarder:latest
-    port: 3002
-    node_port: 30302
-    target_node: monitoring-server
-    skip_pv: true
-    replicas: 1
-    env:
-      - { name: DISCORD_WEBHOOK_URL, value: "{{ lookup('env', 'DISCORD_WEBHOOK_URL') }}" }
-    memory_request: "64Mi"
-    memory_limit: "256Mi"
-    cpu_request: "50m"
-    cpu_limit: "300m"
-
   - name: overseerr
     namespace: media
     image: sctx/overseerr:latest
