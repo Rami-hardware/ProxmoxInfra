@@ -55,7 +55,8 @@ jobs:
               ] | .[0:15] | join("\n")
             ' trivy-fs-results.json)
 
-            MSG=$(printf '%s' "$SUMMARY" | head -c 3500 \
+            # Discord embed field values are capped at 1024 chars.
+            MSG=$(printf '%s' "$SUMMARY" | head -c 1000 \
                   | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
 
             TITLE="⚠️ Security scan (repo): $COUNT CRITICAL/HIGH finding(s)"
@@ -107,6 +108,13 @@ jobs:
           : > k3s-scan-summary.txt
           TOTAL=0
 
+          # Shared, ephemeral cache dir for the vuln DB so it's downloaded once for
+          # this whole loop instead of once per image (each `docker run --rm` would
+          # otherwise start with an empty cache and re-fetch the ~100MB DB every time).
+          # Wiped at the end of the job — never persisted across workflow runs.
+          CACHE_DIR="$PWD/.trivy-cache"
+          mkdir -p "$CACHE_DIR"
+
           while IFS= read -r IMAGE; do
             [ -z "$IMAGE" ] && continue
             echo "Scanning $IMAGE..."
@@ -115,6 +123,7 @@ jobs:
             sudo docker run --rm \
               -v /var/run/docker.sock:/var/run/docker.sock \
               -v "$PWD":/workspace \
+              -v "$CACHE_DIR":/root/.cache/trivy \
               -e TRIVY_SKIP_JAVA_DB_UPDATE=true \
               aquasec/trivy:0.70.0 image \
               --severity CRITICAL,HIGH \
@@ -145,7 +154,8 @@ jobs:
             COLOR=3066993
             FIELDS_EXTRA=""
           else
-            MSG=$(head -c 3500 k3s-scan-summary.txt \
+            # Discord embed field values are capped at 1024 chars.
+            MSG=$(head -c 1000 k3s-scan-summary.txt \
                   | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
             TITLE="⚠️ k3s images: $TOTAL CRITICAL/HIGH CVE(s) found"
             COLOR=15158332
@@ -166,6 +176,9 @@ jobs:
           }
           EOF
 
-      - name: Cleanup k3s scan summary
+      - name: Cleanup k3s scan summary and Trivy cache
         if: always()
-        run: rm -f k3s-scan-summary.txt
+        run: |
+          rm -f k3s-scan-summary.txt
+          sudo rm -rf .trivy-cache
+          sudo docker image prune -af
