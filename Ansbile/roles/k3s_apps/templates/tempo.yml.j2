@@ -1,5 +1,18 @@
 ---
 apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tempo-storage-pvc
+  namespace: istio-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  # storageClassName: local-path   # uncomment/adjust if your cluster needs an explicit class (k3s default is "local-path")
+---
+apiVersion: v1
 kind: ConfigMap
 metadata:
   name: tempo-config
@@ -98,7 +111,8 @@ spec:
           configMap:
             name: tempo-config
         - name: storage
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: tempo-storage-pvc
 ---
 apiVersion: v1
 kind: Service
