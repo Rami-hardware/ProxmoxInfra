@@ -63,7 +63,7 @@ jobs:
             FIELDS_EXTRA=", {\"name\": \"Findings (top 15)\", \"value\": $MSG}"
           fi
 
-          curl -sS -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK" <<EOF
+          curl -sS -f -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK" <<EOF
           {
             "embeds": [{
               "title": "$TITLE",
@@ -152,7 +152,7 @@ jobs:
             FIELDS_EXTRA=", {\"name\": \"Findings (top 5 per image)\", \"value\": $MSG}"
           fi
 
-          curl -sS -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK" <<EOF
+          curl -sS -f -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK" <<EOF
           {
             "embeds": [{
               "title": "$TITLE",
