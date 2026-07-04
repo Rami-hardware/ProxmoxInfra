@@ -17,9 +17,59 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  build-image:
+    name: Build & Scan alert-forwarder Image
+    runs-on: self-hosted
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image (local, for scanning)
+        uses: docker/build-push-action@v6
+        with:
+          context: Ansbile/apps/alert-forwarder
+          push: false
+          load: true
+          tags: alert-forwarder:scan
+
+      - name: Scan image for CVEs
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: alert-forwarder:scan
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          ignore-unfixed: true
+
+      - name: Log in to GHCR
+        if: github.ref_name == 'main' || github.ref_name == 'staging' || github.ref_name == 'development'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: Ansbile/apps/alert-forwarder
+          push: true
+          tags: |
+            ghcr.io/rami-hardware/alert-forwarder:${{ github.sha }}
+            ghcr.io/rami-hardware/alert-forwarder:latest
+
   testing:
     name: Testing Infrastructure Code
     runs-on: self-hosted
+    needs: build-image
     timeout-minutes: 30
     environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || 'development' }}
 

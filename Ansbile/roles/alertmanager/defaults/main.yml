@@ -1,6 +1,6 @@
 ---
 alertmanager_config_dir: /opt/docker/alertmanager
-alertmanager_webhook_url: "http://192.168.1.203:3002/Alertmanager"
+alertmanager_webhook_url: "http://192.168.1.203:30302/alertmanager"
 alertmanager_resolve_timeout: 5m
 alertmanager_group_wait: 30s
 alertmanager_group_interval: 5m
