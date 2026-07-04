@@ -60,7 +60,7 @@ jobs:
     if: always()
     uses: ./.github/workflows/security.yml
     secrets:
-      DISCORD_CD_Alert_URL: ${{ secrets.DISCORD_CD_Alert_URL }}
+      DISCORD_CI_ALERT_SEC_URL: ${{ secrets.DISCORD_CI_ALERT_SEC_URL }}
 
   notify:
     name: Notify Discord

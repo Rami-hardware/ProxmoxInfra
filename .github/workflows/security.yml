@@ -3,7 +3,7 @@ name: Security Scan
 on:
   workflow_call:
     secrets:
-      DISCORD_CD_Alert_URL:
+      DISCORD_CI_ALERT_SEC_URL:
         required: true
 
 jobs:
@@ -37,37 +37,41 @@ jobs:
 
       - name: Check findings and notify Discord
         env:
-          WEBHOOK: ${{ secrets.DISCORD_CD_Alert_URL }}
+          WEBHOOK: ${{ secrets.DISCORD_CI_ALERT_SEC_URL }}
         run: |
           COUNT=$(jq '[.Results[]? | (.Misconfigurations // [])[], (.Secrets // [])[], (.Vulnerabilities // [])[]] | length' trivy-fs-results.json)
           echo "Found $COUNT CRITICAL/HIGH security findings"
 
           if [ "$COUNT" -eq 0 ]; then
-            echo "No findings — skipping notification."
-            exit 0
+            TITLE="✅ Security scan (repo): no CRITICAL/HIGH findings"
+            COLOR=3066993
+            FIELDS_EXTRA=""
+          else
+            SUMMARY=$(jq -r '
+              [.Results[]? |
+                ( (.Misconfigurations // [])[] | "MISCONFIG \(.Severity): \(.ID) \(.Title)" ),
+                ( (.Secrets // [])[] | "SECRET \(.Severity): \(.RuleID) in \(.Title // "file")" ),
+                ( (.Vulnerabilities // [])[] | "CVE \(.Severity): \(.PkgName) \(.VulnerabilityID) (\(.InstalledVersion) -> \(.FixedVersion // "no fix"))" )
+              ] | .[0:15] | join("\n")
+            ' trivy-fs-results.json)
+
+            MSG=$(printf '%s' "$SUMMARY" | head -c 3500 \
+                  | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
+
+            TITLE="⚠️ Security scan (repo): $COUNT CRITICAL/HIGH finding(s)"
+            COLOR=15158332
+            FIELDS_EXTRA=", {\"name\": \"Findings (top 15)\", \"value\": $MSG}"
           fi
-
-          SUMMARY=$(jq -r '
-            [.Results[]? |
-              ( (.Misconfigurations // [])[] | "MISCONFIG \(.Severity): \(.ID) \(.Title)" ),
-              ( (.Secrets // [])[] | "SECRET \(.Severity): \(.RuleID) in \(.Title // "file")" ),
-              ( (.Vulnerabilities // [])[] | "CVE \(.Severity): \(.PkgName) \(.VulnerabilityID) (\(.InstalledVersion) -> \(.FixedVersion // "no fix"))" )
-            ] | .[0:15] | join("\n")
-          ' trivy-fs-results.json)
-
-          MSG=$(printf '%s' "$SUMMARY" | head -c 3500 \
-                | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
 
           curl -sS -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK" <<EOF
           {
             "embeds": [{
-              "title": "⚠️ Security scan: $COUNT CRITICAL/HIGH finding(s)",
+              "title": "$TITLE",
               "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-              "color": 15158332,
+              "color": $COLOR,
               "fields": [
                 {"name": "Branch", "value": "\`${{ github.ref_name }}\`", "inline": true},
-                {"name": "Commit", "value": "\`${{ github.sha }}\`", "inline": true},
-                {"name": "Findings (top 15)", "value": $MSG}
+                {"name": "Commit", "value": "\`${{ github.sha }}\`", "inline": true}$FIELDS_EXTRA
               ],
               "footer": {"text": "Trivy fs scan — misconfig + secrets + CVEs"}
             }]
@@ -87,7 +91,7 @@ jobs:
       # image's layers are ever on disk at a time — keeps the small runner disk from filling.
       - name: Scan all k3s workload images for CVEs
         env:
-          WEBHOOK: ${{ secrets.DISCORD_CD_Alert_URL }}
+          WEBHOOK: ${{ secrets.DISCORD_CI_ALERT_SEC_URL }}
         run: |
           export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
           IMAGES=$(sudo kubectl get pods --all-namespaces \
@@ -137,22 +141,25 @@ jobs:
 
           echo "Found $TOTAL total CRITICAL/HIGH vulnerabilities across k3s images"
           if [ "$TOTAL" -eq 0 ]; then
-            echo "No CVEs found in k3s images — skipping notification."
-            exit 0
+            TITLE="✅ k3s images: no CRITICAL/HIGH CVEs found"
+            COLOR=3066993
+            FIELDS_EXTRA=""
+          else
+            MSG=$(head -c 3500 k3s-scan-summary.txt \
+                  | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
+            TITLE="⚠️ k3s images: $TOTAL CRITICAL/HIGH CVE(s) found"
+            COLOR=15158332
+            FIELDS_EXTRA=", {\"name\": \"Findings (top 5 per image)\", \"value\": $MSG}"
           fi
-
-          MSG=$(head -c 3500 k3s-scan-summary.txt \
-                | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
 
           curl -sS -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK" <<EOF
           {
             "embeds": [{
-              "title": "⚠️ k3s images: $TOTAL CRITICAL/HIGH CVE(s) found",
+              "title": "$TITLE",
               "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-              "color": 15158332,
+              "color": $COLOR,
               "fields": [
-                {"name": "Branch", "value": "\`${{ github.ref_name }}\`", "inline": true},
-                {"name": "Findings (top 5 per image)", "value": $MSG}
+                {"name": "Branch", "value": "\`${{ github.ref_name }}\`", "inline": true}$FIELDS_EXTRA
               ],
               "footer": {"text": "Trivy scan across all running k3s pod images"}
             }]
