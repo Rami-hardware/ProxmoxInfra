@@ -11,6 +11,16 @@ k3s_apps_istio_injected_namespaces:
   - monitoring
   - network
 
+# Manifest names to exclude from the "delete removed apps" cleanup —
+# these are managed outside k3s_apps_list (DaemonSets, RBAC, or Helm releases).
+k3s_apps_helm_managed_names:
+  - node-exporter
+  - promtail
+  - kube-state-metrics
+  - prometheus-rbac
+  - ingress-services
+  - alert-forwarder
+
 # k3s_apps is a list of app dicts defined in group_vars/github-vm.yml.
 # Each dict must have:
 #   name         - used as Deployment name, Namespace, and manifest filename

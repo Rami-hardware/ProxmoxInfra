@@ -208,7 +208,7 @@
   loop: "{{ k3s_apps_existing_manifests.files }}"
   when: >
     (item.path | basename | splitext)[0] not in
-    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac', 'ingress-services', 'alert-forwarder']
+    (k3s_apps_list | map(attribute='name') | list) + k3s_apps_helm_managed_names
   changed_when: true
 
 - name: Remove stale manifest files
@@ -218,7 +218,7 @@
   loop: "{{ k3s_apps_existing_manifests.files }}"
   when: >
     (item.path | basename | splitext)[0] not in
-    (k3s_apps_list | map(attribute='name') | list) + ['node-exporter', 'promtail', 'kube-state-metrics', 'prometheus-rbac', 'ingress-services', 'alert-forwarder']
+    (k3s_apps_list | map(attribute='name') | list) + k3s_apps_helm_managed_names
 
 # Single template for all apps — item.* variables drive the output
 - name: Template app manifests
