@@ -81,3 +81,84 @@ jobs:
         run: |
           rm -f trivy-fs-results.json
           sudo docker rmi aquasec/trivy:0.70.0 || true
+
+      # Scans every image actually running in the k3s cluster (not just what's on the
+      # runner's local Docker disk). For each image: pull -> scan -> delete, so only one
+      # image's layers are ever on disk at a time — keeps the small runner disk from filling.
+      - name: Scan all k3s workload images for CVEs
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_CD_Alert_URL }}
+        run: |
+          export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+          IMAGES=$(sudo kubectl get pods --all-namespaces \
+            -o jsonpath='{range .items[*].spec.containers[*]}{.image}{"\n"}{end}' \
+            | sort -u)
+
+          if [ -z "$IMAGES" ]; then
+            echo "No running pods found — skipping k3s image scan."
+            exit 0
+          fi
+
+          echo "$IMAGES"
+          : > k3s-scan-summary.txt
+          TOTAL=0
+
+          while IFS= read -r IMAGE; do
+            [ -z "$IMAGE" ] && continue
+            echo "Scanning $IMAGE..."
+            sudo docker pull "$IMAGE" >/dev/null 2>&1 || { echo "  could not pull $IMAGE — skipping"; continue; }
+
+            sudo docker run --rm \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              -v "$PWD":/workspace \
+              -e TRIVY_SKIP_JAVA_DB_UPDATE=true \
+              aquasec/trivy:0.70.0 image \
+              --severity CRITICAL,HIGH \
+              --ignore-unfixed \
+              --format json \
+              --output /workspace/trivy-k3s-result.json \
+              --exit-code 0 \
+              "$IMAGE"
+            sudo chown "$(id -u):$(id -g)" trivy-k3s-result.json
+
+            COUNT=$(jq '[.Results[]?.Vulnerabilities[]?] | length' trivy-k3s-result.json)
+            TOTAL=$((TOTAL + COUNT))
+            if [ "$COUNT" -gt 0 ]; then
+              jq -r --arg img "$IMAGE" '
+                [.Results[]?.Vulnerabilities[]? |
+                  "\($img): \(.Severity) \(.PkgName) \(.VulnerabilityID) (\(.InstalledVersion) -> \(.FixedVersion // "no fix"))"
+                ] | .[0:5] | join("\n")
+              ' trivy-k3s-result.json >> k3s-scan-summary.txt
+            fi
+
+            rm -f trivy-k3s-result.json
+            sudo docker rmi "$IMAGE" >/dev/null 2>&1 || true
+          done <<< "$IMAGES"
+
+          echo "Found $TOTAL total CRITICAL/HIGH vulnerabilities across k3s images"
+          if [ "$TOTAL" -eq 0 ]; then
+            echo "No CVEs found in k3s images — skipping notification."
+            exit 0
+          fi
+
+          MSG=$(head -c 3500 k3s-scan-summary.txt \
+                | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
+
+          curl -sS -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK" <<EOF
+          {
+            "embeds": [{
+              "title": "⚠️ k3s images: $TOTAL CRITICAL/HIGH CVE(s) found",
+              "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              "color": 15158332,
+              "fields": [
+                {"name": "Branch", "value": "\`${{ github.ref_name }}\`", "inline": true},
+                {"name": "Findings (top 5 per image)", "value": $MSG}
+              ],
+              "footer": {"text": "Trivy scan across all running k3s pod images"}
+            }]
+          }
+          EOF
+
+      - name: Cleanup k3s scan summary
+        if: always()
+        run: rm -f k3s-scan-summary.txt
