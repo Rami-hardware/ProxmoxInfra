@@ -58,6 +58,11 @@ prometheus_scrape_jobs:
     relabel_configs:
       - target_label: instance
         replacement: media-server
+  - name: adguard
+    targets: ["{{ hostvars['gateway-server']['ansible_host'] }}:9618"]
+    relabel_configs:
+      - target_label: instance
+        replacement: gateway-server
   - name: kube-state-metrics
     targets: ["{{ hostvars['git-k3s-server']['ansible_host'] }}:8083"]
     relabel_configs:

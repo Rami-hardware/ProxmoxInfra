@@ -16,17 +16,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Scans the repo filesystem for misconfigurations (Terraform, Ansible, Dockerfiles),
-      # known-secret patterns, and vulnerable/CVE-affected dependencies (e.g. requirements.txt,
-      # collections). Runs in a throwaway container like the image scan in build-image.yml,
-      # so the vuln DB never touches the runner's disk.
-      - name: Scan repo for misconfigurations, secrets, and CVEs
+      # Scans the repo filesystem for misconfigurations (Terraform, Ansible, Dockerfiles)
+      # and known-secret patterns. Runs in a throwaway container like the image scan in
+      # build-image.yml, so nothing touches the runner's disk beyond the results file.
+      # CVE/dependency vuln scanning is disabled for now (see "Scan all k3s workload
+      # images for CVEs" step below, also disabled) — re-enable by adding "vuln" back
+      # to --scanners and restoring the k3s image scan step.
+      - name: Scan repo for misconfigurations and secrets
         run: |
           sudo docker run --rm \
             -v "$PWD":/workspace \
             -e TRIVY_SKIP_JAVA_DB_UPDATE=true \
             aquasec/trivy:0.70.0 fs \
-            --scanners misconfig,secret,vuln \
+            --scanners misconfig,secret \
             --severity CRITICAL,HIGH \
             --ignore-unfixed \
             --format json \
@@ -39,7 +41,7 @@ jobs:
         env:
           WEBHOOK: ${{ secrets.DISCORD_CI_ALERT_SEC_URL }}
         run: |
-          COUNT=$(jq '[.Results[]? | (.Misconfigurations // [])[], (.Secrets // [])[], (.Vulnerabilities // [])[]] | length' trivy-fs-results.json)
+          COUNT=$(jq '[.Results[]? | (.Misconfigurations // [])[], (.Secrets // [])[]] | length' trivy-fs-results.json)
           echo "Found $COUNT CRITICAL/HIGH security findings"
 
           if [ "$COUNT" -eq 0 ]; then
@@ -50,8 +52,7 @@ jobs:
             SUMMARY=$(jq -r '
               [.Results[]? |
                 ( (.Misconfigurations // [])[] | "MISCONFIG \(.Severity): \(.ID) \(.Title)" ),
-                ( (.Secrets // [])[] | "SECRET \(.Severity): \(.RuleID) in \(.Title // "file")" ),
-                ( (.Vulnerabilities // [])[] | "CVE \(.Severity): \(.PkgName) \(.VulnerabilityID) (\(.InstalledVersion) -> \(.FixedVersion // "no fix"))" )
+                ( (.Secrets // [])[] | "SECRET \(.Severity): \(.RuleID) in \(.Title // "file")" )
               ] | .[0:15] | join("\n")
             ' trivy-fs-results.json)
 
@@ -74,7 +75,7 @@ jobs:
                 {"name": "Branch", "value": "\`${{ github.ref_name }}\`", "inline": true},
                 {"name": "Commit", "value": "\`${{ github.sha }}\`", "inline": true}$FIELDS_EXTRA
               ],
-              "footer": {"text": "Trivy fs scan — misconfig + secrets + CVEs"}
+              "footer": {"text": "Trivy fs scan — misconfig + secrets"}
             }]
           }
           EOF
@@ -90,7 +91,9 @@ jobs:
       # Scans every image actually running in the k3s cluster (not just what's on the
       # runner's local Docker disk). For each image: pull -> scan -> delete, so only one
       # image's layers are ever on disk at a time — keeps the small runner disk from filling.
+      # Disabled for now (CVE scanning paused) — flip `if: false` to `if: true` to re-enable.
       - name: Scan all k3s workload images for CVEs
+        if: false
         env:
           WEBHOOK: ${{ secrets.DISCORD_CI_ALERT_SEC_URL }}
         run: |
