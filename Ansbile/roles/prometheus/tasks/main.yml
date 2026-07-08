@@ -10,15 +10,4 @@
     src: prometheus.yml.j2
     dest: "{{ prometheus_config_file }}"
     mode: '0644'
-  register: prometheus_config_result
-
-# Prometheus runs as a k3s pod (hostPath-mounted config from this VM), started
-# with --web.enable-lifecycle. Templating the file alone doesn't make the running
-# pod pick up changes — hit the reload endpoint so scrape_config edits take effect
-# without a pod restart.
-- name: Reload Prometheus config via lifecycle API
-  ansible.builtin.uri:
-    url: "http://localhost:{{ prometheus_port | default(9090) }}/-/reload"
-    method: POST
-    status_code: 200
-  when: prometheus_config_result.changed
+  notify: Reload Prometheus config
