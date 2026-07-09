@@ -135,7 +135,7 @@ prometheus_scrape_jobs:
   - name: speedtest
     targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:9798"]
     scrape_interval: 10m
-    scrape_timeout: 1m
+    scrape_timeout: 2m
     relabel_configs:
       - target_label: instance
         replacement: monitoring-server
