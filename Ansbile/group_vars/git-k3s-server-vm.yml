@@ -407,6 +407,20 @@ k3s_apps_list:
       - "10.43.0.10"
       - "8.8.8.8"
       - "8.8.4.4"
+    # Each scrape runs a real Ookla speedtest (30-90s+), so probes only check
+    # that the Flask process itself is alive, not that a speedtest just succeeded.
+    liveness_probe:
+      path: /
+      initial_delay_seconds: 10
+      period_seconds: 30
+      timeout_seconds: 5
+      failure_threshold: 3
+    readiness_probe:
+      path: /
+      initial_delay_seconds: 5
+      period_seconds: 10
+      timeout_seconds: 5
+      failure_threshold: 3
     memory_request: "32Mi"
     memory_limit: "128Mi"
     cpu_request: "10m"

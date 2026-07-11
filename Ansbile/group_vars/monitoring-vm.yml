@@ -1,13 +1,4 @@
 ---
-docker_apps_enabled:
-  - promtail
-  - loki
-  - grafana
-  - alertmanager
-  - prometheus
-  - node-exporter
-  - speedtest-exporter
-
 # ── Prometheus ────────────────────────────────────────────────────────────────
 prometheus_config_dir: /opt/docker/prometheus
 prometheus_config_file: "{{ prometheus_config_dir }}/prometheus.yml"

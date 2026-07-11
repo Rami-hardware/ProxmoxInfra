@@ -175,6 +175,26 @@ spec:
             limits:
               memory: "{{ item.memory_limit }}"
               cpu: "{{ item.cpu_limit }}"
+{% if item.liveness_probe is defined %}
+          livenessProbe:
+            httpGet:
+              path: {{ item.liveness_probe.path }}
+              port: {{ item.liveness_probe.port | default(item.port) }}
+            initialDelaySeconds: {{ item.liveness_probe.initial_delay_seconds | default(10) }}
+            periodSeconds: {{ item.liveness_probe.period_seconds | default(30) }}
+            timeoutSeconds: {{ item.liveness_probe.timeout_seconds | default(5) }}
+            failureThreshold: {{ item.liveness_probe.failure_threshold | default(3) }}
+{% endif %}
+{% if item.readiness_probe is defined %}
+          readinessProbe:
+            httpGet:
+              path: {{ item.readiness_probe.path }}
+              port: {{ item.readiness_probe.port | default(item.port) }}
+            initialDelaySeconds: {{ item.readiness_probe.initial_delay_seconds | default(5) }}
+            periodSeconds: {{ item.readiness_probe.period_seconds | default(10) }}
+            timeoutSeconds: {{ item.readiness_probe.timeout_seconds | default(5) }}
+            failureThreshold: {{ item.readiness_probe.failure_threshold | default(3) }}
+{% endif %}
 {% if has_mounts %}
       volumes:
 {% if not (item.skip_pv | default(false)) %}
