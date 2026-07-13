@@ -1,0 +1,7 @@
+---
+exclude_paths:
+  # ArgoCD-managed application manifests and Kustomize bases — not Ansible
+  # content. The .argocd-source-*.yaml files under here are auto-generated
+  # by ArgoCD Image Updater on every image digest bump and don't follow
+  # Ansible's YAML style.
+  - Ansbile/argocd-apps/
