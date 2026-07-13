@@ -207,6 +207,14 @@
     path: "{{ k3s_apps_manifest_dir }}/alert-forwarder.yml"
     state: absent
 
+# Apps migrated to ArgoCD — remove their stale manifest files so the
+# "Apply K3s app manifests one by one" loop below stops re-applying them.
+- name: Remove stale manifests for apps migrated to ArgoCD
+  ansible.builtin.file:
+    path: "{{ k3s_apps_manifest_dir }}/{{ item }}.yml"
+    state: absent
+  loop: "{{ k3s_apps_argocd_managed_names }}"
+
 - name: Find existing app manifests on disk
   ansible.builtin.find:
     paths: "{{ k3s_apps_manifest_dir }}"

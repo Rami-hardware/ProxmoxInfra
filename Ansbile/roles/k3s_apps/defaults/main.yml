@@ -21,6 +21,12 @@ k3s_apps_helm_managed_names:
   - prometheus-rbac
   - ingress-services
   - alert-forwarder
+
+# App names migrated from k3s_apps_list to ArgoCD (see Ansbile/argocd-apps/).
+# Their old {{ k3s_apps_manifest_dir }}/<name>.yml files are stale and must
+# be removed so Ansible's "apply *.yml" loop stops re-applying them —
+# ArgoCD's own manifests now own these resources.
+k3s_apps_argocd_managed_names:
   - grafana
   - prometheus
   - loki
