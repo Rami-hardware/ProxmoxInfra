@@ -144,6 +144,28 @@ prometheus_scrape_jobs:
       - source_labels: [__meta_kubernetes_pod_name]
         target_label: pod
 
+  # Alertmanager exposes its own /metrics natively on the same port as its
+  # UI/API — no separate exporter needed, just scrape the pod.
+  - name: alertmanager-internal
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_namespace]
+        action: keep
+        regex: monitoring
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        action: keep
+        regex: alertmanager
+      - source_labels: [__address__]
+        action: replace
+        regex: '([^:]+)(?::\d+)?'
+        replacement: '$1:9093'
+        target_label: __address__
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+      - target_label: instance
+        replacement: monitoring-server
+
   - name: speedtest
     targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:9798"]
     scrape_interval: 10m
