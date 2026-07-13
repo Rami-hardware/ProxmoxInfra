@@ -697,6 +697,8 @@
       --set meshConfig.defaultConfig.tracing.zipkin.address=tempo.istio-system.svc.cluster.local:9411
       --set meshConfig.enableTracing=true
       --set meshConfig.defaultConfig.tracing.sampling=100
+      --set meshConfig.accessLogFile=/dev/stdout
+      --set meshConfig.accessLogEncoding=JSON
       --wait
       --timeout 5m
   environment:
