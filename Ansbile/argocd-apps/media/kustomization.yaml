@@ -1,0 +1,36 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - overseerr.yaml
+  - jellyfin.yaml
+  - bazarr.yaml
+  - radarr.yaml
+  - prowlarr.yaml
+  - qbittorrent.yaml
+  - flaresolverr.yaml
+  - scraparr.yaml
+  - sonarr.yaml
+
+# argocd-image-updater rewrites entries here (newTag/digest) when it detects
+# a new image on the registry side — this is the write-back target.
+images:
+  - name: sctx/overseerr
+    newTag: latest
+  - name: jellyfin/jellyfin
+    newTag: latest
+  - name: linuxserver/bazarr
+    newTag: latest
+  - name: linuxserver/radarr
+    newTag: latest
+  - name: linuxserver/prowlarr
+    newTag: latest
+  - name: linuxserver/qbittorrent
+    newTag: latest
+  - name: ghcr.io/flaresolverr/flaresolverr
+    newTag: latest
+  - name: ghcr.io/thecfu/scraparr
+    newTag: latest
+  - name: linuxserver/sonarr
+    newTag: latest

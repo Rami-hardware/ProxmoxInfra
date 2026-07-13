@@ -1,0 +1,12 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - adguard-home.yaml
+
+# argocd-image-updater rewrites entries here (newTag/digest) when it detects
+# a new image on the registry side — this is the write-back target.
+images:
+  - name: adguard/adguardhome
+    newTag: latest
