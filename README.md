@@ -229,6 +229,7 @@ App-level changes (editing anything under `Ansbile/argocd-apps/`) don't need a C
 | `speedtest`             | speedtest-exporter                 | ISP bandwidth, ping, jitter (10m interval)                                         |
 | `ingress-nginx`         | ingress-nginx controller           | Request rate, latency, 5xx rate per service                                        |
 | `zfs`                   | zfs-exporter on Proxmox host       | Pool health, IO, capacity                                                          |
+| `smartctl_exporter`     | smartctl_exporter on Proxmox host  | Disk S.M.A.R.T. health (reallocated sectors, temperature, wear)                    |
 | `promtail`              | Promtail pods                      | Log pipeline health                                                                |
 | `cert-manager`          | cert-manager controller pod        | Certificate expiry (built-in metrics, no separate exporter)                        |
 | `alertmanager-internal` | Alertmanager pod                   | Alertmanager's own health/notification metrics (built-in, no separate exporter)    |

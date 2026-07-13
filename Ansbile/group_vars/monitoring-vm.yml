@@ -97,6 +97,11 @@ prometheus_scrape_jobs:
     relabel_configs:
       - target_label: instance
         replacement: host-node
+  - name: smartctl_exporter
+    targets: ["{{ hostvars['host-node']['ansible_host'] }}:9633"]
+    relabel_configs:
+      - target_label: instance
+        replacement: host-node
   - name: ingress-nginx
     targets: ["{{ hostvars['git-k3s-server']['ansible_host'] }}:10254"]
     relabel_configs:
