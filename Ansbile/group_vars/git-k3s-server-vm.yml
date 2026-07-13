@@ -1,24 +1,6 @@
 ---
 prometheus_retention_time: 30d
 
-# ── Security stack ────────────────────────────────────────────────────────────
-falco_config_dir: /opt/falco/config
-wazuh_agent_version: "4.9.0"
-# wazuh-agent has no official Docker image — agents are installed via package on each host
-trivy_operator_version: "0.22.0"
-
-authelia_session_secret: "change_me_session_secret"
-authelia_encryption_key: "change_me_encryption_key_32chars_min"
-authelia_jwt_secret: "change_me_jwt_secret"
-
-authelia_users:
-  - username: rami
-    displayname: "Rami"
-    email: "rami@atomzstudio.com"
-    password_hash: "{{ vault_authelia_password_hash }}"
-    groups:
-      - admins
-
 adguard_exporter_username: "{{ lookup('env', 'ADGUARD_EXPORTER_USERNAME') | default('', true) }}"
 adguard_exporter_password: "{{ lookup('env', 'ADGUARD_EXPORTER_PASSWORD') | default('', true) }}"
 

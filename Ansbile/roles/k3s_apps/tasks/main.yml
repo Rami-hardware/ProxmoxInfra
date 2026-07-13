@@ -46,6 +46,17 @@
   changed_when: "'already exists' not in k3s_apps_helm_repo_metallb.stdout"
   failed_when: k3s_apps_helm_repo_metallb.rc != 0 and 'already exists' not in k3s_apps_helm_repo_metallb.stdout
 
+- name: Add Argo Helm repo
+  ansible.builtin.command:
+    cmd: helm repo add argo https://argoproj.github.io/argo-helm
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  register: k3s_apps_helm_repo_argo
+  changed_when: "'already exists' not in k3s_apps_helm_repo_argo.stdout"
+  failed_when: k3s_apps_helm_repo_argo.rc != 0 and 'already exists' not in k3s_apps_helm_repo_argo.stdout
+
 - name: Ensure Helm repositories file is world-readable
   ansible.builtin.file:
     path: /etc/helm/repositories.yaml
@@ -467,6 +478,40 @@
 - name: Remove ingress-nginx values tempfile
   ansible.builtin.file:
     path: /tmp/ingress-nginx-values.yml
+    state: absent
+
+# ── ArgoCD via Helm ────────────────────────────────────────────────────────────
+- name: Deploy ArgoCD via Helm
+  ansible.builtin.command:
+    cmd: >
+      helm upgrade --install argocd argo/argo-cd
+      --namespace argocd
+      --create-namespace
+      --set configs.params."server\.insecure"=true
+      --wait
+      --timeout 5m
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  changed_when: true
+
+- name: Template ArgoCD Ingress
+  ansible.builtin.template:
+    src: argocd-ingress.yml.j2
+    dest: /tmp/argocd-ingress.yml
+    mode: '0600'
+
+- name: Apply ArgoCD Ingress
+  ansible.builtin.command:
+    cmd: k3s kubectl apply -f /tmp/argocd-ingress.yml
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+
+- name: Remove ArgoCD ingress tempfile
+  ansible.builtin.file:
+    path: /tmp/argocd-ingress.yml
     state: absent
 
 # ── alert-forwarder via Helm ──────────────────────────────────────────────────
