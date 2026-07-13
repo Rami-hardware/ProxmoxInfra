@@ -515,10 +515,14 @@
 # one Ansible uses to log into the VMs, registered separately as a GitHub
 # Deploy Key (write access) so it can also push commits to this repo.
 - name: Deploy ArgoCD Image Updater via Helm
+  # Pinned to the last chart release before the app switched from
+  # annotation-driven config (Application annotations, what we use below)
+  # to the CRD-based model in v1.0.0+ (argoproj-labs/argocd-image-updater#1170).
   ansible.builtin.command:
     cmd: >
       helm upgrade --install argocd-image-updater
       argo/argocd-image-updater
+      --version 0.8.5
       --namespace argocd
       --create-namespace
       --wait
