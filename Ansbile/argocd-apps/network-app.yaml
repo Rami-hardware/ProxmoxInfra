@@ -4,6 +4,12 @@ kind: Application
 metadata:
   name: network
   namespace: argocd
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: adguard-home=adguard/adguardhome
+    argocd-image-updater.argoproj.io/adguard-home.update-strategy: digest
+    argocd-image-updater.argoproj.io/write-back-method: git
+    argocd-image-updater.argoproj.io/git-branch: development
+    argocd-image-updater.argoproj.io/git-credentials: argocd/git-creds
 spec:
   project: default
   source:

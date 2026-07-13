@@ -4,6 +4,25 @@ kind: Application
 metadata:
   name: monitoring
   namespace: argocd
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: >-
+      grafana=grafana/grafana,
+      prometheus=prom/prometheus,
+      loki=grafana/loki,
+      alertmanager=prom/alertmanager,
+      speedtest-exporter=miguelndecarvalho/speedtest-exporter,
+      intel-gpu-exporter=ghcr.io/onedr0p/intel-gpu-exporter,
+      qbittorrent-exporter=esanchezm/prometheus-qbittorrent-exporter
+    argocd-image-updater.argoproj.io/grafana.update-strategy: digest
+    argocd-image-updater.argoproj.io/prometheus.update-strategy: digest
+    argocd-image-updater.argoproj.io/loki.update-strategy: digest
+    argocd-image-updater.argoproj.io/alertmanager.update-strategy: digest
+    argocd-image-updater.argoproj.io/speedtest-exporter.update-strategy: digest
+    argocd-image-updater.argoproj.io/intel-gpu-exporter.update-strategy: digest
+    argocd-image-updater.argoproj.io/qbittorrent-exporter.update-strategy: digest
+    argocd-image-updater.argoproj.io/write-back-method: git
+    argocd-image-updater.argoproj.io/git-branch: development
+    argocd-image-updater.argoproj.io/git-credentials: argocd/git-creds
 spec:
   project: default
   source:

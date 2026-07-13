@@ -509,6 +509,52 @@
     HELM_REPOSITORY_CACHE: /etc/helm/cache
   changed_when: true
 
+# ── ArgoCD Image Updater ──────────────────────────────────────────────────────
+# Watches image digests on :latest tags and commits the resolved digest back
+# into argocd-apps/*.yaml so ArgoCD redeploys — the SSH key here is the same
+# one Ansible uses to log into the VMs, registered separately as a GitHub
+# Deploy Key (write access) so it can also push commits to this repo.
+- name: Deploy ArgoCD Image Updater via Helm
+  ansible.builtin.command:
+    cmd: >
+      helm upgrade --install argocd-image-updater
+      argo/argocd-image-updater
+      --namespace argocd
+      --create-namespace
+      --wait
+      --timeout 5m
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  changed_when: true
+
+- name: Read controller SSH private key
+  ansible.builtin.set_fact:
+    k3s_apps_git_ssh_key: "{{ lookup('file', '~/.ssh/id_rsa') }}"
+  no_log: true
+  delegate_to: localhost
+
+- name: Template git SSH secret manifest for Image Updater
+  ansible.builtin.template:
+    src: image-updater-git-secret.yml.j2
+    dest: /tmp/image-updater-git-secret.yml
+    mode: '0600'
+  no_log: true
+
+- name: Apply git SSH secret for Image Updater
+  ansible.builtin.command:
+    cmd: k3s kubectl apply -f /tmp/image-updater-git-secret.yml
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+  no_log: true
+
+- name: Remove git SSH secret tempfile
+  ansible.builtin.file:
+    path: /tmp/image-updater-git-secret.yml
+    state: absent
+
 # Apply ArgoCD Application manifests — these point ArgoCD at paths in this
 # repo (argocd-apps/) and it takes over syncing them from there.
 - name: Apply ArgoCD Application manifests
