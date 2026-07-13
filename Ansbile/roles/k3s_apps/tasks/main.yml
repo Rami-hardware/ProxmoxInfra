@@ -614,7 +614,7 @@
 # ── Security stack ────────────────────────────────────────────────────────────
 - name: Ensure Falco config directory exists on all nodes
   ansible.builtin.file:
-    path: "{{ falco_config_dir }}"
+    path: "{{ k3s_apps_falco_config_dir }}"
     state: directory
     mode: '0755'
   delegate_to: "{{ k3s_node }}"
