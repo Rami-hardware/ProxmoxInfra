@@ -123,6 +123,27 @@ prometheus_scrape_jobs:
       - source_labels: [__meta_kubernetes_pod_name]
         target_label: pod
 
+  # cert-manager's controller exposes certificate expiry metrics
+  # (certmanager_certificate_expiration_timestamp_seconds, etc.) natively —
+  # no separate exporter needed, just scrape its pod.
+  - name: cert-manager
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_namespace]
+        action: keep
+        regex: cert-manager
+      - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+        action: keep
+        regex: cert-manager
+      - source_labels: [__address__]
+        action: replace
+        regex: '([^:]+)(?::\d+)?'
+        replacement: '$1:9402'
+        target_label: __address__
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+
   - name: speedtest
     targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:9798"]
     scrape_interval: 10m
