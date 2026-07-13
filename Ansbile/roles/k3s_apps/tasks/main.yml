@@ -505,7 +505,10 @@
 # repo (argocd-apps/) and it takes over syncing them from there.
 - name: Apply ArgoCD Application manifests
   ansible.builtin.command:
-    cmd: "k3s kubectl apply -f {{ playbook_dir }}/argocd-apps/monitoring-app.yaml"
+    cmd: "k3s kubectl apply -f {{ playbook_dir }}/argocd-apps/{{ item }}"
+  loop:
+    - monitoring-app.yaml
+    - media-app.yaml
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   changed_when: true

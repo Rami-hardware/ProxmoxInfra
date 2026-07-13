@@ -26,6 +26,14 @@ k3s_apps_helm_managed_names:
   - loki
   - alertmanager
   - speedtest-exporter
+  - overseerr
+  - jellyfin
+  - bazarr
+  - radarr
+  - prowlarr
+  - qbittorrent
+  - flaresolverr
+  - scraparr
 
 # k3s_apps is a list of app dicts defined in group_vars/github-vm.yml.
 # Each dict must have:

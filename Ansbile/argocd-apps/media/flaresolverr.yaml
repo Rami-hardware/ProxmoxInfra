@@ -1,0 +1,67 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flaresolverr
+  namespace: media
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: flaresolverr
+  template:
+    metadata:
+      labels:
+        app: flaresolverr
+    spec:
+      dnsPolicy: None
+      dnsConfig:
+        nameservers:
+          - "10.43.0.10"
+          - "8.8.8.8"
+          - "8.8.4.4"
+        searches:
+          - "media.svc.cluster.local"
+          - "svc.cluster.local"
+          - "cluster.local"
+      nodeSelector:
+        kubernetes.io/hostname: media-server
+      containers:
+        - name: flaresolverr
+          image: ghcr.io/flaresolverr/flaresolverr:latest
+          ports:
+            - containerPort: 8191
+          env:
+            - name: TZ
+              value: "Asia/Riyadh"
+            - name: LOG_LEVEL
+              value: "info"
+          # Flaresolverr runs a full Chromium browser — baseline 300-400MB,
+          # spikes to 600-800MB on challenge pages. 512Mi was too tight.
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "50m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flaresolverr
+  namespace: media
+spec:
+  type: NodePort
+  selector:
+    app: flaresolverr
+  ports:
+    - name: http
+      port: 8191
+      targetPort: 8191
+      nodePort: 8191
