@@ -34,11 +34,11 @@ metadata:
   namespace: media
 spec:
   replicas: 1
+  # hostPort 6881 (TCP/UDP) is bound on media-server — RollingUpdate would
+  # try to schedule the new pod before killing the old one, and both can't
+  # hold the same hostPort on the same node, so it deadlocks Pending forever.
   strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
+    type: Recreate
   selector:
     matchLabels:
       app: qbittorrent
