@@ -34,6 +34,10 @@ k3s_apps_helm_managed_names:
   - qbittorrent
   - flaresolverr
   - scraparr
+  - sonarr
+  - intel-gpu-exporter
+  - qbittorrent-exporter
+  - adguard-home
 
 # k3s_apps is a list of app dicts defined in group_vars/github-vm.yml.
 # Each dict must have:

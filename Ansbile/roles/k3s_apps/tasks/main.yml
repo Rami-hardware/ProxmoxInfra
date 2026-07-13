@@ -509,6 +509,7 @@
   loop:
     - monitoring-app.yaml
     - media-app.yaml
+    - network-app.yaml
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   changed_when: true

@@ -1,0 +1,21 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: network
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Rami-hardware/ProxmoxInfra.git
+    targetRevision: development
+    path: Ansbile/argocd-apps/network
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: network
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
