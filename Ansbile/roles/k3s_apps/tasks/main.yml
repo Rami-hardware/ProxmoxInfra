@@ -501,6 +501,15 @@
     HELM_REPOSITORY_CACHE: /etc/helm/cache
   changed_when: true
 
+# Apply ArgoCD Application manifests — these point ArgoCD at paths in this
+# repo (argocd-apps/) and it takes over syncing them from there.
+- name: Apply ArgoCD Application manifests
+  ansible.builtin.command:
+    cmd: "k3s kubectl apply -f {{ playbook_dir }}/argocd-apps/monitoring-app.yaml"
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+
 # ── alert-forwarder via Helm ──────────────────────────────────────────────────
 - name: Deploy alert-forwarder via Helm
   ansible.builtin.command:

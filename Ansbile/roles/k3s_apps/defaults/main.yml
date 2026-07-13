@@ -21,6 +21,11 @@ k3s_apps_helm_managed_names:
   - prometheus-rbac
   - ingress-services
   - alert-forwarder
+  - grafana
+  - prometheus
+  - loki
+  - alertmanager
+  - speedtest-exporter
 
 # k3s_apps is a list of app dicts defined in group_vars/github-vm.yml.
 # Each dict must have:
