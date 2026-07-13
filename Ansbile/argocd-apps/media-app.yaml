@@ -6,15 +6,15 @@ metadata:
   namespace: argocd
   annotations:
     argocd-image-updater.argoproj.io/image-list: >-
-      overseerr=sctx/overseerr,
-      jellyfin=jellyfin/jellyfin,
-      bazarr=linuxserver/bazarr,
-      radarr=linuxserver/radarr,
-      prowlarr=linuxserver/prowlarr,
-      qbittorrent=linuxserver/qbittorrent,
-      flaresolverr=ghcr.io/flaresolverr/flaresolverr,
-      scraparr=ghcr.io/thecfu/scraparr,
-      sonarr=linuxserver/sonarr
+      overseerr=sctx/overseerr:latest,
+      jellyfin=jellyfin/jellyfin:latest,
+      bazarr=linuxserver/bazarr:latest,
+      radarr=linuxserver/radarr:latest,
+      prowlarr=linuxserver/prowlarr:latest,
+      qbittorrent=linuxserver/qbittorrent:latest,
+      flaresolverr=ghcr.io/flaresolverr/flaresolverr:latest,
+      scraparr=ghcr.io/thecfu/scraparr:latest,
+      sonarr=linuxserver/sonarr:latest
     argocd-image-updater.argoproj.io/overseerr.update-strategy: digest
     argocd-image-updater.argoproj.io/jellyfin.update-strategy: digest
     argocd-image-updater.argoproj.io/bazarr.update-strategy: digest

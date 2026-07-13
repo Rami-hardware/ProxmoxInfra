@@ -6,13 +6,13 @@ metadata:
   namespace: argocd
   annotations:
     argocd-image-updater.argoproj.io/image-list: >-
-      grafana=grafana/grafana,
-      prometheus=prom/prometheus,
-      loki=grafana/loki,
-      alertmanager=prom/alertmanager,
-      speedtest-exporter=miguelndecarvalho/speedtest-exporter,
-      intel-gpu-exporter=ghcr.io/onedr0p/intel-gpu-exporter,
-      qbittorrent-exporter=esanchezm/prometheus-qbittorrent-exporter
+      grafana=grafana/grafana:latest,
+      prometheus=prom/prometheus:latest,
+      loki=grafana/loki:latest,
+      alertmanager=prom/alertmanager:latest,
+      speedtest-exporter=miguelndecarvalho/speedtest-exporter:latest,
+      intel-gpu-exporter=ghcr.io/onedr0p/intel-gpu-exporter:rolling,
+      qbittorrent-exporter=esanchezm/prometheus-qbittorrent-exporter:latest
     argocd-image-updater.argoproj.io/grafana.update-strategy: digest
     argocd-image-updater.argoproj.io/prometheus.update-strategy: digest
     argocd-image-updater.argoproj.io/loki.update-strategy: digest
