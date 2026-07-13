@@ -8,12 +8,12 @@ metadata:
     argocd-image-updater.argoproj.io/image-list: adguard-home=adguard/adguardhome:latest
     argocd-image-updater.argoproj.io/adguard-home.update-strategy: digest
     argocd-image-updater.argoproj.io/write-back-method: git:secret:argocd/git-creds
-    argocd-image-updater.argoproj.io/git-branch: development
+    argocd-image-updater.argoproj.io/git-branch: main
 spec:
   project: default
   source:
     repoURL: git@github.com:Rami-hardware/ProxmoxInfra.git
-    targetRevision: development
+    targetRevision: main
     path: Ansbile/argocd-apps/network
   destination:
     server: https://kubernetes.default.svc
