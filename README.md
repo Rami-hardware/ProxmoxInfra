@@ -217,21 +217,22 @@ App-level changes (editing anything under `Ansbile/argocd-apps/`) don't need a C
 
 ### Prometheus Scrape Jobs
 
-| Job                     | Target                             | Notes                                                                           |
-| :---------------------- | :--------------------------------- | :------------------------------------------------------------------------------ |
-| `nodes`                 | node-exporter on all VMs           | `relabel_configs` maps IP → hostname                                            |
-| `kubelet-cadvisor`      | kubelet `/metrics/cadvisor`        | HTTPS + bearer token auth                                                       |
-| `kube-state-metrics`    | kube-state-metrics pod             | Adds k8s labels to container metrics                                            |
-| `loki`                  | Loki on monitoring-server          | Internal metrics                                                                |
-| `qbittorrent`           | qbittorrent-exporter               | Torrent download/upload/ratio metrics                                           |
-| `scraparr`              | Scraparr on media-server           | Arr app queue/health metrics                                                    |
-| `intel-gpu`             | intel-gpu-exporter on media-server | Arc GPU utilization                                                             |
-| `speedtest`             | speedtest-exporter                 | ISP bandwidth, ping, jitter (10m interval)                                      |
-| `ingress-nginx`         | ingress-nginx controller           | Request rate, latency, 5xx rate per service                                     |
-| `zfs`                   | zfs-exporter on Proxmox host       | Pool health, IO, capacity                                                       |
-| `promtail`              | Promtail pods                      | Log pipeline health                                                             |
-| `cert-manager`          | cert-manager controller pod        | Certificate expiry (built-in metrics, no separate exporter)                     |
-| `alertmanager-internal` | Alertmanager pod                   | Alertmanager's own health/notification metrics (built-in, no separate exporter) |
+| Job                     | Target                             | Notes                                                                              |
+| :---------------------- | :--------------------------------- | :--------------------------------------------------------------------------------- |
+| `nodes`                 | node-exporter on all VMs           | `relabel_configs` maps IP → hostname                                               |
+| `kubelet-cadvisor`      | kubelet `/metrics/cadvisor`        | HTTPS + bearer token auth                                                          |
+| `kube-state-metrics`    | kube-state-metrics pod             | Adds k8s labels to container metrics                                               |
+| `loki`                  | Loki on monitoring-server          | Internal metrics                                                                   |
+| `qbittorrent`           | qbittorrent-exporter               | Torrent download/upload/ratio metrics                                              |
+| `scraparr`              | Scraparr on media-server           | Arr app queue/health metrics                                                       |
+| `intel-gpu`             | intel-gpu-exporter on media-server | Arc GPU utilization                                                                |
+| `speedtest`             | speedtest-exporter                 | ISP bandwidth, ping, jitter (10m interval)                                         |
+| `ingress-nginx`         | ingress-nginx controller           | Request rate, latency, 5xx rate per service                                        |
+| `zfs`                   | zfs-exporter on Proxmox host       | Pool health, IO, capacity                                                          |
+| `promtail`              | Promtail pods                      | Log pipeline health                                                                |
+| `cert-manager`          | cert-manager controller pod        | Certificate expiry (built-in metrics, no separate exporter)                        |
+| `alertmanager-internal` | Alertmanager pod                   | Alertmanager's own health/notification metrics (built-in, no separate exporter)    |
+| `coredns`               | CoreDNS pod (kube-system)          | DNS query rate/latency/errors (K3s ships the prometheus plugin enabled by default) |
 
 ### Loki + Promtail
 
