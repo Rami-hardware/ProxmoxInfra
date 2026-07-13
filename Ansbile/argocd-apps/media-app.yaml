@@ -24,13 +24,12 @@ metadata:
     argocd-image-updater.argoproj.io/flaresolverr.update-strategy: digest
     argocd-image-updater.argoproj.io/scraparr.update-strategy: digest
     argocd-image-updater.argoproj.io/sonarr.update-strategy: digest
-    argocd-image-updater.argoproj.io/write-back-method: git
+    argocd-image-updater.argoproj.io/write-back-method: git:secret:argocd/git-creds
     argocd-image-updater.argoproj.io/git-branch: development
-    argocd-image-updater.argoproj.io/git-credentials: argocd/git-creds
 spec:
   project: default
   source:
-    repoURL: https://github.com/Rami-hardware/ProxmoxInfra.git
+    repoURL: git@github.com:Rami-hardware/ProxmoxInfra.git
     targetRevision: development
     path: Ansbile/argocd-apps/media
   destination:

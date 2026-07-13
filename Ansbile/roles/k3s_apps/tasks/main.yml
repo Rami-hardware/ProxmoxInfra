@@ -559,6 +559,29 @@
     path: /tmp/image-updater-git-secret.yml
     state: absent
 
+# ArgoCD itself also needs credentials to clone/pull the repo over SSH
+# (argocd-apps-app.yaml sources use git@github.com:... now that write-back
+# needs SSH) — registered as a repo-creds Secret per ArgoCD's own convention.
+- name: Template ArgoCD repo credentials secret manifest
+  ansible.builtin.template:
+    src: argocd-repo-creds-secret.yml.j2
+    dest: /tmp/argocd-repo-creds-secret.yml
+    mode: '0600'
+  no_log: true
+
+- name: Apply ArgoCD repo credentials secret
+  ansible.builtin.command:
+    cmd: k3s kubectl apply -f /tmp/argocd-repo-creds-secret.yml
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+  no_log: true
+
+- name: Remove ArgoCD repo credentials tempfile
+  ansible.builtin.file:
+    path: /tmp/argocd-repo-creds-secret.yml
+    state: absent
+
 # Apply ArgoCD Application manifests — these point ArgoCD at paths in this
 # repo (argocd-apps/) and it takes over syncing them from there.
 - name: Apply ArgoCD Application manifests
