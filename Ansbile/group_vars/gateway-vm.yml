@@ -168,3 +168,9 @@ nginx_services_local:
     port: 30320
     namespace: istio-system
     auth: false
+
+  - name: argocd
+    ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
+    port: 30321
+    namespace: argocd
+    auth: false

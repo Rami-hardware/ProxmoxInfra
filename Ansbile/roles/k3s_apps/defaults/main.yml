@@ -1,5 +1,6 @@
 ---
 k3s_apps_manifest_dir: /opt/k3s/manifests
+falco_config_dir: /opt/falco
 k3s_apps_metallb_ip_range: "192.168.1.210-192.168.1.220"
 k3s_apps_ingress_nginx_ip: "192.168.1.210"
 

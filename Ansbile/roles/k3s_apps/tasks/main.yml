@@ -481,6 +481,9 @@
     state: absent
 
 # ── ArgoCD via Helm ────────────────────────────────────────────────────────────
+# NodePort exposes argocd-server so the gateway's nginx (nginx_services_local
+# in group_vars/gateway-vm.yml) can proxy argocd.homelab.lan to it, same
+# pattern as grafana/prometheus/tempo.
 - name: Deploy ArgoCD via Helm
   ansible.builtin.command:
     cmd: >
@@ -488,6 +491,8 @@
       --namespace argocd
       --create-namespace
       --set configs.params."server\.insecure"=true
+      --set server.service.type=NodePort
+      --set server.service.nodePortHttp=30321
       --wait
       --timeout 5m
   environment:
@@ -495,24 +500,6 @@
     HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
     HELM_REPOSITORY_CACHE: /etc/helm/cache
   changed_when: true
-
-- name: Template ArgoCD Ingress
-  ansible.builtin.template:
-    src: argocd-ingress.yml.j2
-    dest: /tmp/argocd-ingress.yml
-    mode: '0600'
-
-- name: Apply ArgoCD Ingress
-  ansible.builtin.command:
-    cmd: k3s kubectl apply -f /tmp/argocd-ingress.yml
-  environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-  changed_when: true
-
-- name: Remove ArgoCD ingress tempfile
-  ansible.builtin.file:
-    path: /tmp/argocd-ingress.yml
-    state: absent
 
 # ── alert-forwarder via Helm ──────────────────────────────────────────────────
 - name: Deploy alert-forwarder via Helm
