@@ -193,6 +193,91 @@ prometheus_scrape_jobs:
       - target_label: instance
         replacement: git-k3s-server
 
+  # ArgoCD's three main components each expose their own /metrics natively
+  # (application-controller: sync/health status, server: API metrics,
+  # repo-server: git fetch/manifest generation) — no separate exporter.
+  - name: argocd-application-controller
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_namespace]
+        action: keep
+        regex: argocd
+      - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
+        action: keep
+        regex: application-controller
+      - source_labels: [__address__]
+        action: replace
+        regex: '([^:]+)(?::\d+)?'
+        replacement: '$1:8082'
+        target_label: __address__
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+      - target_label: instance
+        replacement: git-k3s-server
+
+  - name: argocd-server
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_namespace]
+        action: keep
+        regex: argocd
+      - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
+        action: keep
+        regex: server
+      - source_labels: [__address__]
+        action: replace
+        regex: '([^:]+)(?::\d+)?'
+        replacement: '$1:8083'
+        target_label: __address__
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+      - target_label: instance
+        replacement: git-k3s-server
+
+  - name: argocd-repo-server
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_namespace]
+        action: keep
+        regex: argocd
+      - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
+        action: keep
+        regex: repo-server
+      - source_labels: [__address__]
+        action: replace
+        regex: '([^:]+)(?::\d+)?'
+        replacement: '$1:8084'
+        target_label: __address__
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+      - target_label: instance
+        replacement: git-k3s-server
+
+  # Tempo exposes its own /metrics on the same HTTP API port as its
+  # query/ingest endpoints — no separate exporter.
+  - name: tempo
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_namespace]
+        action: keep
+        regex: istio-system
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        action: keep
+        regex: tempo
+      - source_labels: [__address__]
+        action: replace
+        regex: '([^:]+)(?::\d+)?'
+        replacement: '$1:3200'
+        target_label: __address__
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+      - target_label: instance
+        replacement: git-k3s-server
+
   - name: speedtest
     targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:9798"]
     scrape_interval: 10m
