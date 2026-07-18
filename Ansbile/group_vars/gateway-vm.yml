@@ -191,3 +191,9 @@ nginx_services_local:
     port: 30322
     namespace: network
     auth: false
+
+  - name: homepage
+    ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
+    port: 30323
+    namespace: network
+    auth: false
