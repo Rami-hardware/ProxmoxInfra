@@ -41,8 +41,8 @@ data:
           memory: true
           showLabel: true
     - greeting:
-    text_size: xl
-    text: Welcome Back Robin
+        text_size: xl
+        text: Welcome Back Robin
 
   bookmarks.yaml: |
     []
