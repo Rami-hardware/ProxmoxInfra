@@ -501,6 +501,8 @@
       --set configs.params."server\.insecure"=true
       --set server.service.type=NodePort
       --set server.service.nodePortHttp=30321
+      --set configs.cm."accounts\.homepage"=apiKey
+      --set-string configs.rbac."policy\.csv"="p, role:homepage, applications, get, */*, allow\ng, homepage, role:homepage"
       --wait
       --timeout 5m
   environment:

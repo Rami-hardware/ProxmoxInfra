@@ -16,10 +16,30 @@ data:
     []
 
   widgets.yaml: |
-    - resources:
-        cpu: true
-        memory: true
-        label: "cluster"
+    - datetime:
+        text_size: xl
+        format:
+          dateStyle: long
+          timeStyle: short
+          hourCycle: h23
+    - openmeteo:
+        label: Riyadh
+        latitude: 24.7136
+        longitude: 46.6753
+        units: metric
+        cache: 5
+    - kubernetes:
+        cluster:
+          show: true
+          cpu: true
+          memory: true
+          showLabel: true
+          label: "cluster"
+        nodes:
+          show: true
+          cpu: true
+          memory: true
+          showLabel: true
     - search:
         provider: duckduckgo
         target: _blank
