@@ -9,11 +9,9 @@ data:
     title: Homelab
     theme: dark
     color: slate
-    headerStyle: boxed
+    headerStyle: clean
     statusStyle: dot
     hideVersion: true
-    showStats: true
-    useEqualHeights: true
     disableCollapse: true
     disableIndexing: true
     iconStyle: theme
@@ -26,11 +24,9 @@ data:
       opacity: 65
 
     quicklaunch:
-      searchDescriptions: true
+      searchDescriptions: false
       hideInternetSearch: true
-      showSearchSuggestions: false
-      hideVisitURL: true
-      provider: google
+      provider: duckduckgo
 
     layout:
       Infrastructure:
@@ -126,45 +122,11 @@ data:
       filter: sepia(1) saturate(3) hue-rotate(5deg) brightness(1.1) !important;
     }
 
-    /* ── Compact density: smaller padding/font, denser rows ── */
-    .service-card {
-      padding: 0.5rem 0.75rem !important;
-    }
-    .service-card .service-name {
-      font-size: 0.85rem !important;
-    }
-    .service-card .service-description {
-      font-size: 0.7rem !important;
-    }
-    #information-widgets,
-    .services-group {
-      gap: 0.5rem !important;
-    }
-
   bookmarks.yaml: |
     - Infrastructure:
         - GitHub Repo:
             - abbr: GH
               href: https://github.com/Rami-hardware/ProxmoxInfra
-
-    - SSH:
-        - Git/K3s Server:
-            - abbr: GIT
-              href: ssh://github@192.168.1.204
-        - Media Server:
-            - abbr: MED
-              href: ssh://media@192.168.1.201
-        - Gateway Server:
-            - abbr: GW
-              href: ssh://gateway@192.168.1.200
-        - Monitoring Server:
-            - abbr: MON
-              href: ssh://monitoring@192.168.1.203
-
-    - Cloudflare:
-        - Login:
-            - abbr: CF
-              href: https://dash.cloudflare.com/login
 
   kubernetes.yaml: |
     mode: cluster
@@ -234,7 +196,7 @@ spec:
           command:
             - sh
             - -c
-            - wget -O /images/bg.jpg 'https://mrwallpaper.com/images/hd/batman-black-and-yellow-silhouette-spusq4c4sc56b943.jpg'
+            - wget -O /images/bg.jpg 'https://mrwallpaper.com/images/hd/luxurious-black-and-gold-desktop-rt85zskt4leyftct.jpg'
           volumeMounts:
             - name: background-image
               mountPath: /images
