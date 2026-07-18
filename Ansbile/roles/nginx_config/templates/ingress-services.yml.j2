@@ -129,6 +129,13 @@ metadata:
   annotations:
     cert-manager.io/cluster-issuer: homelab-ca-issuer
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+{% if svc.homepage_group | default(false) %}
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "{{ svc.homepage_name | default(svc.name | capitalize) }}"
+    gethomepage.dev/group: "{{ svc.homepage_group }}"
+    gethomepage.dev/icon: "{{ svc.homepage_icon | default(svc.name + '.png') }}"
+    gethomepage.dev/pod-selector: ""
+{% endif %}
 {% if svc.backend_protocol | default(false) %}
     nginx.ingress.kubernetes.io/backend-protocol: "{{ svc.backend_protocol }}"
 {% endif %}
