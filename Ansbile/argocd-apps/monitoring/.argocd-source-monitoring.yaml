@@ -7,3 +7,4 @@ kustomize:
   - miguelndecarvalho/speedtest-exporter@sha256:f1064d49124c7fc45faabb87c6c876a2fd04e92b3dc14d4b871301217ba30fed
   - ghcr.io/onedr0p/intel-gpu-exporter@sha256:90a95483bf5d3752f4db2ab2e1663f19bba307fd832bf53557cbdc38c3701f84
   - esanchezm/prometheus-qbittorrent-exporter@sha256:41a7030be19534bf13dfaf3371ec8cdd8a90adf2c29261a075e2255b3ad6e705
+  - germannewsmaker/myspeed@sha256:3a3e774b3f78d930a5a962d625b99bcb3d71730bfeb4a6b93e04fd38cfe7d9a9
