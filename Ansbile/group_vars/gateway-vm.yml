@@ -103,6 +103,10 @@ nginx_services_local:
     namespace: media
     homepage_group: Media
     homepage_name: Overseerr
+    homepage_widget:
+      type: overseerr
+      url: "http://overseerr.media.svc.cluster.local:5055"
+      key: "{{ '{{HOMEPAGE_VAR_OVERSEERR_KEY}}' }}"
 
   - name: radarr
     ip: 192.168.1.201
@@ -111,6 +115,10 @@ nginx_services_local:
     auth: false
     homepage_group: Media
     homepage_name: Radarr
+    homepage_widget:
+      type: radarr
+      url: "http://radarr.media.svc.cluster.local:7878"
+      key: "{{ '{{HOMEPAGE_VAR_RADARR_KEY}}' }}"
 
   - name: sonarr
     ip: 192.168.1.201
@@ -119,6 +127,10 @@ nginx_services_local:
     auth: false
     homepage_group: Media
     homepage_name: Sonarr
+    homepage_widget:
+      type: sonarr
+      url: "http://sonarr.media.svc.cluster.local:8989"
+      key: "{{ '{{HOMEPAGE_VAR_SONARR_KEY}}' }}"
 
   - name: prowlarr
     ip: 192.168.1.201
@@ -127,6 +139,10 @@ nginx_services_local:
     auth: false
     homepage_group: Media
     homepage_name: Prowlarr
+    homepage_widget:
+      type: prowlarr
+      url: "http://prowlarr.media.svc.cluster.local:9696"
+      key: "{{ '{{HOMEPAGE_VAR_PROWLARR_KEY}}' }}"
 
   - name: bazarr
     ip: 192.168.1.201
@@ -135,6 +151,10 @@ nginx_services_local:
     auth: false
     homepage_group: Media
     homepage_name: Bazarr
+    homepage_widget:
+      type: bazarr
+      url: "http://bazarr.media.svc.cluster.local:6767"
+      key: "{{ '{{HOMEPAGE_VAR_BAZARR_KEY}}' }}"
 
   - name: qbittorrent
     ip: 192.168.1.201

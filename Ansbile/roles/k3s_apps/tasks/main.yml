@@ -582,6 +582,38 @@
     path: /tmp/argocd-repo-creds-secret.yml
     state: absent
 
+# Homepage dashboard widget API keys — same GitHub Secrets already used by
+# the media-server role's *_api_key vars, mirrored here as a k8s Secret so
+# Homepage's live-stat widgets (Radarr/Sonarr/Prowlarr/Bazarr/Overseerr) can
+# authenticate. Referenced via {{HOMEPAGE_VAR_*}} in Ingress annotations.
+- name: Ensure network namespace exists before Homepage secret
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      k3s kubectl create namespace network --dry-run=client -o yaml | k3s kubectl apply -f -
+    executable: /bin/bash
+  changed_when: true
+
+- name: Template Homepage widgets secret manifest
+  ansible.builtin.template:
+    src: homepage-widgets-secret.yml.j2
+    dest: /tmp/homepage-widgets-secret.yml
+    mode: '0600'
+  no_log: true
+
+- name: Apply Homepage widgets secret
+  ansible.builtin.command:
+    cmd: k3s kubectl apply -f /tmp/homepage-widgets-secret.yml
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+  no_log: true
+
+- name: Remove Homepage widgets secret tempfile
+  ansible.builtin.file:
+    path: /tmp/homepage-widgets-secret.yml
+    state: absent
+
 # Apply ArgoCD Application manifests — these point ArgoCD at paths in this
 # repo (argocd-apps/) and it takes over syncing them from there.
 - name: Apply ArgoCD Application manifests

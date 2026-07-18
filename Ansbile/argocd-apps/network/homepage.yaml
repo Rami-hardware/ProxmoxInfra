@@ -100,6 +100,9 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
+          envFrom:
+            - secretRef:
+                name: homepage-widgets-secret
           volumeMounts:
             - name: config
               mountPath: /app/config/settings.yaml

@@ -135,6 +135,9 @@ metadata:
     gethomepage.dev/group: "{{ svc.homepage_group }}"
     gethomepage.dev/icon: "{{ svc.homepage_icon | default(svc.name + '.png') }}"
     gethomepage.dev/pod-selector: ""
+{% for key, value in svc.homepage_widget | default({}) | dictsort %}
+    gethomepage.dev/widget.{{ key }}: "{{ value }}"
+{% endfor %}
 {% endif %}
 {% if svc.backend_protocol | default(false) %}
     nginx.ingress.kubernetes.io/backend-protocol: "{{ svc.backend_protocol }}"
