@@ -170,6 +170,11 @@ nginx_services_local:
     homepage_group: Media
     homepage_name: qBittorrent
     homepage_icon: qbittorrent.png
+    homepage_widget:
+      type: qbittorrent
+      url: "http://qbittorrent.media.svc.cluster.local:8080"
+      username: "{{ '{{HOMEPAGE_VAR_QBITTORRENT_USER}}' }}"
+      password: "{{ '{{HOMEPAGE_VAR_QBITTORRENT_PASS}}' }}"
 
   - name: adguard
     ip: 192.168.1.200
@@ -253,3 +258,7 @@ nginx_services_local:
     auth: false
     homepage_group: Media
     homepage_name: Tracearr
+    homepage_widget:
+      type: tracearr
+      url: "http://tracearr.media.svc.cluster.local:3000"
+      key: "{{ '{{HOMEPAGE_VAR_TRACEARR_KEY}}' }}"

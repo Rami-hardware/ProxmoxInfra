@@ -27,6 +27,12 @@ on:
         required: true
       JELLYFIN_API_KEY:
         required: true
+      QBITTORRENT_USER:
+        required: true
+      QBITTORRENT_PASS:
+        required: true
+      TRACEARR_API_KEY:
+        required: true
       ADGUARD_EXPORTER_USERNAME:
         required: true
       ADGUARD_EXPORTER_PASSWORD:
@@ -175,6 +181,9 @@ jobs:
           RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
           OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
           JELLYFIN_API_KEY: ${{ secrets.JELLYFIN_API_KEY }}
+          QBITTORRENT_USER: ${{ secrets.QBITTORRENT_USER }}
+          QBITTORRENT_PASS: ${{ secrets.QBITTORRENT_PASS }}
+          TRACEARR_API_KEY: ${{ secrets.TRACEARR_API_KEY }}
           ADGUARD_EXPORTER_USERNAME: ${{ secrets.ADGUARD_EXPORTER_USERNAME }}
           ADGUARD_EXPORTER_PASSWORD: ${{ secrets.ADGUARD_EXPORTER_PASSWORD }}
         run: |
