@@ -193,6 +193,10 @@ nginx_services_local:
     auth: false
     homepage_group: Monitoring
     homepage_name: Grafana
+    homepage_widget:
+      type: grafana
+      url: "http://grafana.monitoring.svc.cluster.local:3000"
+      key: "{{ '{{HOMEPAGE_VAR_GRAFANA_TOKEN}}' }}"
 
   - name: alertmanager
     ip: 192.168.1.203
@@ -209,6 +213,9 @@ nginx_services_local:
     auth: false
     homepage_group: Monitoring
     homepage_name: Prometheus
+    homepage_widget:
+      type: prometheus
+      url: "http://prometheus.monitoring.svc.cluster.local:9090"
 
   - name: server
     ip: 192.168.1.250
@@ -219,6 +226,11 @@ nginx_services_local:
     homepage_group: Infrastructure
     homepage_name: Proxmox
     homepage_icon: proxmox.png
+    homepage_widget:
+      type: proxmox
+      url: "https://192.168.1.250:8006"
+      username: "root@pam!homepage"
+      password: "{{ '{{HOMEPAGE_VAR_PROXMOX_TOKEN}}' }}"
 
   - name: tempo
     ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
@@ -236,6 +248,10 @@ nginx_services_local:
     homepage_group: Infrastructure
     homepage_name: ArgoCD
     homepage_icon: argo-cd.png
+    homepage_widget:
+      type: argocd
+      url: "http://argocd-server.argocd.svc.cluster.local"
+      key: "{{ '{{HOMEPAGE_VAR_ARGOCD_TOKEN}}' }}"
 
   - name: portnote
     ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"

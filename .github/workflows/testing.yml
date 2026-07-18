@@ -27,6 +27,12 @@ on:
         required: true
       TRACEARR_API_KEY:
         required: true
+      PROXMOX_API_TOKEN:
+        required: true
+      GRAFANA_API_TOKEN:
+        required: true
+      ARGOCD_API_TOKEN:
+        required: true
 
 jobs:
   testing:
@@ -130,6 +136,9 @@ jobs:
           QBITTORRENT_USER: ${{ secrets.QBITTORRENT_USER }}
           QBITTORRENT_PASS: ${{ secrets.QBITTORRENT_PASS }}
           TRACEARR_API_KEY: ${{ secrets.TRACEARR_API_KEY }}
+          PROXMOX_API_TOKEN: ${{ secrets.PROXMOX_API_TOKEN }}
+          GRAFANA_API_TOKEN: ${{ secrets.GRAFANA_API_TOKEN }}
+          ARGOCD_API_TOKEN: ${{ secrets.ARGOCD_API_TOKEN }}
 
       - name: Cleanup secrets
         if: always()
