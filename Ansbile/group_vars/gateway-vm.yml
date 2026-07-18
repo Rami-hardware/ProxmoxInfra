@@ -193,10 +193,6 @@ nginx_services_local:
     auth: false
     homepage_group: Monitoring
     homepage_name: Grafana
-    homepage_widget:
-      type: grafana
-      url: "http://grafana.monitoring.svc.cluster.local:3000"
-      key: "{{ '{{HOMEPAGE_VAR_GRAFANA_TOKEN}}' }}"
 
   - name: alertmanager
     ip: 192.168.1.203

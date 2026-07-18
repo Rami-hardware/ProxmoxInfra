@@ -10,7 +10,30 @@ data:
     theme: dark
     color: slate
     headerStyle: clean
+    statusStyle: dot
     hideVersion: true
+    disableCollapse: true
+    disableIndexing: true
+    iconStyle: theme
+
+    quicklaunch:
+      searchDescriptions: false
+      hideInternetSearch: true
+      provider: duckduckgo
+
+    layout:
+      Infrastructure:
+        style: row
+        columns: 4
+      Monitoring:
+        style: row
+        columns: 3
+      Media:
+        style: row
+        columns: 5
+      Network:
+        style: row
+        columns: 2
 
   services.yaml: |
     []
@@ -43,9 +66,25 @@ data:
     - greeting:
         text_size: xl
         text: Welcome Back Robin
+    - resources:
+        cpu: true
+        refresh: 3000
+    - resources:
+        cputemp: true
+        units: metric
+        refresh: 3000
+    - resources:
+        memory: true
+        refresh: 3000
+    - resources:
+        disk: /host
+        refresh: 10000
 
   bookmarks.yaml: |
-    []
+    - Infrastructure:
+        - GitHub Repo:
+            - abbr: GH
+              href: https://github.com/Rami-hardware/ProxmoxInfra
 
   kubernetes.yaml: |
     mode: cluster
@@ -108,6 +147,7 @@ spec:
         app: homepage
     spec:
       serviceAccountName: homepage
+      hostPID: true
       containers:
         - name: homepage
           image: ghcr.io/gethomepage/homepage:latest
@@ -142,6 +182,9 @@ spec:
             - name: config
               mountPath: /app/config/docker.yaml
               subPath: docker.yaml
+            - name: host-root
+              mountPath: /host
+              readOnly: true
           resources:
             requests:
               memory: "64Mi"
@@ -153,6 +196,10 @@ spec:
         - name: config
           configMap:
             name: homepage-config
+        - name: host-root
+          hostPath:
+            path: /
+            type: Directory
 ---
 apiVersion: v1
 kind: Service
