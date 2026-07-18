@@ -174,3 +174,10 @@ nginx_services_local:
     port: 30321
     namespace: argocd
     auth: false
+
+  - name: router
+    ip: 192.168.1.1
+    port: 443
+    namespace: network
+    auth: false
+    backend_protocol: HTTPS
