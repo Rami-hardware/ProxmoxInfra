@@ -80,6 +80,41 @@ data:
         disk: /host
         refresh: 10000
 
+  custom.css: |
+    /* ── Hide section names, keep spacing ── */
+    .service-group-name {
+      visibility: hidden !important;
+      height: 3rem !important;
+      pointer-events: none !important;
+    }
+
+    /* ── Base card ── */
+    .service-card {
+      background: rgba(30, 30, 30, 0.60) !important;
+      border: 2px solid rgba(148, 163, 184, 0.08) !important;
+      border-radius: 10px !important;
+      transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease !important;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
+    }
+
+    /* ── Hover — warm amber/gold matching the bg wallpaper tones ── */
+    .service-card:hover {
+      background: rgba(120, 80, 20, 0.25) !important;
+      border-color: rgba(251, 191, 36, 0.45) !important;
+      box-shadow:
+        0 0 0 1px rgba(251, 191, 36, 0.3),
+        0 0 18px rgba(251, 191, 36, 0.2),
+        0 4px 20px rgba(0, 0, 0, 0.4) !important;
+      transform: translateY(-1px) !important;
+    }
+
+    /* ── Amber/gold tint on glances graphs ── */
+    canvas,
+    svg path[fill],
+    svg path[stroke] {
+      filter: sepia(1) saturate(3) hue-rotate(5deg) brightness(1.1) !important;
+    }
+
   bookmarks.yaml: |
     - Infrastructure:
         - GitHub Repo:
@@ -182,6 +217,9 @@ spec:
             - name: config
               mountPath: /app/config/docker.yaml
               subPath: docker.yaml
+            - name: config
+              mountPath: /app/config/custom.css
+              subPath: custom.css
             - name: host-root
               mountPath: /host
               readOnly: true
