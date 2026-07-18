@@ -63,6 +63,11 @@ controller:
         prometheus.io/scrape: "true"
         prometheus.io/port: "10254"
 
+  # hostNetwork + hostPort means only one pod can bind 80/443 on this node at
+  # a time — RollingUpdate's overlap deadlocks the new pod in Pending.
+  updateStrategy:
+    type: Recreate
+
   hostNetwork: true
 
   hostPort:
@@ -83,6 +88,14 @@ controller:
   service:
     type: LoadBalancer
     loadBalancerIP: {{ k3s_apps_ingress_nginx_ip | default('192.168.1.210') }}
+    # Cluster (the chart default) lets any node's kube-proxy receive and
+    # SNAT-forward traffic to the pod, replacing the real client IP with
+    # whichever node happens to be the MetalLB L2 speaker for this IP —
+    # this was the cause of every request logging as 192.168.1.200
+    # (gateway-server, the elected speaker) instead of the real client.
+    # Local preserves the original source IP by only routing to pods on
+    # the node that's actually announcing the LoadBalancer IP.
+    externalTrafficPolicy: Local
     ports:
       http: 80
       https: 443
