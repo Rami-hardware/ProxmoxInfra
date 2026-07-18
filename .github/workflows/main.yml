@@ -36,6 +36,7 @@ jobs:
       PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
       RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
       OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
+      JELLYFIN_API_KEY: ${{ secrets.JELLYFIN_API_KEY }}
 
   Deploy:
     name: Deploy Infrastructure Code
@@ -53,6 +54,7 @@ jobs:
       PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
       RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
       OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
+      JELLYFIN_API_KEY: ${{ secrets.JELLYFIN_API_KEY }}
       ADGUARD_EXPORTER_USERNAME: ${{ secrets.ADGUARD_EXPORTER_USERNAME }}
       ADGUARD_EXPORTER_PASSWORD: ${{ secrets.ADGUARD_EXPORTER_PASSWORD }}
 

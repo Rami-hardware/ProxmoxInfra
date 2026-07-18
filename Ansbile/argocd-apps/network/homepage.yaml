@@ -40,9 +40,9 @@ data:
           cpu: true
           memory: true
           showLabel: true
-    - search:
-        provider: duckduckgo
-        target: _blank
+    - greeting:
+    text_size: xl
+    text: Welcome Back Robin
 
   bookmarks.yaml: |
     []

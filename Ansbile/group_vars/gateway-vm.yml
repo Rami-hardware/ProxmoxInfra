@@ -96,6 +96,11 @@ nginx_services_local:
     cache_ttl: "7d"
     homepage_group: Media
     homepage_name: Jellyfin
+    homepage_widget:
+      type: jellyfin
+      url: "http://jellyfin.media.svc.cluster.local:8096"
+      key: "{{ '{{HOMEPAGE_VAR_JELLYFIN_KEY}}' }}"
+      enableBlocks: "true"
 
   - name: overseerr
     ip: 192.168.1.201
@@ -227,19 +232,6 @@ nginx_services_local:
     homepage_name: ArgoCD
     homepage_icon: argo-cd.png
 
-  # Login bounces back to the home/logon screen when proxied — this appears
-  # to be the router's own session handling (likely tied to source IP or a
-  # hardcoded redirect), not fixable via proxy headers/cookies. Use this
-  # only to reach the login page; log in via https://192.168.1.1 directly.
-  - name: router
-    ip: 192.168.1.1
-    port: 443
-    namespace: network
-    auth: false
-    backend_protocol: HTTPS
-    homepage_group: Network
-    homepage_name: Router
-
   - name: portnote
     ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
     port: 30322
@@ -254,13 +246,11 @@ nginx_services_local:
     namespace: network
     auth: false
 
-  - name: myspeed
+  - name: tracearr
     ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
     port: 30324
-    namespace: monitoring
+    namespace: media
     auth: false
-    homepage_group: Monitoring
-    homepage_name: MySpeed
-    homepage_widget:
-      type: myspeed
-      url: "http://myspeed.monitoring.svc.cluster.local:5216"
+    homepage_group: Media
+    homepage_name: Tracearr
+

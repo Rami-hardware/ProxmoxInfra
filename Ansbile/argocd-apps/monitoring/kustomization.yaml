@@ -10,7 +10,6 @@ resources:
   - speedtest-exporter.yaml
   - intel-gpu-exporter.yaml
   - qbittorrent-exporter.yaml
-  - myspeed.yaml
 
 # argocd-image-updater rewrites entries here (newTag/digest) when it detects
 # a new image on the registry side — this is the write-back target.
@@ -28,6 +27,4 @@ images:
   - name: ghcr.io/onedr0p/intel-gpu-exporter
     newTag: rolling
   - name: esanchezm/prometheus-qbittorrent-exporter
-    newTag: latest
-  - name: germannewsmaker/myspeed
     newTag: latest

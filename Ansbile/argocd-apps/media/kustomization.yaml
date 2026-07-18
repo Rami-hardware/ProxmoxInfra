@@ -12,6 +12,9 @@ resources:
   - flaresolverr.yaml
   - scraparr.yaml
   - sonarr.yaml
+  - tracearr.yaml
+  - tracearr-timescale.yaml
+  - tracearr-redis.yaml
 
 # argocd-image-updater rewrites entries here (newTag/digest) when it detects
 # a new image on the registry side — this is the write-back target.
@@ -33,4 +36,6 @@ images:
   - name: ghcr.io/thecfu/scraparr
     newTag: latest
   - name: linuxserver/sonarr
+    newTag: latest
+  - name: ghcr.io/connorgallopo/tracearr
     newTag: latest

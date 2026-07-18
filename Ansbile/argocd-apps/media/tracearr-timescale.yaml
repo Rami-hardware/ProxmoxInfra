@@ -1,0 +1,95 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: tracearr-timescale-pv
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  hostPath:
+    path: /opt/tracearr/timescale
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tracearr-timescale-pvc
+  namespace: media
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  volumeName: tracearr-timescale-pv
+  storageClassName: ""
+---
+# CHANGE ME: placeholder credentials committed to git for the initial
+# deploy — replace with real values before relying on this in production.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tracearr-timescale-secret
+  namespace: media
+type: Opaque
+stringData:
+  POSTGRES_USER: tracearr
+  POSTGRES_PASSWORD: change-me-timescale-password
+  POSTGRES_DB: tracearr
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tracearr-timescale
+  namespace: media
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: tracearr-timescale
+  template:
+    metadata:
+      labels:
+        app: tracearr-timescale
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: media-server
+      containers:
+        - name: timescale
+          image: timescale/timescaledb-ha:pg18.1-ts2.25.0
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: tracearr-timescale-secret
+          volumeMounts:
+            - name: data
+              mountPath: /home/postgres/pgdata/data
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: tracearr-timescale-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tracearr-timescale
+  namespace: media
+spec:
+  selector:
+    app: tracearr-timescale
+  ports:
+    - port: 5432
+      targetPort: 5432
