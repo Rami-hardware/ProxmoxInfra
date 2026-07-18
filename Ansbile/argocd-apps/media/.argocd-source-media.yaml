@@ -9,3 +9,4 @@ kustomize:
   - ghcr.io/flaresolverr/flaresolverr@sha256:139dfee1c6f89249c8d665d1333a42e8ec74ec0a86bc6bb1c8461e10d3a66a47
   - ghcr.io/thecfu/scraparr@sha256:47ae07184e9d35ed7c25ed378e79a423b6f9da15056c9299d517af2bbe6f5e96
   - linuxserver/sonarr@sha256:24acea2956a0ccb11f103877d9f4f8576600fb34bff34820ed749c2256dab89f
+  - ghcr.io/connorgallopo/tracearr@sha256:2b6aca8d86126bb57211f54f1a34e9d8292ad0d783dbc48015452b2af1b9fe3c
