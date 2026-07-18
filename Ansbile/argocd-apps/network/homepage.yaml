@@ -23,7 +23,7 @@ data:
           timeStyle: short
           hourCycle: h23
     - openmeteo:
-        label: Riyadh
+        label: Jeddah
         latitude: 24.7136
         longitude: 46.6753
         units: metric

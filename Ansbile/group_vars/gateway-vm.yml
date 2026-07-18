@@ -253,3 +253,14 @@ nginx_services_local:
     port: 30323
     namespace: network
     auth: false
+
+  - name: myspeed
+    ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
+    port: 30324
+    namespace: monitoring
+    auth: false
+    homepage_group: Monitoring
+    homepage_name: MySpeed
+    homepage_widget:
+      type: myspeed
+      url: "http://myspeed.monitoring.svc.cluster.local:5216"

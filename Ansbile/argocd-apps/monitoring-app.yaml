@@ -12,7 +12,8 @@ metadata:
       alertmanager=prom/alertmanager:latest,
       speedtest-exporter=miguelndecarvalho/speedtest-exporter:latest,
       intel-gpu-exporter=ghcr.io/onedr0p/intel-gpu-exporter:rolling,
-      qbittorrent-exporter=esanchezm/prometheus-qbittorrent-exporter:latest
+      qbittorrent-exporter=esanchezm/prometheus-qbittorrent-exporter:latest,
+      myspeed=germannewsmaker/myspeed:latest
     argocd-image-updater.argoproj.io/grafana.update-strategy: digest
     argocd-image-updater.argoproj.io/prometheus.update-strategy: digest
     argocd-image-updater.argoproj.io/loki.update-strategy: digest
@@ -20,6 +21,7 @@ metadata:
     argocd-image-updater.argoproj.io/speedtest-exporter.update-strategy: digest
     argocd-image-updater.argoproj.io/intel-gpu-exporter.update-strategy: digest
     argocd-image-updater.argoproj.io/qbittorrent-exporter.update-strategy: digest
+    argocd-image-updater.argoproj.io/myspeed.update-strategy: digest
     argocd-image-updater.argoproj.io/write-back-method: git:secret:argocd/git-creds
     argocd-image-updater.argoproj.io/git-branch: main
 spec:
