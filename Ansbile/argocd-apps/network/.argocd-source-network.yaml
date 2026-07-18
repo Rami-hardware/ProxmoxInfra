@@ -1,3 +1,4 @@
 kustomize:
   images:
   - adguard/adguardhome@sha256:1ea34eafe5dc691007946e8eaab7bf46b0de9412f39213d8c06e48b53bf9a6c5
+  - haedlessdev/portnote@sha256:237090f54671df81f00408fef436a6f710d4fe5b9d4c216a6a79484f66687d8a
