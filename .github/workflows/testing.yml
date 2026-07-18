@@ -33,6 +33,12 @@ on:
         required: true
       ARGOCD_API_TOKEN:
         required: true
+      PORTNOTE_JWT_SECRET:
+        required: true
+      PORTNOTE_USER_SECRET:
+        required: true
+      PORTNOTE_LOGIN_PASSWORD:
+        required: true
 
 jobs:
   testing:
@@ -139,6 +145,9 @@ jobs:
           PROXMOX_API_TOKEN: ${{ secrets.PROXMOX_API_TOKEN }}
           GRAFANA_API_TOKEN: ${{ secrets.GRAFANA_API_TOKEN }}
           ARGOCD_API_TOKEN: ${{ secrets.ARGOCD_API_TOKEN }}
+          PORTNOTE_JWT_SECRET: ${{ secrets.PORTNOTE_JWT_SECRET }}
+          PORTNOTE_USER_SECRET: ${{ secrets.PORTNOTE_USER_SECRET }}
+          PORTNOTE_LOGIN_PASSWORD: ${{ secrets.PORTNOTE_LOGIN_PASSWORD }}
 
       - name: Cleanup secrets
         if: always()
