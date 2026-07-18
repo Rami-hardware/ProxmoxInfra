@@ -16,6 +16,13 @@ data:
     disableIndexing: true
     iconStyle: theme
 
+    background:
+      image: /images/bg.jpg
+      blur: md
+      saturate: 25
+      brightness: 50
+      opacity: 65
+
     quicklaunch:
       searchDescriptions: false
       hideInternetSearch: true
@@ -115,6 +122,21 @@ data:
       filter: sepia(1) saturate(3) hue-rotate(5deg) brightness(1.1) !important;
     }
 
+    /* ── Compact density: smaller padding/font, denser rows ── */
+    .service-card {
+      padding: 0.5rem 0.75rem !important;
+    }
+    .service-card .service-name {
+      font-size: 0.85rem !important;
+    }
+    .service-card .service-description {
+      font-size: 0.7rem !important;
+    }
+    #information-widgets,
+    .services-group {
+      gap: 0.5rem !important;
+    }
+
   bookmarks.yaml: |
     - Infrastructure:
         - GitHub Repo:
@@ -183,6 +205,16 @@ spec:
     spec:
       serviceAccountName: homepage
       hostPID: true
+      initContainers:
+        - name: fetch-background
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - wget -O /images/bg.jpg 'https://mrwallpaper.com/images/hd/luxurious-black-and-gold-desktop-rt85zskt4leyftct.jpg'
+          volumeMounts:
+            - name: background-image
+              mountPath: /images
       containers:
         - name: homepage
           image: ghcr.io/gethomepage/homepage:latest
@@ -223,6 +255,8 @@ spec:
             - name: host-root
               mountPath: /host
               readOnly: true
+            - name: background-image
+              mountPath: /app/public/images
           resources:
             requests:
               memory: "64Mi"
@@ -238,6 +272,8 @@ spec:
           hostPath:
             path: /
             type: Directory
+        - name: background-image
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
