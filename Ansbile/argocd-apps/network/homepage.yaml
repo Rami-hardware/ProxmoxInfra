@@ -9,9 +9,11 @@ data:
     title: Homelab
     theme: dark
     color: slate
-    headerStyle: clean
+    headerStyle: boxed
     statusStyle: dot
     hideVersion: true
+    showStats: true
+    useEqualHeights: true
     disableCollapse: true
     disableIndexing: true
     iconStyle: theme
@@ -24,9 +26,11 @@ data:
       opacity: 65
 
     quicklaunch:
-      searchDescriptions: false
+      searchDescriptions: true
       hideInternetSearch: true
-      provider: duckduckgo
+      showSearchSuggestions: false
+      hideVisitURL: true
+      provider: google
 
     layout:
       Infrastructure:
@@ -143,6 +147,25 @@ data:
             - abbr: GH
               href: https://github.com/Rami-hardware/ProxmoxInfra
 
+    - SSH:
+        - Git/K3s Server:
+            - abbr: GIT
+              href: ssh://github@192.168.1.204
+        - Media Server:
+            - abbr: MED
+              href: ssh://media@192.168.1.201
+        - Gateway Server:
+            - abbr: GW
+              href: ssh://gateway@192.168.1.200
+        - Monitoring Server:
+            - abbr: MON
+              href: ssh://monitoring@192.168.1.203
+
+    - Cloudflare:
+        - Login:
+            - abbr: CF
+              href: https://dash.cloudflare.com/login
+
   kubernetes.yaml: |
     mode: cluster
 
@@ -211,7 +234,7 @@ spec:
           command:
             - sh
             - -c
-            - wget -O /images/bg.jpg 'https://mrwallpaper.com/images/hd/luxurious-black-and-gold-desktop-rt85zskt4leyftct.jpg'
+            - wget -O /images/bg.jpg 'https://mrwallpaper.com/images/hd/batman-black-and-yellow-silhouette-spusq4c4sc56b943.jpg'
           volumeMounts:
             - name: background-image
               mountPath: /images
