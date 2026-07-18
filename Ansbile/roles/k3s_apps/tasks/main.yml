@@ -491,18 +491,22 @@
 # ── ArgoCD via Helm ────────────────────────────────────────────────────────────
 # NodePort exposes argocd-server so the gateway's nginx (nginx_services_local
 # in group_vars/gateway-vm.yml) can proxy argocd.homelab.lan to it, same
-# pattern as grafana/prometheus/tempo.
+# pattern as grafana/prometheus/tempo. Uses a values file rather than --set
+# strings because the RBAC policy.csv value contains commas, which Helm's
+# --set/--set-string parser treats as field separators.
+- name: Template ArgoCD Helm values
+  ansible.builtin.template:
+    src: argocd-values.yml.j2
+    dest: /tmp/argocd-values.yml
+    mode: '0600'
+
 - name: Deploy ArgoCD via Helm
   ansible.builtin.command:
     cmd: >
       helm upgrade --install argocd argo/argo-cd
       --namespace argocd
       --create-namespace
-      --set configs.params."server\.insecure"=true
-      --set server.service.type=NodePort
-      --set server.service.nodePortHttp=30321
-      --set configs.cm."accounts\.homepage"=apiKey
-      --set-string configs.rbac."policy\.csv"="p, role:homepage, applications, get, */*, allow\ng, homepage, role:homepage"
+      --values /tmp/argocd-values.yml
       --wait
       --timeout 5m
   environment:
@@ -510,6 +514,11 @@
     HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
     HELM_REPOSITORY_CACHE: /etc/helm/cache
   changed_when: true
+
+- name: Remove ArgoCD values tempfile
+  ansible.builtin.file:
+    path: /tmp/argocd-values.yml
+    state: absent
 
 # ── ArgoCD Image Updater ──────────────────────────────────────────────────────
 # Watches image digests on :latest tags and commits the resolved digest back

@@ -1,0 +1,15 @@
+---
+configs:
+  params:
+    server.insecure: true
+  cm:
+    accounts.homepage: apiKey
+  rbac:
+    policy.csv: |
+      p, role:homepage, applications, get, */*, allow
+      g, homepage, role:homepage
+
+server:
+  service:
+    type: NodePort
+    nodePortHttp: 30321
