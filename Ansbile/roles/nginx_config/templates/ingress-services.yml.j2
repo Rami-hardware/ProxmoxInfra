@@ -150,6 +150,15 @@ metadata:
     nginx.ingress.kubernetes.io/auth-signin: "https://auth.homelab.lan?rd=$scheme://$http_host$escaped_request_uri"
     nginx.ingress.kubernetes.io/auth-response-headers: "Remote-User,Remote-Groups,Remote-Name,Remote-Email"
 {% endif %}
+{% if svc.preserve_host | default(false) %}
+    # Some backends (e.g. router/appliance admin UIs) set cookies or
+    # redirects scoped to their own IP/hostname and break under a proxied
+    # Host header — pass the original upstream Host through unmodified.
+    nginx.ingress.kubernetes.io/upstream-vhost: "{{ svc.ip }}"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_ssl_server_name on;
+      proxy_cookie_domain {{ svc.ip }} $host;
+{% endif %}
 spec:
   ingressClassName: nginx
   tls:

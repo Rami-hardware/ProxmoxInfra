@@ -181,3 +181,4 @@ nginx_services_local:
     namespace: network
     auth: false
     backend_protocol: HTTPS
+    preserve_host: true
