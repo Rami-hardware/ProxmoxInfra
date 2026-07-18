@@ -1,0 +1,73 @@
+---
+# CHANGE ME: placeholder secrets committed to git for the initial deploy —
+# replace with real values before relying on this in production. Not wired
+# to any secret manager yet.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: portnote-secret
+  namespace: network
+type: Opaque
+stringData:
+  JWT_SECRET: change-me-jwt-secret
+  USER_SECRET: change-me-user-secret
+  LOGIN_USERNAME: admin
+  LOGIN_PASSWORD: change-me-admin-password
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portnote
+  namespace: network
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: portnote
+  template:
+    metadata:
+      labels:
+        app: portnote
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: gateway-server
+      containers:
+        - name: portnote
+          image: haedlessdev/portnote:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@portnote-postgres.network.svc.cluster.local:5432/$(POSTGRES_DB)"
+          envFrom:
+            - secretRef:
+                name: portnote-secret
+            - secretRef:
+                name: portnote-postgres-secret
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "25m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: portnote
+  namespace: network
+spec:
+  type: NodePort
+  selector:
+    app: portnote
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      nodePort: 30322

@@ -175,10 +175,19 @@ nginx_services_local:
     namespace: argocd
     auth: false
 
+  # Login bounces back to the home/logon screen when proxied — this appears
+  # to be the router's own session handling (likely tied to source IP or a
+  # hardcoded redirect), not fixable via proxy headers/cookies. Use this
+  # only to reach the login page; log in via https://192.168.1.1 directly.
   - name: router
     ip: 192.168.1.1
     port: 443
     namespace: network
     auth: false
     backend_protocol: HTTPS
-    preserve_host: true
+
+  - name: portnote
+    ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
+    port: 30322
+    namespace: network
+    auth: false

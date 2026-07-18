@@ -5,8 +5,11 @@ metadata:
   name: network
   namespace: argocd
   annotations:
-    argocd-image-updater.argoproj.io/image-list: adguard-home=adguard/adguardhome:latest
+    argocd-image-updater.argoproj.io/image-list: >-
+      adguard-home=adguard/adguardhome:latest,
+      portnote=haedlessdev/portnote:latest
     argocd-image-updater.argoproj.io/adguard-home.update-strategy: digest
+    argocd-image-updater.argoproj.io/portnote.update-strategy: digest
     argocd-image-updater.argoproj.io/write-back-method: git:secret:argocd/git-creds
     argocd-image-updater.argoproj.io/git-branch: main
 spec:
