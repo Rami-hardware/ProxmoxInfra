@@ -59,6 +59,8 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: media-server
+      securityContext:
+        fsGroup: 1000
       containers:
         - name: timescale
           image: timescale/timescaledb-ha:pg18.1-ts2.25.0
