@@ -5,7 +5,7 @@ kustomize:
   - linuxserver/bazarr@sha256:4c30dc0bb9a5d223075e7f5d12c77bd293c4b460f86d696dbe64763104c1e88c
   - linuxserver/radarr@sha256:2b2c1c05eb3f648d2c80dfab9486147dd7bb0ad4d77fa972fc1c5de8f1da3738
   - linuxserver/prowlarr@sha256:4fd7a166c8f46dd3370a871c250ee577d6c2ae97a0dbe0e3614b5ef736205620
-  - linuxserver/qbittorrent@sha256:352371a7242e8b4aa10958ca02076d1023758070519b89a10251475fb9f1a35a
+  - linuxserver/qbittorrent@sha256:b024436f8ca665d16d9a997d26fd27fdf867ee5566ba09f32764e7b2976d3e02
   - ghcr.io/flaresolverr/flaresolverr@sha256:139dfee1c6f89249c8d665d1333a42e8ec74ec0a86bc6bb1c8461e10d3a66a47
   - ghcr.io/thecfu/scraparr@sha256:47ae07184e9d35ed7c25ed378e79a423b6f9da15056c9299d517af2bbe6f5e96
   - linuxserver/sonarr@sha256:24acea2956a0ccb11f103877d9f4f8576600fb34bff34820ed749c2256dab89f
