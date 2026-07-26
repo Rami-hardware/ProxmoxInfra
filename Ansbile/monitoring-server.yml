@@ -4,7 +4,6 @@
   become: true
   roles:
     - loki
-    - prometheus
     - alertmanager
     - grafana
     - promtail
