@@ -429,38 +429,38 @@
     state: absent
 
 # ── MetalLB via Helm ─────────────────────────────────────────────────────────
-# - name: Deploy MetalLB via Helm
-#   ansible.builtin.command:
-#     cmd: >
-#       helm upgrade --install metallb metallb/metallb
-#       --namespace metallb-system
-#       --create-namespace
-#       --wait
-#       --timeout 5m
-#   environment:
-#     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-#     HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
-#     HELM_REPOSITORY_CACHE: /etc/helm/cache
-#   changed_when: true
-#
-# - name: Template MetalLB IP pool config
-#   ansible.builtin.template:
-#     src: metallb-config.yml.j2
-#     dest: /tmp/metallb-config.yml
-#     mode: '0600'
-#
-# - name: Apply MetalLB IP pool config
-#   ansible.builtin.command:
-#     cmd: k3s kubectl apply -f /tmp/metallb-config.yml
-#   environment:
-#     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-#   changed_when: true
-#
-# - name: Remove MetalLB config tempfile
-#   ansible.builtin.file:
-#     path: /tmp/metallb-config.yml
-#     state: absent
-#
+- name: Deploy MetalLB via Helm
+  ansible.builtin.command:
+    cmd: >
+      helm upgrade --install metallb metallb/metallb
+      --namespace metallb-system
+      --create-namespace
+      --wait
+      --timeout 5m
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  changed_when: true
+
+- name: Template MetalLB IP pool config
+  ansible.builtin.template:
+    src: metallb-config.yml.j2
+    dest: /tmp/metallb-config.yml
+    mode: '0600'
+
+- name: Apply MetalLB IP pool config
+  ansible.builtin.command:
+    cmd: k3s kubectl apply -f /tmp/metallb-config.yml
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+
+- name: Remove MetalLB config tempfile
+  ansible.builtin.file:
+    path: /tmp/metallb-config.yml
+    state: absent
+
 # ── ingress-nginx via Helm ────────────────────────────────────────────────────
 - name: Template ingress-nginx Helm values
   ansible.builtin.template:
