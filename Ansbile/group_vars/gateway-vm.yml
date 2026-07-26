@@ -62,7 +62,7 @@ authelia_cluster_ip: 10.43.20.164
 
 nginx_services:
   - name: jellyfin
-    ip: 192.168.1.201
+    ip: 192.168.10.201
     port: 8096
     disable_buffering: true
     streaming: true
@@ -73,12 +73,12 @@ nginx_services:
     cache_ttl: "7d"
 
   - name: overseerr
-    ip: 192.168.1.201
+    ip: 192.168.10.201
     port: 5055
     namespace: media
 
   - name: adguard
-    ip: 192.168.1.200
+    ip: 192.168.10.200
     port: 8081
     namespace: network
     k8s_service: adguard-home
@@ -86,7 +86,7 @@ nginx_services:
 nginx_services_local:
   - name: jellyfin
     namespace: media
-    ip: 192.168.1.201
+    ip: 192.168.10.201
     port: 8096
     disable_buffering: true
     streaming: true
@@ -103,7 +103,7 @@ nginx_services_local:
       enableBlocks: "true"
 
   - name: overseerr
-    ip: 192.168.1.201
+    ip: 192.168.10.201
     port: 5055
     namespace: media
     homepage_group: Media
@@ -114,7 +114,7 @@ nginx_services_local:
       key: "{{ '{{HOMEPAGE_VAR_OVERSEERR_KEY}}' }}"
 
   - name: radarr
-    ip: 192.168.1.201
+    ip: 192.168.10.201
     port: 7878
     namespace: media
     auth: false
@@ -126,7 +126,7 @@ nginx_services_local:
       key: "{{ '{{HOMEPAGE_VAR_RADARR_KEY}}' }}"
 
   - name: sonarr
-    ip: 192.168.1.201
+    ip: 192.168.10.201
     port: 8989
     namespace: media
     auth: false
@@ -138,7 +138,7 @@ nginx_services_local:
       key: "{{ '{{HOMEPAGE_VAR_SONARR_KEY}}' }}"
 
   - name: prowlarr
-    ip: 192.168.1.201
+    ip: 192.168.10.201
     port: 9696
     namespace: media
     auth: false
@@ -150,7 +150,7 @@ nginx_services_local:
       key: "{{ '{{HOMEPAGE_VAR_PROWLARR_KEY}}' }}"
 
   - name: bazarr
-    ip: 192.168.1.201
+    ip: 192.168.10.201
     port: 6767
     namespace: media
     auth: false
@@ -162,7 +162,7 @@ nginx_services_local:
       key: "{{ '{{HOMEPAGE_VAR_BAZARR_KEY}}' }}"
 
   - name: qbittorrent
-    ip: 192.168.1.201
+    ip: 192.168.10.201
     port: 8080
     disable_buffering: true
     namespace: media
@@ -177,7 +177,7 @@ nginx_services_local:
       password: "{{ '{{HOMEPAGE_VAR_QBITTORRENT_PASS}}' }}"
 
   - name: adguard
-    ip: 192.168.1.200
+    ip: 192.168.10.200
     port: 8081
     namespace: network
     k8s_service: adguard-home
@@ -187,7 +187,7 @@ nginx_services_local:
     homepage_icon: adguard-home.png
 
   - name: grafana
-    ip: 192.168.1.203
+    ip: 192.168.10.203
     port: 3000
     namespace: monitoring
     auth: false
@@ -195,7 +195,7 @@ nginx_services_local:
     homepage_name: Grafana
 
   - name: alertmanager
-    ip: 192.168.1.203
+    ip: 192.168.10.203
     port: 9093
     namespace: monitoring
     auth: false
@@ -203,7 +203,7 @@ nginx_services_local:
     homepage_name: Alertmanager
 
   - name: prometheus
-    ip: 192.168.1.203
+    ip: 192.168.10.203
     port: 9090
     namespace: monitoring
     auth: false
@@ -214,7 +214,7 @@ nginx_services_local:
       url: "http://prometheus.monitoring.svc.cluster.local:9090"
 
   - name: server
-    ip: 192.168.1.250
+    ip: 192.168.10.250
     port: 8006
     namespace: network
     auth: false
@@ -224,7 +224,7 @@ nginx_services_local:
     homepage_icon: proxmox.png
     homepage_widget:
       type: proxmox
-      url: "https://192.168.1.250:8006"
+      url: "https://192.168.10.250:8006"
       username: "root@pam!homepage"
       password: "{{ '{{HOMEPAGE_VAR_PROXMOX_TOKEN}}' }}"
 

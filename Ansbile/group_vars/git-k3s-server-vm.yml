@@ -22,7 +22,7 @@ k3s_apps_list:
     replicas: 1
     env:
       - name: ADGUARD_SERVERS
-        value: "192.168.1.200:8081"
+        value: "192.168.10.200:8081"
       - name: ADGUARD_USERNAMES
         value: "{{ adguard_exporter_username }}"
       - name: ADGUARD_PASSWORDS

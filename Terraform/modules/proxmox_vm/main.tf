@@ -36,7 +36,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
     ip_config {
       ipv4 {
         address = var.ip
-        gateway = "192.168.1.1"
+        gateway = "192.168.10.1"
       }
     }
     user_account {

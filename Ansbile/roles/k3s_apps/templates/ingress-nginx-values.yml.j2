@@ -45,7 +45,7 @@ controller:
     # socket IP is already correct and must NOT be in this CIDR list —
     # trusting a client's own subnet here makes nginx read a header the
     # client itself can spoof/omit, which is what caused every LAN request
-    # to misreport as 192.168.1.200 instead of the real client IP.
+    # to misreport as 192.168.10.200 instead of the real client IP.
     enable-real-ip: "true"
     forwarded-for-header: "X-Forwarded-For"
     proxy-real-ip-cidr: "173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22"
@@ -87,11 +87,11 @@ controller:
 
   service:
     type: LoadBalancer
-    loadBalancerIP: {{ k3s_apps_ingress_nginx_ip | default('192.168.1.210') }}
+    loadBalancerIP: {{ k3s_apps_ingress_nginx_ip | default('192.168.10.210') }}
     # Cluster (the chart default) lets any node's kube-proxy receive and
     # SNAT-forward traffic to the pod, replacing the real client IP with
     # whichever node happens to be the MetalLB L2 speaker for this IP —
-    # this was the cause of every request logging as 192.168.1.200
+    # this was the cause of every request logging as 192.168.10.200
     # (gateway-server, the elected speaker) instead of the real client.
     # Local preserves the original source IP by only routing to pods on
     # the node that's actually announcing the LoadBalancer IP.

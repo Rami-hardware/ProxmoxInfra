@@ -8,7 +8,7 @@ A fully automated homelab running on Proxmox, provisioned with Terraform, config
 
 ### Physical Host
 
-- **Proxmox VE** on bare metal (`192.168.1.250`)
+- **Proxmox VE** on bare metal (`192.168.10.250`)
 - Intel Arc GPU passthrough to media VM
 - ZFS storage with custom exporter
 
@@ -16,10 +16,10 @@ A fully automated homelab running on Proxmox, provisioned with Terraform, config
 
 | VM                | IP            | Cores | RAM  | Role                                      |
 | :---------------- | :------------ | :---- | :--- | :---------------------------------------- |
-| gateway-server    | 192.168.1.200 | 1     | 2 GB | Reverse proxy, DNS                        |
-| media-server      | 192.168.1.201 | 3     | 8 GB | Media stack — K3s worker                  |
-| monitoring-server | 192.168.1.203 | 1     | 2 GB | Observability stack — K3s worker          |
-| git-k3s-server    | 192.168.1.204 | 4     | 8 GB | GitHub Actions runner + K3s control plane |
+| gateway-server    | 192.168.10.200 | 1     | 2 GB | Reverse proxy, DNS                        |
+| media-server      | 192.168.10.201 | 3     | 8 GB | Media stack — K3s worker                  |
+| monitoring-server | 192.168.10.203 | 1     | 2 GB | Observability stack — K3s worker          |
+| git-k3s-server    | 192.168.10.204 | 4     | 8 GB | GitHub Actions runner + K3s control plane |
 
 ---
 
@@ -50,7 +50,7 @@ k3s kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data
 
 ## Services
 
-### Media (192.168.1.201) — K3s worker, namespace: `media` — ArgoCD-managed
+### Media (192.168.10.201) — K3s worker, namespace: `media` — ArgoCD-managed
 
 | App          | URL                               | Port | Notes                                         |
 | :----------- | :-------------------------------- | :--- | :-------------------------------------------- |
@@ -64,7 +64,7 @@ k3s kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data
 | FlareSolverr | —                                 | 8191 | Cloudflare bypass (stateless, Chromium-based) |
 | Scraparr     | —                                 | 7100 | Prometheus metrics exporter for arr apps      |
 
-### Monitoring (192.168.1.203) — K3s worker, namespace: `monitoring` — ArgoCD-managed
+### Monitoring (192.168.10.203) — K3s worker, namespace: `monitoring` — ArgoCD-managed
 
 | App                  | URL                                | Port  | Notes                              |
 | :------------------- | :--------------------------------- | :---- | :--------------------------------- |
@@ -78,7 +78,7 @@ k3s kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data
 
 `adguard-exporter` remains Ansible-managed (`k3s_apps_list`) rather than ArgoCD, since it needs real secret handling (AdGuard credentials) that hasn't been wired into git write-back yet.
 
-### Network (192.168.1.200) — K3s worker, namespace: `network` — ArgoCD-managed
+### Network (192.168.10.200) — K3s worker, namespace: `network` — ArgoCD-managed
 
 | App     | URL                           | Port | Notes                           |
 | :------ | :---------------------------- | :--- | :------------------------------ |
@@ -86,13 +86,13 @@ k3s kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data
 
 Gateway also runs: **Nginx** (reverse proxy + TLS, routes to K3s NodePorts).
 
-### Git / K3s (192.168.1.204)
+### Git / K3s (192.168.10.204)
 
 - **K3s control plane** — Kubernetes API server
 - **GitHub Actions self-hosted runner** — executes CI/CD pipeline
 - **ArgoCD + ArgoCD Image Updater** — GitOps sync + auto image updates
 - **cert-manager** — TLS via internal CA (`homelab-ca-issuer`)
-- **ingress-nginx** — Kubernetes ingress controller (Helm-managed, LoadBalancer at `192.168.1.210`)
+- **ingress-nginx** — Kubernetes ingress controller (Helm-managed, LoadBalancer at `192.168.10.210`)
 - **Istio** (`istio-base` + `istiod`) — service mesh, sidecar injection on `media`, `monitoring`, `network` namespaces, traces to Tempo
 - **kube-state-metrics** — Kubernetes object metadata exported to Prometheus
 

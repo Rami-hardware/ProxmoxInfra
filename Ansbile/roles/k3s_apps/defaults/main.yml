@@ -1,8 +1,8 @@
 ---
 k3s_apps_manifest_dir: /opt/k3s/manifests
 k3s_apps_falco_config_dir: /opt/falco
-k3s_apps_metallb_ip_range: "192.168.1.210-192.168.1.220"
-k3s_apps_ingress_nginx_ip: "192.168.1.210"
+k3s_apps_metallb_ip_range: "192.168.10.210-192.168.10.220"
+k3s_apps_ingress_nginx_ip: "192.168.10.210"
 
 # Namespaces that should have Istio sidecar injection enabled.
 # Applied as a label on the Namespace object in app.yml.j2 so it survives
