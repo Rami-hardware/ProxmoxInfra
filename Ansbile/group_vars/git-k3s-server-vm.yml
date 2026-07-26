@@ -1,9 +1,6 @@
 ---
 prometheus_retention_time: 30d
 
-adguard_exporter_username: "{{ lookup('env', 'ADGUARD_EXPORTER_USERNAME') | default('', true) }}"
-adguard_exporter_password: "{{ lookup('env', 'ADGUARD_EXPORTER_PASSWORD') | default('', true) }}"
-
 k3s_apps_list:
   # overseerr, jellyfin, bazarr, radarr, prowlarr, qbittorrent, flaresolverr,
   # scraparr, sonarr are now managed by ArgoCD — see Ansbile/argocd-apps/media/
@@ -11,25 +8,5 @@ k3s_apps_list:
   # intel-gpu-exporter, qbittorrent-exporter are now managed by ArgoCD — see
   # Ansbile/argocd-apps/monitoring/
   # adguard-home is now managed by ArgoCD — see Ansbile/argocd-apps/network/
-
-  - name: adguard-exporter
-    namespace: monitoring
-    image: ghcr.io/henrywhitaker3/adguard-exporter:latest
-    port: 9618
-    node_port: 9618
-    target_node: gateway-server
-    skip_pv: true
-    replicas: 1
-    env:
-      - name: ADGUARD_SERVERS
-        value: "192.168.10.200:8081"
-      - name: ADGUARD_USERNAMES
-        value: "{{ adguard_exporter_username }}"
-      - name: ADGUARD_PASSWORDS
-        value: "{{ adguard_exporter_password }}"
-      - name: INTERVAL
-        value: "15s"
-    memory_request: "32Mi"
-    memory_limit: "128Mi"
-    cpu_request: "25m"
-    cpu_limit: "100m"
+  # adguard-exporter removed — was stuck ImagePullBackOff/rollout timeout
+  []
