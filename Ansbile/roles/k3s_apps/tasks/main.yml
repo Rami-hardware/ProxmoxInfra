@@ -110,23 +110,6 @@
     label: "{{ item.0.name }}: {{ item.1.host_path }}"
   when: item.1.create_host_dir | default(false)
 
-# Deploy authelia configuration files to its config directory on the target node
-- name: Deploy authelia configuration.yml
-  ansible.builtin.template:
-    src: configuration.yml.j2
-    dest: "{{ (k3s_apps_list | selectattr('name', 'equalto', 'authelia') | list | first | default({'config_path': '/tmp'})).config_path }}/configuration.yml"
-    mode: '0600'
-  delegate_to: "{{ (k3s_apps_list | selectattr('name', 'equalto', 'authelia') | list | first | default({'target_node': inventory_hostname})).target_node }}"
-  when: k3s_apps_list | selectattr('name', 'equalto', 'authelia') | list | length > 0
-
-- name: Deploy authelia users_database.yml
-  ansible.builtin.template:
-    src: users_database.yml.j2
-    dest: "{{ (k3s_apps_list | selectattr('name', 'equalto', 'authelia') | list | first | default({'config_path': '/tmp'})).config_path }}/users_database.yml"
-    mode: '0600'
-  delegate_to: "{{ (k3s_apps_list | selectattr('name', 'equalto', 'authelia') | list | first | default({'target_node': inventory_hostname})).target_node }}"
-  when: k3s_apps_list | selectattr('name', 'equalto', 'authelia') | list | length > 0
-
 # Prometheus RBAC — allows scraping kubelet /metrics/cadvisor
 - name: Template Prometheus RBAC manifest
   ansible.builtin.template:
@@ -592,80 +575,6 @@
   ansible.builtin.file:
     path: /tmp/argocd-repo-creds-secret.yml
     state: absent
-
-# Homepage dashboard widget API keys — same GitHub Secrets already used by
-# the media-server role's *_api_key vars, mirrored here as a k8s Secret so
-# Homepage's live-stat widgets (Radarr/Sonarr/Prowlarr/Bazarr/Overseerr) can
-# authenticate. Referenced via {{HOMEPAGE_VAR_*}} in Ingress annotations.
-- name: Ensure network namespace exists before Homepage secret
-  ansible.builtin.shell:
-    cmd: |
-      set -o pipefail
-      k3s kubectl create namespace network --dry-run=client -o yaml | k3s kubectl apply -f -
-    executable: /bin/bash
-  changed_when: true
-
-- name: Template Homepage widgets secret manifest
-  ansible.builtin.template:
-    src: homepage-widgets-secret.yml.j2
-    dest: /tmp/homepage-widgets-secret.yml
-    mode: '0600'
-  no_log: true
-
-- name: Apply Homepage widgets secret
-  ansible.builtin.command:
-    cmd: k3s kubectl apply -f /tmp/homepage-widgets-secret.yml
-  environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-  changed_when: true
-  no_log: true
-
-- name: Remove Homepage widgets secret tempfile
-  ansible.builtin.file:
-    path: /tmp/homepage-widgets-secret.yml
-    state: absent
-
-# Env vars are only injected at pod creation — kubectl apply on the Secret
-# alone does not update already-running pods, so force a restart to pick up
-# any changed widget API keys.
-- name: Restart Homepage to pick up updated widget secret
-  ansible.builtin.command:
-    cmd: k3s kubectl rollout restart deployment/homepage -n network
-  environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-  changed_when: true
-  failed_when: false
-
-# portnote.yaml in argocd-apps/ ships with placeholder secrets (ArgoCD has
-# no templating) — this overrides them with real values from GitHub Secrets
-# once ArgoCD has created the namespace/app. Falls back to the same
-# placeholders if the GitHub Secrets aren't set, so this is safe to run
-# even before real credentials exist.
-- name: Template PortNote secret override
-  ansible.builtin.template:
-    src: portnote-secret-override.yml.j2
-    dest: /tmp/portnote-secret-override.yml
-    mode: '0600'
-  no_log: true
-
-- name: Apply PortNote secret override
-  ansible.builtin.command:
-    cmd: k3s kubectl apply -f /tmp/portnote-secret-override.yml
-  environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-  changed_when: true
-  no_log: true
-
-- name: Remove PortNote secret override tempfile
-  ansible.builtin.file:
-    path: /tmp/portnote-secret-override.yml
-    state: absent
-
-- name: Restart PortNote to pick up updated secret
-  ansible.builtin.command:
-    cmd: k3s kubectl rollout restart deployment/portnote -n network
-  changed_when: true
-  failed_when: false
 
 # Apply ArgoCD Application manifests — these point ArgoCD at paths in this
 # repo (argocd-apps/) and it takes over syncing them from there.

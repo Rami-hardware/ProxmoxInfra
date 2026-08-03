@@ -4,18 +4,9 @@ kind: Kustomization
 
 resources:
   - adguard-home.yaml
-  - portnote.yaml
-  - portnote-postgres.yaml
-  - homepage.yaml
 
 # argocd-image-updater rewrites entries here (newTag/digest) when it detects
 # a new image on the registry side — this is the write-back target.
 images:
   - name: adguard/adguardhome
-    newTag: latest
-  - name: haedlessdev/portnote
-    newTag: latest
-  - name: postgres
-    newTag: "17"
-  - name: ghcr.io/gethomepage/homepage
     newTag: latest

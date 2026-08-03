@@ -36,12 +36,6 @@ watchtower_run: /var/run/docker.sock:/var/run/docker.sock
 fail2ban_var_path: "/var/log:/var/log:ro"
 fail2ban_data_path: "{{ docker_apps_compose_dir }}/fail2ban:/data"
 
-authelia_config_dir: /opt/docker/authelia/config
-authelia_cert_dir: /opt/docker/authelia/certs
-
-authelia_container_name: authelia
-authelia_image: authelia/authelia:latest
-
 timezone: UTC
 
 crowdsec_val:
@@ -57,8 +51,6 @@ crowdsec_nginx_env:
 
 crowdsec_online_api_key: a7c65c19d023489a88b70036e3a10397nmDvrI0bzgfqoUau
 crowdsec_online_api_secret: K6yiJt6KCOfj0AeXbeWQ4BptCGhEYfdCwrNwrr3NoStJ3BOGyoov7JCgbW467u3v
-
-authelia_cluster_ip: 10.43.20.164
 
 nginx_services:
   - name: jellyfin
@@ -94,72 +86,35 @@ nginx_services_local:
       - /Items
       - /web
     cache_ttl: "7d"
-    homepage_group: Media
-    homepage_name: Jellyfin
-    homepage_widget:
-      type: jellyfin
-      url: "http://jellyfin.media.svc.cluster.local:8096"
-      key: "{{ '{{HOMEPAGE_VAR_JELLYFIN_KEY}}' }}"
-      enableBlocks: "true"
 
   - name: overseerr
     ip: 192.168.10.201
     port: 5055
     namespace: media
-    homepage_group: Media
-    homepage_name: Overseerr
-    homepage_widget:
-      type: overseerr
-      url: "http://overseerr.media.svc.cluster.local:5055"
-      key: "{{ '{{HOMEPAGE_VAR_OVERSEERR_KEY}}' }}"
 
   - name: radarr
     ip: 192.168.10.201
     port: 7878
     namespace: media
     auth: false
-    homepage_group: Media
-    homepage_name: Radarr
-    homepage_widget:
-      type: radarr
-      url: "http://radarr.media.svc.cluster.local:7878"
-      key: "{{ '{{HOMEPAGE_VAR_RADARR_KEY}}' }}"
 
   - name: sonarr
     ip: 192.168.10.201
     port: 8989
     namespace: media
     auth: false
-    homepage_group: Media
-    homepage_name: Sonarr
-    homepage_widget:
-      type: sonarr
-      url: "http://sonarr.media.svc.cluster.local:8989"
-      key: "{{ '{{HOMEPAGE_VAR_SONARR_KEY}}' }}"
 
   - name: prowlarr
     ip: 192.168.10.201
     port: 9696
     namespace: media
     auth: false
-    homepage_group: Media
-    homepage_name: Prowlarr
-    homepage_widget:
-      type: prowlarr
-      url: "http://prowlarr.media.svc.cluster.local:9696"
-      key: "{{ '{{HOMEPAGE_VAR_PROWLARR_KEY}}' }}"
 
   - name: bazarr
     ip: 192.168.10.201
     port: 6767
     namespace: media
     auth: false
-    homepage_group: Media
-    homepage_name: Bazarr
-    homepage_widget:
-      type: bazarr
-      url: "http://bazarr.media.svc.cluster.local:6767"
-      key: "{{ '{{HOMEPAGE_VAR_BAZARR_KEY}}' }}"
 
   - name: qbittorrent
     ip: 192.168.10.201
@@ -167,14 +122,6 @@ nginx_services_local:
     disable_buffering: true
     namespace: media
     auth: false
-    homepage_group: Media
-    homepage_name: qBittorrent
-    homepage_icon: qbittorrent.png
-    homepage_widget:
-      type: qbittorrent
-      url: "http://qbittorrent.media.svc.cluster.local:8080"
-      username: "{{ '{{HOMEPAGE_VAR_QBITTORRENT_USER}}' }}"
-      password: "{{ '{{HOMEPAGE_VAR_QBITTORRENT_PASS}}' }}"
 
   - name: adguard
     ip: 192.168.10.200
@@ -182,36 +129,24 @@ nginx_services_local:
     namespace: network
     k8s_service: adguard-home
     auth: false
-    homepage_group: Network
-    homepage_name: AdGuard Home
-    homepage_icon: adguard-home.png
 
   - name: grafana
     ip: 192.168.10.203
     port: 3000
     namespace: monitoring
     auth: false
-    homepage_group: Monitoring
-    homepage_name: Grafana
 
   - name: alertmanager
     ip: 192.168.10.203
     port: 9093
     namespace: monitoring
     auth: false
-    homepage_group: Monitoring
-    homepage_name: Alertmanager
 
   - name: prometheus
     ip: 192.168.10.203
     port: 9090
     namespace: monitoring
     auth: false
-    homepage_group: Monitoring
-    homepage_name: Prometheus
-    homepage_widget:
-      type: prometheus
-      url: "http://prometheus.monitoring.svc.cluster.local:9090"
 
   - name: server
     ip: 192.168.10.250
@@ -219,48 +154,17 @@ nginx_services_local:
     namespace: network
     auth: false
     backend_protocol: HTTPS
-    homepage_group: Infrastructure
-    homepage_name: Proxmox
-    homepage_icon: proxmox.png
-    homepage_widget:
-      type: proxmox
-      url: "https://192.168.10.250:8006"
-      username: "root@pam!homepage"
-      password: "{{ '{{HOMEPAGE_VAR_PROXMOX_TOKEN}}' }}"
 
   - name: tempo
     ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
     port: 30320
     namespace: istio-system
     auth: false
-    homepage_group: Monitoring
-    homepage_name: Tempo
 
   - name: argocd
     ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
     port: 30321
     namespace: argocd
-    auth: false
-    homepage_group: Infrastructure
-    homepage_name: ArgoCD
-    homepage_icon: argo-cd.png
-    homepage_widget:
-      type: argocd
-      url: "http://argocd-server.argocd.svc.cluster.local"
-      key: "{{ '{{HOMEPAGE_VAR_ARGOCD_TOKEN}}' }}"
-
-  - name: portnote
-    ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
-    port: 30322
-    namespace: network
-    auth: false
-    homepage_group: Infrastructure
-    homepage_name: PortNote
-
-  - name: homepage
-    ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
-    port: 30323
-    namespace: network
     auth: false
 
   - name: tracearr
@@ -268,9 +172,3 @@ nginx_services_local:
     port: 30324
     namespace: media
     auth: false
-    homepage_group: Media
-    homepage_name: Tracearr
-    homepage_widget:
-      type: tracearr
-      url: "http://tracearr.media.svc.cluster.local:3000"
-      key: "{{ '{{HOMEPAGE_VAR_TRACEARR_KEY}}' }}"
