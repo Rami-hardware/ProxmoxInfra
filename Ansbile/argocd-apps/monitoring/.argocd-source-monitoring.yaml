@@ -2,7 +2,7 @@ kustomize:
   images:
   - grafana/grafana@sha256:d177053ab62253815f130d81504f77063baf5fd4ca93299d6048453bd31e047a
   - prom/prometheus@sha256:508729e0e2d18e11fd742a5a5ca70e557b940a93948c3c95fd0123a6fd538b69
-  - grafana/loki@sha256:f968164e718f9cbe9f5b0f967f3bb6f9cad5d95cf7ffcaf968cce06c941aed62
+  - grafana/loki@sha256:efd47c67f9bac88ca29bcf8cb997d9ab29d1848bd0aff579282295542a745952
   - prom/alertmanager@sha256:9e082985f56f4c8c9f724e18f2288c6708f472e56a5286b8863d080434ea065d
   - miguelndecarvalho/speedtest-exporter@sha256:f1064d49124c7fc45faabb87c6c876a2fd04e92b3dc14d4b871301217ba30fed
   - ghcr.io/onedr0p/intel-gpu-exporter@sha256:90a95483bf5d3752f4db2ab2e1663f19bba307fd832bf53557cbdc38c3701f84
