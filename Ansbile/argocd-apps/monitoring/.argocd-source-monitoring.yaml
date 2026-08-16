@@ -3,7 +3,7 @@ kustomize:
   - grafana/grafana@sha256:ab5cb380e3ff3172d6c8bd2e7cfd31cce977d2881b260e1f5bc089bf0b759b43
   - prom/prometheus@sha256:508729e0e2d18e11fd742a5a5ca70e557b940a93948c3c95fd0123a6fd538b69
   - grafana/loki@sha256:efd47c67f9bac88ca29bcf8cb997d9ab29d1848bd0aff579282295542a745952
-  - prom/alertmanager@sha256:9e082985f56f4c8c9f724e18f2288c6708f472e56a5286b8863d080434ea065d
+  - prom/alertmanager@sha256:690c7b525f4367aa91f73e2f91c632206d32e97c6384bdbf2fb7a861b420340d
   - miguelndecarvalho/speedtest-exporter@sha256:f1064d49124c7fc45faabb87c6c876a2fd04e92b3dc14d4b871301217ba30fed
   - ghcr.io/onedr0p/intel-gpu-exporter@sha256:90a95483bf5d3752f4db2ab2e1663f19bba307fd832bf53557cbdc38c3701f84
   - esanchezm/prometheus-qbittorrent-exporter@sha256:41a7030be19534bf13dfaf3371ec8cdd8a90adf2c29261a075e2255b3ad6e705
