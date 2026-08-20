@@ -32,6 +32,18 @@
   .muted { opacity:.6; font-size:12px; }
   #trip { padding:10px 16px; font-size:13px; display:none; border-bottom:1px solid var(--border); }
   #trip b { font-size:16px; }
+  #drive { display:none; padding:10px 16px; border-bottom:1px solid var(--border); }
+  #drive .row { display:flex; gap:8px; }
+  #drive button { margin-top:0; }
+  #now { display:none; padding:12px 16px; background:var(--accent); color:#fff; }
+  #now .man { font-size:15px; font-weight:600; }
+  #now .dist { font-size:12px; opacity:.9; margin-top:2px; }
+  .step { padding:9px 16px; border-bottom:1px solid var(--border); font-size:13px; display:flex; gap:10px; }
+  .step.done { opacity:.4; }
+  .step.cur { background:var(--bg); font-weight:600; }
+  .step .d { opacity:.6; font-size:12px; white-space:nowrap; }
+  .car { font-size:26px; line-height:1; text-align:center;
+         filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
   @media (max-width:760px){ #app{flex-direction:column} #side{width:auto;height:46%} }
 </style>
 </head>
@@ -45,6 +57,13 @@
       <button id="go">Search</button>
     </div>
     <div id="trip"></div>
+    <div id="drive">
+      <div class="row">
+        <button id="start">Start drive</button>
+        <button id="stop" class="sec">Stop</button>
+      </div>
+    </div>
+    <div id="now"></div>
     <div class="box muted" id="hint">
       Click the map to set <b>start</b>, click again for <b>destination</b>.
       <button class="sec" id="clear">Clear route</button>
@@ -109,7 +128,113 @@ async function reverse(ll){
   try{
     const j = await getJSON(`${NOMINATIM}/reverse?lat=${ll.lat}&lon=${ll.lng}&format=json`);
     return j.display_name || `${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}`;
-  }catch{ return `${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}`; }
+  }catch(e){ return `${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}`; }
+}
+
+// ── Drive simulation ────────────────────────────────────────────────────────
+// The route geometry is a list of [lng,lat] points. We walk it at a speed
+// derived from OSRM's own duration estimate, so the drive takes roughly the
+// time the route claims, and surface the matching turn instruction as we go.
+const carIcon = L.divIcon({className:'', html:'<div class="car">🚗</div>',
+                           iconSize:[26,26], iconAnchor:[13,13]});
+let car = null, drive = null, path = [], steps = [], rtInfo = null;
+
+const MAN = {
+  'depart':'Start', 'arrive':'Arrive', 'turn':'Turn', 'new name':'Continue',
+  'merge':'Merge', 'on ramp':'Take the ramp', 'off ramp':'Take the exit',
+  'fork':'Keep', 'end of road':'At the end of the road', 'continue':'Continue',
+  'roundabout':'Enter the roundabout', 'rotary':'Enter the rotary',
+  'exit roundabout':'Exit the roundabout', 'exit rotary':'Exit the rotary'
+};
+function manText(st){
+  const m = st.maneuver;
+  const head = MAN[m.type] || 'Continue';
+  const mod = m.modifier ? ' ' + m.modifier : '';
+  const road = st.name ? ` onto ${st.name}` : '';
+  if(m.type === 'arrive') return 'Arrive at destination';
+  if(m.type === 'depart') return 'Start' + (st.name ? ` on ${st.name}` : '');
+  return head + mod + road;
+}
+function fmtDist(m){ return m >= 1000 ? (m/1000).toFixed(1)+' km' : Math.round(m)+' m'; }
+
+// metres between two [lng,lat] points
+function dist(a,b){
+  const R=6371000, t=Math.PI/180;
+  const dLat=(b[1]-a[1])*t, dLon=(b[0]-a[0])*t;
+  const la1=a[1]*t, la2=b[1]*t;
+  const h=Math.sin(dLat/2)**2 + Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+
+function renderSteps(activeIdx){
+  out.innerHTML = '';
+  steps.forEach((st,i) => {
+    const d = document.createElement('div');
+    d.className = 'step' + (i < activeIdx ? ' done' : i === activeIdx ? ' cur' : '');
+    d.innerHTML = `<div>${esc(manText(st))}</div><div class="d">${fmtDist(st.distance)}</div>`;
+    out.appendChild(d);
+  });
+}
+
+function stopDrive(){
+  if(drive){ clearInterval(drive); drive = null; }
+  if(car){ map.removeLayer(car); car = null; }
+  document.getElementById('now').style.display = 'none';
+}
+
+function startDrive(){
+  if(!path.length) return;
+  stopDrive();
+  car = L.marker([path[0][1], path[0][0]], {icon:carIcon}).addTo(map);
+  const now = document.getElementById('now');
+  now.style.display = 'block';
+
+  // Cumulative distance so we can map position → remaining distance.
+  let seg = 0, along = 0;
+  const total = rtInfo.distance;
+  // Advance in real time: cover `total` metres over `duration` seconds,
+  // sped up so a long route is watchable.
+  const SPEED_UP = 8;
+  const tick = 100;                       // ms
+  const mPerTick = (total / rtInfo.duration) * (tick/1000) * SPEED_UP;
+
+  let travelled = 0;
+  drive = setInterval(() => {
+    let need = mPerTick;
+    while(need > 0 && seg < path.length-1){
+      const segLen = dist(path[seg], path[seg+1]);
+      const left = segLen - along;
+      if(need < left){ along += need; need = 0; }
+      else { need -= left; seg++; along = 0; }
+    }
+    travelled = Math.min(travelled + mPerTick, total);
+    if(seg >= path.length-1){
+      car.setLatLng([path[path.length-1][1], path[path.length-1][0]]);
+      now.innerHTML = '<div class="man">Arrived</div>';
+      renderSteps(steps.length);
+      clearInterval(drive); drive = null;
+      return;
+    }
+    const a = path[seg], b = path[seg+1];
+    const segLen = dist(a,b) || 1, f = along/segLen;
+    const pos = [a[1] + (b[1]-a[1])*f, a[0] + (b[0]-a[0])*f];
+    car.setLatLng(pos);
+    map.panTo(pos, {animate:false});
+
+    // Which step are we on? Steps carry their own geometry offsets, so match
+    // by distance travelled against the running step totals.
+    let acc = 0, idx = 0;
+    for(let i=0;i<steps.length;i++){
+      if(travelled < acc + steps[i].distance){ idx = i; break; }
+      acc += steps[i].distance; idx = i;
+    }
+    const st = steps[idx];
+    const toTurn = Math.max(0, (acc + st.distance) - travelled);
+    now.innerHTML = `<div class="man">${esc(manText(st))}</div>` +
+                    `<div class="dist">in ${fmtDist(toTurn)} &middot; ` +
+                    `${fmtDist(total-travelled)} left</div>`;
+    renderSteps(idx);
+  }, tick);
 }
 
 async function route(){
@@ -127,6 +252,12 @@ async function route(){
     const km = (rt.distance/1000).toFixed(1);
     const min = Math.round(rt.duration/60);
     trip.innerHTML = `<b>${km} km</b> &middot; about ${min} min by car`;
+
+    path = rt.geometry.coordinates;
+    steps = (rt.legs || []).flatMap(l => l.steps || []);
+    rtInfo = {distance: rt.distance, duration: rt.duration};
+    document.getElementById('drive').style.display = 'block';
+    renderSteps(-1);
   }catch(e){ trip.textContent = 'Routing failed: ' + esc(e.message); }
 }
 
@@ -142,10 +273,16 @@ map.on('click', async e => {
 
 document.getElementById('go').onclick = search;
 document.getElementById('q').addEventListener('keydown', e => { if(e.key === 'Enter') search(); });
+document.getElementById('start').onclick = startDrive;
+document.getElementById('stop').onclick  = stopDrive;
 document.getElementById('clear').onclick = () => {
+  stopDrive();
   pts = []; pins.forEach(p => map.removeLayer(p)); pins = [];
   if(line){ map.removeLayer(line); line = null; }
   trip.style.display = 'none';
+  document.getElementById('drive').style.display = 'none';
+  path = []; steps = []; rtInfo = null;
+  out.innerHTML = '';
 };
 </script>
 </body>
