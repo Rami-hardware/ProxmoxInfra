@@ -19,6 +19,39 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: {{ .Values.targetNode }}
       initContainers:
+        # The osrm-backend image ships no curl/wget, so fetch the extract in a
+        # small helper image first. Skipped when the graph is already built.
+        - name: fetch
+          image: curlimages/curl:8.10.1
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              MARKER=/data/.osrm-ready
+              STAMP="${PBF_URL}|${PROFILE}|${ALGORITHM}"
+              if [ -f "$MARKER" ] && [ "$(cat "$MARKER")" = "$STAMP" ]; then
+                echo "Graph already built — no download needed."
+                exit 0
+              fi
+              curl -fL --retry 5 --retry-delay 10 -C - -o /data/region.osm.pbf "${PBF_URL}"
+          env:
+            - name: PBF_URL
+              value: "{{ .Values.pbfUrl }}"
+            - name: PROFILE
+              value: "{{ .Values.profile }}"
+            - name: ALGORITHM
+              value: "{{ .Values.algorithm }}"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
         # OSRM needs a 3-stage preprocess (extract → partition → customize)
         # before it can serve. Guarded by a marker holding the source URL and
         # profile, so it runs once and re-runs only if either changes.
@@ -40,7 +73,6 @@ spec:
 
               echo "Building routing graph for ${PROFILE} (${ALGORITHM})..."
               rm -f /data/region.osrm* "${MARKER}"
-              curl -fL --retry 5 --retry-delay 10 -C - -o /data/region.osm.pbf "${PBF_URL}"
 
               osrm-extract -p "/opt/${PROFILE}.lua" /data/region.osm.pbf
               osrm-partition /data/region.osrm
