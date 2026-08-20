@@ -24,18 +24,19 @@ persistence:
   data:
     size: 20Gi
 
+# Small requests: media-server is nearly fully reserved by the media stack.
 resources:
   requests:
-    memory: "1Gi"
-    cpu: "500m"
+    memory: "512Mi"
+    cpu: "200m"
   limits:
     memory: "4Gi"
     cpu: "2"
 
 importResources:
   requests:
-    memory: "2Gi"
-    cpu: "1"
+    memory: "512Mi"
+    cpu: "200m"
   limits:
-    memory: "6Gi"
-    cpu: "4"
+    memory: "5Gi"
+    cpu: "3"

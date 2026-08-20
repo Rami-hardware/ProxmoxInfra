@@ -22,18 +22,21 @@ persistence:
   data:
     size: 40Gi
 
+# media-server is ~99% CPU-requested by the existing media stack, so keep
+# requests small (they are scheduling reservations, not real usage) and let
+# the limit provide the headroom the import actually needs.
 resources:
   requests:
-    memory: "1Gi"
-    cpu: "500m"
+    memory: "512Mi"
+    cpu: "200m"
   limits:
     memory: "4Gi"
     cpu: "2"
 
 importResources:
   requests:
-    memory: "2Gi"
-    cpu: "1"
+    memory: "512Mi"
+    cpu: "200m"
   limits:
-    memory: "6Gi"
-    cpu: "4"
+    memory: "5Gi"
+    cpu: "3"
