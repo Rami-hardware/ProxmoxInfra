@@ -1,0 +1,69 @@
+{{- if .Values.ui.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openstreetmap-ui
+  labels:
+    app: openstreetmap-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openstreetmap-ui
+  template:
+    metadata:
+      labels:
+        app: openstreetmap-ui
+      annotations:
+        # Roll the pod whenever the page or nginx config changes.
+        checksum/ui: {{ .Files.Get "files/index.html" | sha256sum | trunc 16 }}
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: ui
+              mountPath: /usr/share/nginx/html/index.html
+              subPath: index.html
+            - name: ui
+              mountPath: /usr/share/nginx/html/vendor/leaflet.css
+              subPath: leaflet.css
+            - name: uijs
+              mountPath: /usr/share/nginx/html/vendor/leaflet.js
+              subPath: leaflet.js
+            - name: ui
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: nginx.conf
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "20m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+      volumes:
+        - name: ui
+          configMap:
+            name: openstreetmap-ui
+        - name: uijs
+          configMap:
+            name: openstreetmap-ui-js
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openstreetmap-ui
+  labels:
+    app: openstreetmap-ui
+spec:
+  type: NodePort
+  selector:
+    app: openstreetmap-ui
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      nodePort: {{ .Values.ui.nodePort }}
+{{- end }}

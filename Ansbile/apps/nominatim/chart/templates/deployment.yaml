@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nominatim
+  labels:
+    app: nominatim
+spec:
+  replicas: {{ .Values.replicas }}
+  # PVC is ReadWriteOnce — never two pods on one volume.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: nominatim
+  template:
+    metadata:
+      labels:
+        app: nominatim
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: {{ .Values.targetNode }}
+      containers:
+        - name: nominatim
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # The image imports on first start and reuses the volume afterwards.
+          env:
+            - name: PBF_URL
+              value: "{{ .Values.pbfUrl }}"
+            - name: IMPORT_STYLE
+              value: "address"
+            - name: THREADS
+              value: "{{ .Values.importThreads }}"
+            - name: NOMINATIM_PASSWORD
+              value: "nominatim"
+          ports:
+            - containerPort: 8080
+          # Import runs for hours on first start; the probes must not kill it.
+          startupProbe:
+            httpGet:
+              path: /status
+              port: 8080
+            periodSeconds: 30
+            failureThreshold: 480
+          readinessProbe:
+            httpGet:
+              path: /status
+              port: 8080
+            periodSeconds: 30
+            timeoutSeconds: 10
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/16/main
+          resources:
+            requests:
+              memory: {{ .Values.resources.requests.memory }}
+              cpu: {{ .Values.resources.requests.cpu }}
+            limits:
+              memory: {{ .Values.importResources.limits.memory }}
+              cpu: {{ .Values.importResources.limits.cpu }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: nominatim-data

@@ -1,0 +1,42 @@
+{{- if .Values.ui.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openstreetmap-ui
+  labels:
+    app: openstreetmap-ui
+data:
+  # Ports are injected here so the page never hardcodes them.
+  index.html: |
+{{ .Files.Get "files/index.html"
+   | replace "NOMINATIM_PORT" (printf "%d" (int .Values.ui.nominatimPort))
+   | replace "OSRM_PORT"      (printf "%d" (int .Values.ui.osrmPort))
+   | indent 4 }}
+  leaflet.css: |
+{{ .Files.Get "files/leaflet.css" | indent 4 }}
+  nginx.conf: |
+    server {
+      listen 8080;
+      root /usr/share/nginx/html;
+      index index.html;
+
+      location /vendor/ {
+        alias /usr/share/nginx/html/vendor/;
+      }
+
+      # Tiles are proxied so the browser makes one same-origin request.
+      location /tile/ {
+        proxy_pass http://openstreetmap:{{ .Values.port }}/tile/;
+        proxy_set_header Host $host;
+      }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openstreetmap-ui-js
+  labels:
+    app: openstreetmap-ui
+binaryData:
+  leaflet.js: {{ .Files.Get "files/leaflet.js" | b64enc }}
+{{- end }}

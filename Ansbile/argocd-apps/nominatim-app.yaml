@@ -1,0 +1,23 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nominatim
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:Rami-hardware/ProxmoxInfra.git
+    targetRevision: main
+    path: Ansbile/apps/nominatim/chart
+    helm:
+      releaseName: nominatim
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: network
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

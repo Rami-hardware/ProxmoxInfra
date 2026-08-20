@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: osrm
+  labels:
+    app: osrm
+spec:
+  replicas: {{ .Values.replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: osrm
+  template:
+    metadata:
+      labels:
+        app: osrm
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: {{ .Values.targetNode }}
+      initContainers:
+        # OSRM needs a 3-stage preprocess (extract → partition → customize)
+        # before it can serve. Guarded by a marker holding the source URL and
+        # profile, so it runs once and re-runs only if either changes.
+        - name: prepare
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -euo pipefail
+              MARKER=/data/.osrm-ready
+              STAMP="${PBF_URL}|${PROFILE}|${ALGORITHM}"
+
+              if [ -f "${MARKER}" ] && [ "$(cat "${MARKER}")" = "${STAMP}" ]; then
+                echo "OSRM graph already built for ${STAMP} — skipping."
+                exit 0
+              fi
+
+              echo "Building routing graph for ${PROFILE} (${ALGORITHM})..."
+              rm -f /data/region.osrm* "${MARKER}"
+              curl -fL --retry 5 --retry-delay 10 -C - -o /data/region.osm.pbf "${PBF_URL}"
+
+              osrm-extract -p "/opt/${PROFILE}.lua" /data/region.osm.pbf
+              osrm-partition /data/region.osrm
+              osrm-customize /data/region.osrm
+
+              # Only reached on success (set -e), so the marker never lies.
+              echo -n "${STAMP}" > "${MARKER}"
+              rm -f /data/region.osm.pbf
+              echo "OSRM graph ready."
+          env:
+            - name: PBF_URL
+              value: "{{ .Values.pbfUrl }}"
+            - name: PROFILE
+              value: "{{ .Values.profile }}"
+            - name: ALGORITHM
+              value: "{{ .Values.algorithm }}"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              memory: {{ .Values.importResources.requests.memory }}
+              cpu: {{ .Values.importResources.requests.cpu }}
+            limits:
+              memory: {{ .Values.importResources.limits.memory }}
+              cpu: {{ .Values.importResources.limits.cpu }}
+      containers:
+        - name: osrm
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - osrm-routed
+            - --algorithm
+            - "{{ .Values.algorithm }}"
+            - /data/region.osrm
+          ports:
+            - containerPort: 5000
+          readinessProbe:
+            httpGet:
+              # Any valid coordinate pair; 200 means the graph is loaded.
+              path: /route/v1/driving/39.19,21.54;39.20,21.55
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 10
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              memory: {{ .Values.resources.requests.memory }}
+              cpu: {{ .Values.resources.requests.cpu }}
+            limits:
+              memory: {{ .Values.resources.limits.memory }}
+              cpu: {{ .Values.resources.limits.cpu }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: osrm-data

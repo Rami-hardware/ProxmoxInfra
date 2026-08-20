@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Homelab Maps</title>
+<link rel="stylesheet" href="/vendor/leaflet.css">
+<style>
+  :root { --bg:#fff; --fg:#111; --panel:#f7f7f8; --border:#d8d8dc; --accent:#2b6cb0; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16181d; --fg:#e8e8ea; --panel:#1f2229; --border:#333842; --accent:#5b9bd5; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+               background:var(--bg); color:var(--fg); }
+  #app { display:flex; height:100%; }
+  #side { width:340px; flex:none; background:var(--panel); border-right:1px solid var(--border);
+          display:flex; flex-direction:column; overflow:hidden; }
+  #map { flex:1; }
+  h1 { font-size:15px; margin:0; padding:14px 16px; border-bottom:1px solid var(--border); font-weight:600; }
+  .box { padding:12px 16px; border-bottom:1px solid var(--border); }
+  label { display:block; font-size:11px; text-transform:uppercase; letter-spacing:.04em;
+          opacity:.65; margin-bottom:5px; }
+  input { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px;
+          background:var(--bg); color:var(--fg); font-size:14px; }
+  button { margin-top:8px; width:100%; padding:8px 10px; border:0; border-radius:6px;
+           background:var(--accent); color:#fff; font-size:13px; cursor:pointer; }
+  button.sec { background:transparent; color:var(--fg); border:1px solid var(--border); }
+  .results { overflow-y:auto; flex:1; }
+  .hit { padding:10px 16px; border-bottom:1px solid var(--border); cursor:pointer; font-size:13px; }
+  .hit:hover { background:var(--bg); }
+  .muted { opacity:.6; font-size:12px; }
+  #trip { padding:10px 16px; font-size:13px; display:none; border-bottom:1px solid var(--border); }
+  #trip b { font-size:16px; }
+  @media (max-width:760px){ #app{flex-direction:column} #side{width:auto;height:46%} }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="side">
+    <h1>Homelab Maps</h1>
+    <div class="box">
+      <label for="q">Search address</label>
+      <input id="q" placeholder="e.g. Al-Safa, Jeddah" autocomplete="off">
+      <button id="go">Search</button>
+    </div>
+    <div id="trip"></div>
+    <div class="box muted" id="hint">
+      Click the map to set <b>start</b>, click again for <b>destination</b>.
+      <button class="sec" id="clear">Clear route</button>
+    </div>
+    <div class="results" id="out"></div>
+  </div>
+  <div id="map"></div>
+</div>
+<script src="/vendor/leaflet.js"></script>
+<script>
+const NOMINATIM = window.location.origin.replace(/:\d+$/, '') + ':NOMINATIM_PORT';
+const OSRM      = window.location.origin.replace(/:\d+$/, '') + ':OSRM_PORT';
+
+const map = L.map('map').setView([21.54, 39.19], 11);   // Jeddah
+L.tileLayer('/tile/{z}/{x}/{y}.png', {
+  maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+const out = document.getElementById('out');
+const trip = document.getElementById('trip');
+let marker = null, pts = [], line = null, pins = [];
+
+function esc(s){ return String(s).replace(/[&<>"']/g, c => (
+  {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function search(){
+  const q = document.getElementById('q').value.trim();
+  if(!q) return;
+  out.innerHTML = '<div class="hit muted">Searching…</div>';
+  try{
+    const r = await fetch(`${NOMINATIM}/search?q=${encodeURIComponent(q)}&format=json&addressdetails=1&limit=10`);
+    const hits = await r.json();
+    if(!hits.length){ out.innerHTML = '<div class="hit muted">No results.</div>'; return; }
+    out.innerHTML = '';
+    hits.forEach(h => {
+      const d = document.createElement('div');
+      d.className = 'hit';
+      d.innerHTML = `<div>${esc(h.display_name)}</div>`;
+      d.onclick = () => {
+        map.setView([+h.lat, +h.lon], 17);
+        if(marker) map.removeLayer(marker);
+        marker = L.marker([+h.lat, +h.lon]).addTo(map)
+                  .bindPopup(esc(h.display_name)).openPopup();
+      };
+      out.appendChild(d);
+    });
+  }catch(e){ out.innerHTML = `<div class="hit muted">Search failed: ${esc(e.message)}</div>`; }
+}
+
+async function reverse(ll){
+  try{
+    const r = await fetch(`${NOMINATIM}/reverse?lat=${ll.lat}&lon=${ll.lng}&format=json`);
+    const j = await r.json();
+    return j.display_name || `${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}`;
+  }catch{ return `${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}`; }
+}
+
+async function route(){
+  const c = pts.map(p => `${p.lng},${p.lat}`).join(';');
+  trip.style.display = 'block';
+  trip.textContent = 'Routing…';
+  try{
+    const r = await fetch(`${OSRM}/route/v1/driving/${c}?overview=full&geometries=geojson&steps=true`);
+    const j = await r.json();
+    if(j.code !== 'Ok' || !j.routes.length){ trip.textContent = 'No route found.'; return; }
+    const rt = j.routes[0];
+    if(line) map.removeLayer(line);
+    line = L.geoJSON({type:'Feature', geometry: rt.geometry},
+                     {style:{color:'#2b6cb0', weight:5, opacity:.8}}).addTo(map);
+    map.fitBounds(line.getBounds(), {padding:[40,40]});
+    const km = (rt.distance/1000).toFixed(1);
+    const min = Math.round(rt.duration/60);
+    trip.innerHTML = `<b>${km} km</b> &middot; about ${min} min by car`;
+  }catch(e){ trip.textContent = 'Routing failed: ' + esc(e.message); }
+}
+
+map.on('click', async e => {
+  if(pts.length >= 2) return;
+  pts.push(e.latlng);
+  const label = pts.length === 1 ? 'Start' : 'Destination';
+  const pin = L.marker(e.latlng).addTo(map).bindPopup(`${label}: loading…`).openPopup();
+  pins.push(pin);
+  pin.setPopupContent(`<b>${label}</b><br>` + esc(await reverse(e.latlng)));
+  if(pts.length === 2) route();
+});
+
+document.getElementById('go').onclick = search;
+document.getElementById('q').addEventListener('keydown', e => { if(e.key === 'Enter') search(); });
+document.getElementById('clear').onclick = () => {
+  pts = []; pins.forEach(p => map.removeLayer(p)); pins = [];
+  if(line){ map.removeLayer(line); line = null; }
+  trip.style.display = 'none';
+};
+</script>
+</body>
+</html>

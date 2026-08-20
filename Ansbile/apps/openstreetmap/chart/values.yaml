@@ -53,3 +53,11 @@ importResources:
   limits:
     memory: "7Gi"
     cpu: "4"
+
+# Leaflet front-end: map + address search (Nominatim) + routing (OSRM).
+ui:
+  enabled: true
+  nodePort: 30333
+  # Ports the browser calls directly; must match the nominatim/osrm charts.
+  nominatimPort: 30331
+  osrmPort: 30332

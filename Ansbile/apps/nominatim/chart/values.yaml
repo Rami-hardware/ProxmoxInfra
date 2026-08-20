@@ -1,0 +1,39 @@
+image:
+  repository: mediagis/nominatim
+  tag: "5.3"
+  pullPolicy: IfNotPresent
+
+replicas: 1
+
+port: 8080
+nodePort: 30331
+
+# Same node as the tile server: the only one with RAM and disk headroom.
+targetNode: media-server
+
+# Must match the tile server's extract so search results cover the same area.
+pbfUrl: "https://download.geofabrik.de/asia/gcc-states-latest.osm.pbf"
+
+# Nominatim's own import threads.
+importThreads: 4
+
+persistence:
+  storageClass: local-path
+  data:
+    size: 40Gi
+
+resources:
+  requests:
+    memory: "1Gi"
+    cpu: "500m"
+  limits:
+    memory: "4Gi"
+    cpu: "2"
+
+importResources:
+  requests:
+    memory: "2Gi"
+    cpu: "1"
+  limits:
+    memory: "6Gi"
+    cpu: "4"
