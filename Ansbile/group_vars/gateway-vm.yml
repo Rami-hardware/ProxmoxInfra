@@ -94,7 +94,7 @@ nginx_services_local:
 
   - name: stash
     ip: 192.168.10.201
-    port: 9999
+    port: 30325
     namespace: media
     auth: false
 

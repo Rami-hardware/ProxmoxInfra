@@ -110,6 +110,15 @@
     label: "{{ item.0.name }}: {{ item.1.host_path }}"
   when: item.1.create_host_dir | default(false)
 
+# Stash's library hostPath mount (/mnt/media -> /data) needs this subdirectory
+# to exist on media-server before the pod starts, or the mount is empty/fails.
+- name: Ensure Stash library directory exists on media-server
+  ansible.builtin.file:
+    path: /mnt/media/porn
+    state: directory
+    mode: '0755'
+  delegate_to: media-server
+
 # Prometheus RBAC — allows scraping kubelet /metrics/cadvisor
 - name: Template Prometheus RBAC manifest
   ansible.builtin.template:
