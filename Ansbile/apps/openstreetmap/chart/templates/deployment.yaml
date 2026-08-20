@@ -40,6 +40,18 @@ spec:
                 exit 0
               fi
 
+              # Adopt a database imported before this marker existed (or by an
+              # older chart): if it is populated and no marker is present, trust
+              # it and stamp it rather than burning hours on a re-import.
+              # Match PG_VERSION at any depth: the image has moved the cluster
+              # between /data/database and /data/database/postgres across tags.
+              if [ ! -f "${MARKER}" ] && \
+                 [ -n "$(find /data/database -maxdepth 3 -name PG_VERSION -print -quit 2>/dev/null)" ]; then
+                echo "Existing database found with no marker — adopting it for ${PBF_URL}."
+                echo -n "${PBF_URL}" > "${MARKER}"
+                exit 0
+              fi
+
               # A marker for a *different* extract means the URL changed:
               # wipe the old database so the new region imports cleanly.
               if [ -f "${MARKER}" ]; then

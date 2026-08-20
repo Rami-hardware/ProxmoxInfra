@@ -578,13 +578,23 @@
 
 # Apply ArgoCD Application manifests — these point ArgoCD at paths in this
 # repo (argocd-apps/) and it takes over syncing them from there.
+- name: Find ArgoCD Application manifests
+  ansible.builtin.find:
+    paths: "{{ playbook_dir }}/argocd-apps"
+    patterns: "*-app.yaml"
+    recurse: false
+  delegate_to: localhost
+  become: false
+  register: k3s_apps_argocd_app_manifests
+
+# Applied by discovery rather than a hardcoded list, so adding a new
+# argocd-apps/<name>-app.yaml is enough to register it — no role edit,
+# and no manual kubectl apply on a fresh cluster.
 - name: Apply ArgoCD Application manifests
   ansible.builtin.command:
     cmd: "k3s kubectl apply -f {{ playbook_dir }}/argocd-apps/{{ item }}"
-  loop:
-    - monitoring-app.yaml
-    - media-app.yaml
-    - network-app.yaml
+  loop: "{{ k3s_apps_argocd_app_manifests.files
+            | map(attribute='path') | map('basename') | sort }}"
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   changed_when: true
