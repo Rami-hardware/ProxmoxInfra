@@ -40,10 +40,13 @@ resources:
     memory: "4Gi"
     cpu: "2"
 
+# Nominatim sizes osm2pgsql from the cgroup memory limit: at 3Gi it dropped
+# to --number-processes 1 and a 482MB cache, which made the import crawl.
+# 6Gi lets it use the threads and cache it was configured with.
 importResources:
   requests:
     memory: "512Mi"
     cpu: "200m"
   limits:
-    memory: "3Gi"
-    cpu: "2"
+    memory: "6Gi"
+    cpu: "4"
