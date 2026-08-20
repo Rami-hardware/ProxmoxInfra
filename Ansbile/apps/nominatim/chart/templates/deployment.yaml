@@ -33,6 +33,14 @@ spec:
               value: "{{ .Values.importThreads }}"
             - name: NOMINATIM_PASSWORD
               value: "nominatim"
+            # Without these, osm2pgsql defaults to a ~482MB cache and keeps
+            # node locations in the database, which is the single biggest
+            # cause of a slow import. The flatnode file stores them on disk
+            # instead, and the larger cache cuts random I/O.
+            - name: NOMINATIM_OSM2PGSQL_CACHE
+              value: "{{ .Values.osm2pgsqlCacheMb }}"
+            - name: NOMINATIM_FLATNODE_FILE
+              value: "/nominatim/flatnode.file"
           ports:
             - containerPort: 8080
           # Import runs for hours on first start; the probes must not kill it.

@@ -24,6 +24,9 @@ importThreads: 4
 # Options: admin | street | address | full | extratags
 importStyle: extratags
 
+# osm2pgsql node cache in MB. Must stay well under importResources limit.
+osm2pgsqlCacheMb: 2000
+
 persistence:
   storageClass: local-path
   data:
