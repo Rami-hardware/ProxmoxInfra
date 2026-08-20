@@ -59,6 +59,11 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/16/main
+            # /nominatim holds the downloaded .pbf and the flatnode file —
+            # together ~50GB. Without its own volume that lands on the node's
+            # root filesystem and gets the pod evicted for ephemeral-storage.
+            - name: work
+              mountPath: /nominatim
           resources:
             requests:
               memory: {{ .Values.resources.requests.memory }}
@@ -70,3 +75,6 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: nominatim-data
+        - name: work
+          persistentVolumeClaim:
+            claimName: nominatim-work

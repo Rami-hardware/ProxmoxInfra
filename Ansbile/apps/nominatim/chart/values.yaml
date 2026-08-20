@@ -31,6 +31,9 @@ persistence:
   storageClass: local-path
   data:
     size: 40Gi
+  # .pbf download + flatnode file (~50GB for GCC States).
+  work:
+    size: 60Gi
 
 # media-server is ~99% CPU-requested by the existing media stack, so keep
 # requests small (they are scheduling reservations, not real usage) and let
