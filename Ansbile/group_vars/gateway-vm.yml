@@ -192,3 +192,21 @@ nginx_services_local:
     port: 30330
     namespace: network
     auth: false
+
+  - name: maps
+    ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
+    port: 30333
+    namespace: network
+    auth: false
+
+  - name: nominatim
+    ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
+    port: 30331
+    namespace: network
+    auth: false
+
+  - name: osrm
+    ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
+    port: 30332
+    namespace: network
+    auth: false
