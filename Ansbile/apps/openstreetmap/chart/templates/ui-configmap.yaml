@@ -6,12 +6,8 @@ metadata:
   labels:
     app: openstreetmap-ui
 data:
-  # Ports are injected here so the page never hardcodes them.
   index.html: |
-{{ .Files.Get "files/index.html"
-   | replace "NOMINATIM_PORT" (printf "%d" (int .Values.ui.nominatimPort))
-   | replace "OSRM_PORT"      (printf "%d" (int .Values.ui.osrmPort))
-   | indent 4 }}
+{{ .Files.Get "files/index.html" | indent 4 }}
   leaflet.css: |
 {{ .Files.Get "files/leaflet.css" | indent 4 }}
   nginx.conf: |
@@ -24,9 +20,21 @@ data:
         alias /usr/share/nginx/html/vendor/;
       }
 
-      # Tiles are proxied so the browser makes one same-origin request.
+      # Everything is proxied same-origin, so the page works over whatever
+      # host/port it was opened on — no hardcoded ports, no extra DNS names,
+      # and no CORS.
       location /tile/ {
         proxy_pass http://openstreetmap:{{ .Values.port }}/tile/;
+        proxy_set_header Host $host;
+      }
+
+      location /geocode/ {
+        proxy_pass http://nominatim:{{ .Values.ui.nominatimServicePort }}/;
+        proxy_set_header Host $host;
+      }
+
+      location /route/ {
+        proxy_pass http://osrm:{{ .Values.ui.osrmServicePort }}/route/;
         proxy_set_header Host $host;
       }
     }

@@ -55,8 +55,10 @@
 </div>
 <script src="/vendor/leaflet.js"></script>
 <script>
-const NOMINATIM = window.location.origin.replace(/:\d+$/, '') + ':NOMINATIM_PORT';
-const OSRM      = window.location.origin.replace(/:\d+$/, '') + ':OSRM_PORT';
+// Same-origin paths: nginx proxies these to Nominatim and OSRM, so the page
+// works on any host or port it is served from, with no CORS and no extra DNS.
+const NOMINATIM = '/geocode';
+const OSRM      = '';
 
 const map = L.map('map').setView([21.54, 39.19], 11);   // Jeddah
 L.tileLayer('/tile/{z}/{x}/{y}.png', {

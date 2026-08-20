@@ -8,8 +8,11 @@
         marker: "# {mark} ANSIBLE MANAGED DNS"
         block: |
           [Resolve]
-          DNS=8.8.8.8 1.1.1.1
-          FallbackDNS=9.9.9.9
+          # AdGuard first: it is authoritative for *.homelab.lan, so public
+          # resolvers alone make every internal hostname NXDOMAIN.
+          DNS={{ internal_dns | default('192.168.10.200') }}
+          FallbackDNS=1.1.1.1 8.8.8.8
+          Domains=~homelab.lan
           DNSStubListener=yes
         backup: true
 

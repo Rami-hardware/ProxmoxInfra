@@ -58,6 +58,7 @@ importResources:
 ui:
   enabled: true
   nodePort: 30333
-  # Ports the browser calls directly; must match the nominatim/osrm charts.
-  nominatimPort: 30331
-  osrmPort: 30332
+  # In-cluster Service ports that nginx proxies to. The browser never sees
+  # these — it only calls same-origin /geocode/ and /route/ paths.
+  nominatimServicePort: 8080
+  osrmServicePort: 5000
