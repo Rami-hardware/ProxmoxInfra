@@ -232,6 +232,7 @@ const out   = document.getElementById('out');
 const sheet = document.getElementById('sheet');
 const sect  = document.getElementById('sect');
 let marker = null, pts = [], line = null, pins = [];
+let mePin = null;   // declared here: routeTo() reads it before setMe() runs
 
 // The sheet collapses to just the search bar so the map stays the focus.
 function sheetDown(){ sheet.classList.add('down'); }
@@ -446,7 +447,7 @@ function stopDrive(){
 }
 
 function startDrive(){
-  if(!path.length) return;
+  if(!path.length || !rtInfo || !(rtInfo.duration > 0) || !(rtInfo.distance > 0)) return;
   stopDrive();
   const nav = document.getElementById('nav');
   nav.style.display = 'block';
@@ -542,6 +543,13 @@ async function route(){
     const j = await getJSON(`${OSRM}/route/v1/driving/${c}?overview=full&geometries=geojson&steps=true&annotations=speed`);
     if(j.code !== 'Ok' || !j.routes.length){ sect.textContent = 'No route found.'; return; }
     const rt = j.routes[0];
+    // A zero-length route makes every later figure NaN (distance/duration is
+    // 0/0), so stop here rather than rendering "NaN m · Invalid Date".
+    if(!(rt.distance > 0) || !(rt.duration > 0)){
+      sect.textContent = 'Start and destination are the same';
+      out.innerHTML = '<div class="muted">Pick two different points.</div>';
+      return;
+    }
     if(line) map.removeLayer(line);
     line = L.geoJSON({type:'Feature', geometry: rt.geometry},
                      {style:{color:'#2b6cb0', weight:5, opacity:.8}}).addTo(map);
@@ -673,9 +681,21 @@ function renderHits(hits, cat){
 // Route from the map centre (the "you are here" dot) to the chosen place.
 function routeTo(h){
   const dest = L.latLng(+h.lat, +h.lon);
+  // The start is the saved "me" position, never map.getCenter() — clicking a
+  // result recentres the map onto the destination, which would make start and
+  // end identical and produce a zero-length route.
+  const start = mePin ? mePin.getLatLng() : null;
+  if(!start || start.distanceTo(dest) < 25){
+    sect.textContent = 'Set a starting point';
+    out.innerHTML = '<div class="muted">Tap the map where you want to start, '
+                  + 'then choose Directions again. (Or use ➤ to centre on your '
+                  + 'location first.)</div>';
+    sheetUp();
+    return;
+  }
   pins.forEach(p => map.removeLayer(p)); pins = [];
-  pts = [map.getCenter(), dest];
-  pins.push(L.marker(pts[0]).addTo(map).bindPopup('Start'));
+  pts = [start, dest];
+  pins.push(L.marker(start).addTo(map).bindPopup('Start'));
   pins.push(L.marker(dest).addTo(map).bindPopup('Destination'));
   sheetUp();
   route();
@@ -710,7 +730,6 @@ document.getElementById('t-me').onclick = () => {
 
 // Blue "you are here" dot. Real geolocation needs a trusted HTTPS cert;
 // without it we simply show the map centre as the reference point.
-let mePin = null;
 function setMe(ll){
   if(mePin) map.removeLayer(mePin);
   mePin = L.marker(ll, {icon: L.divIcon({className:'', html:'<div class="me"></div>',
