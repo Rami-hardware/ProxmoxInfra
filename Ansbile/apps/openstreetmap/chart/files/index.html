@@ -16,7 +16,7 @@
   #app { display:flex; height:100%; }
   #side { width:340px; flex:none; background:var(--panel); border-right:1px solid var(--border);
           display:flex; flex-direction:column; overflow:hidden; }
-  #map { flex:1; }
+  #map { flex:1; position:relative; }
   h1 { font-size:15px; margin:0; padding:14px 16px; border-bottom:1px solid var(--border); font-weight:600; }
   .box { padding:12px 16px; border-bottom:1px solid var(--border); }
   label { display:block; font-size:11px; text-transform:uppercase; letter-spacing:.04em;
@@ -37,6 +37,49 @@
   .muted { opacity:.6; font-size:12px; }
   #trip { padding:10px 16px; font-size:13px; display:none; border-bottom:1px solid var(--border); }
   #trip b { font-size:16px; }
+  /* ── Waze/Google-style navigation overlay ─────────────────────────────── */
+  #nav { display:none; position:absolute; inset:0; z-index:1000; pointer-events:none;
+         font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  #nav .top { pointer-events:auto; margin:10px; border-radius:14px; overflow:hidden;
+              background:#12151c; color:#fff; box-shadow:0 6px 24px rgba(0,0,0,.45); }
+  #lanes { display:flex; gap:0; padding:10px 8px 6px; justify-content:center;
+           border-bottom:1px solid #262b36; }
+  #lanes .ln { flex:1; text-align:center; font-size:22px; color:#5d6577;
+               border-right:1px solid #262b36; }
+  #lanes .ln:last-child { border-right:0; }
+  #lanes .ln.on { color:#22c55e; }
+  #banner { display:flex; gap:14px; align-items:center; padding:14px 16px; }
+  #banner .arrow { font-size:34px; line-height:1; }
+  #banner .txt { flex:1; min-width:0; }
+  #banner .road { font-size:19px; font-weight:700; white-space:nowrap;
+                  overflow:hidden; text-overflow:ellipsis; }
+  #banner .to { font-size:15px; opacity:.75; margin-top:2px; }
+  #speed { position:absolute; left:16px; bottom:92px; pointer-events:auto;
+           display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .limit { width:56px; height:56px; border-radius:50%; background:#fff; color:#111;
+           border:5px solid #e11d48; display:flex; align-items:center;
+           justify-content:center; font-weight:800; font-size:19px;
+           box-shadow:0 4px 14px rgba(0,0,0,.4); }
+  .cur { background:#12151c; color:#fff; border-radius:10px; padding:4px 9px;
+         font-size:12px; font-weight:700; box-shadow:0 4px 14px rgba(0,0,0,.4); }
+  .cur.over { background:#e11d48; }
+  #eta { position:absolute; left:50%; transform:translateX(-50%); bottom:16px;
+         pointer-events:auto; display:flex; align-items:center; gap:14px;
+         background:#12151c; color:#fff; border-radius:16px; padding:10px 16px;
+         box-shadow:0 6px 24px rgba(0,0,0,.45); white-space:nowrap; }
+  #eta .big { color:#22c55e; font-weight:700; font-size:17px; }
+  #eta .sub { font-size:13px; opacity:.8; }
+  #eta .x { background:#e11d48; border:0; color:#fff; width:34px; height:34px;
+            border-radius:50%; font-size:16px; cursor:pointer; margin:0; }
+  /* The tile server renders the standard light carto style; filter it to a
+     dark night theme while navigating, like the reference app. */
+  body.navigating .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(1.15) saturate(.75);
+  }
+  .puck { width:0;height:0; }
+  .puck i { display:block; width:0;height:0; border-left:11px solid transparent;
+            border-right:11px solid transparent; border-bottom:26px solid #22c55e;
+            transform-origin:50% 70%; filter:drop-shadow(0 2px 4px rgba(0,0,0,.6)); }
   #drive { display:none; padding:10px 16px; border-bottom:1px solid var(--border); }
   #drive .row { display:flex; gap:8px; }
   #drive button { margin-top:0; }
@@ -75,7 +118,31 @@
     </div>
     <div class="results" id="out"></div>
   </div>
-  <div id="map"></div>
+  <div id="map">
+    <div id="nav">
+      <div class="top">
+        <div id="lanes"></div>
+        <div id="banner">
+          <div class="arrow" id="nav-arrow">↑</div>
+          <div class="txt">
+            <div class="road" id="nav-road"></div>
+            <div class="to"  id="nav-to"></div>
+          </div>
+        </div>
+      </div>
+      <div id="speed">
+        <div class="limit" id="nav-limit">—</div>
+        <div class="cur" id="nav-speed">0 km/h</div>
+      </div>
+      <div id="eta">
+        <div>
+          <div class="big" id="eta-time"></div>
+          <div class="sub" id="eta-rest"></div>
+        </div>
+        <button class="x" id="nav-x" title="End navigation">✕</button>
+      </div>
+    </div>
+  </div>
 </div>
 <script src="/vendor/leaflet.js"></script>
 <script>
@@ -203,9 +270,9 @@ async function reverse(ll){
 // The route geometry is a list of [lng,lat] points. We walk it at a speed
 // derived from OSRM's own duration estimate, so the drive takes roughly the
 // time the route claims, and surface the matching turn instruction as we go.
-const carIcon = L.divIcon({className:'', html:'<div class="car">🚗</div>',
-                           iconSize:[26,26], iconAnchor:[13,13]});
-let car = null, drive = null, path = [], steps = [], rtInfo = null;
+const puckIcon = L.divIcon({className:'puck', html:'<i></i>',
+                            iconSize:[22,26], iconAnchor:[11,18]});
+let car = null, drive = null, path = [], steps = [], rtInfo = null, speeds = [];
 
 const MAN = {
   'depart':'Start', 'arrive':'Arrive', 'turn':'Turn', 'new name':'Continue',
@@ -214,18 +281,29 @@ const MAN = {
   'roundabout':'Enter the roundabout', 'rotary':'Enter the rotary',
   'exit roundabout':'Exit the roundabout', 'exit rotary':'Exit the rotary'
 };
+// Big directional glyph for the banner, chosen from the maneuver modifier.
+const ARROW = {
+  'left':'↰', 'slight left':'↖', 'sharp left':'↰',
+  'right':'↱', 'slight right':'↗', 'sharp right':'↱',
+  'straight':'↑', 'uturn':'↩'
+};
+function arrowFor(st){
+  const m = st.maneuver;
+  if(m.type === 'arrive') return '⚑';
+  if(m.type === 'depart') return '↑';
+  if(m.type.indexOf('roundabout') === 0 || m.type.indexOf('rotary') === 0) return '↻';
+  return ARROW[m.modifier] || '↑';
+}
 function manText(st){
   const m = st.maneuver;
   const head = MAN[m.type] || 'Continue';
   const mod = m.modifier ? ' ' + m.modifier : '';
-  const road = st.name ? ` onto ${st.name}` : '';
   if(m.type === 'arrive') return 'Arrive at destination';
-  if(m.type === 'depart') return 'Start' + (st.name ? ` on ${st.name}` : '');
-  return head + mod + road;
+  if(m.type === 'depart') return 'Head ' + (m.modifier || 'off');
+  return head + mod;
 }
 function fmtDist(m){ return m >= 1000 ? (m/1000).toFixed(1)+' km' : Math.round(m)+' m'; }
 
-// metres between two [lng,lat] points
 function dist(a,b){
   const R=6371000, t=Math.PI/180;
   const dLat=(b[1]-a[1])*t, dLon=(b[0]-a[0])*t;
@@ -233,40 +311,54 @@ function dist(a,b){
   const h=Math.sin(dLat/2)**2 + Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)**2;
   return 2*R*Math.asin(Math.sqrt(h));
 }
+// Compass bearing a→b, degrees clockwise from north.
+function bearing(a,b){
+  const t=Math.PI/180;
+  const y=Math.sin((b[0]-a[0])*t)*Math.cos(b[1]*t);
+  const x=Math.cos(a[1]*t)*Math.sin(b[1]*t) -
+          Math.sin(a[1]*t)*Math.cos(b[1]*t)*Math.cos((b[0]-a[0])*t);
+  return (Math.atan2(y,x)/t + 360) % 360;
+}
 
-function renderSteps(activeIdx){
-  out.innerHTML = '';
-  steps.forEach((st,i) => {
-    const d = document.createElement('div');
-    d.className = 'step' + (i < activeIdx ? ' done' : i === activeIdx ? ' cur' : '');
-    d.innerHTML = `<div>${esc(manText(st))}</div><div class="d">${fmtDist(st.distance)}</div>`;
-    out.appendChild(d);
-  });
+// Lane guidance. The extract carries no turn:lanes tags, so approximate it
+// from the intersection's own bearings: one arrow per available exit, with
+// the one we actually take highlighted.
+function renderLanes(st){
+  const el = document.getElementById('lanes');
+  const ins = (st.intersections && st.intersections[0]) || null;
+  if(!ins || !ins.bearings || ins.bearings.length < 2){ el.innerHTML = ''; return; }
+  const outB = ins.bearings[ins.out !== undefined ? ins.out : 0];
+  el.innerHTML = ins.bearings.map((b,i) => {
+    const rel = ((b - ins.bearings[ins.in !== undefined ? ins.in : 0] + 540) % 360) - 180;
+    const g = Math.abs(rel) < 25 ? '↑' : rel > 0 ? '↱' : '↰';
+    const on = (b === outB) ? ' on' : '';
+    return `<div class="ln${on}">${g}</div>`;
+  }).join('');
 }
 
 function stopDrive(){
   if(drive){ clearInterval(drive); drive = null; }
   if(car){ map.removeLayer(car); car = null; }
-  document.getElementById('now').style.display = 'none';
+  document.getElementById('nav').style.display = 'none';
+  document.body.classList.remove('navigating');
 }
 
 function startDrive(){
   if(!path.length) return;
   stopDrive();
-  car = L.marker([path[0][1], path[0][0]], {icon:carIcon}).addTo(map);
-  const now = document.getElementById('now');
-  now.style.display = 'block';
+  const nav = document.getElementById('nav');
+  nav.style.display = 'block';
+  document.body.classList.add('navigating');
+  car = L.marker([path[0][1], path[0][0]], {icon:puckIcon, zIndexOffset:1000}).addTo(map);
 
-  // Cumulative distance so we can map position → remaining distance.
-  let seg = 0, along = 0;
+  let seg = 0, along = 0, travelled = 0;
   const total = rtInfo.distance;
-  // Advance in real time: cover `total` metres over `duration` seconds,
-  // sped up so a long route is watchable.
-  const SPEED_UP = 8;
-  const tick = 100;                       // ms
+  const SPEED_UP = 8, tick = 100;
   const mPerTick = (total / rtInfo.duration) * (tick/1000) * SPEED_UP;
+  const started = Date.now();
 
-  let travelled = 0;
+  map.setZoom(17);
+
   drive = setInterval(() => {
     let need = mPerTick;
     while(need > 0 && seg < path.length-1){
@@ -276,31 +368,67 @@ function startDrive(){
       else { need -= left; seg++; along = 0; }
     }
     travelled = Math.min(travelled + mPerTick, total);
+
     if(seg >= path.length-1){
-      car.setLatLng([path[path.length-1][1], path[path.length-1][0]]);
-      now.innerHTML = '<div class="man">Arrived</div>';
+      const end = path[path.length-1];
+      car.setLatLng([end[1], end[0]]);
+      document.getElementById('nav-arrow').textContent = '⚑';
+      document.getElementById('nav-road').textContent = 'Arrived';
+      document.getElementById('nav-to').textContent = '';
+      document.getElementById('lanes').innerHTML = '';
+      document.getElementById('eta-rest').textContent = '0 m remaining';
       renderSteps(steps.length);
       clearInterval(drive); drive = null;
       return;
     }
+
     const a = path[seg], b = path[seg+1];
     const segLen = dist(a,b) || 1, f = along/segLen;
     const pos = [a[1] + (b[1]-a[1])*f, a[0] + (b[0]-a[0])*f];
     car.setLatLng(pos);
     map.panTo(pos, {animate:false});
 
-    // Which step are we on? Steps carry their own geometry offsets, so match
-    // by distance travelled against the running step totals.
+    // Rotate the puck to the direction of travel (heading-up feel without
+    // rotating the tiles, which Leaflet cannot do natively).
+    const brg = bearing(a,b);
+    const el = car.getElement() && car.getElement().querySelector('i');
+    if(el) el.style.transform = `rotate(${brg}deg)`;
+
+    // Current step + distance to the next maneuver.
     let acc = 0, idx = 0;
     for(let i=0;i<steps.length;i++){
       if(travelled < acc + steps[i].distance){ idx = i; break; }
       acc += steps[i].distance; idx = i;
     }
     const st = steps[idx];
+    const next = steps[idx+1];
     const toTurn = Math.max(0, (acc + st.distance) - travelled);
-    now.innerHTML = `<div class="man">${esc(manText(st))}</div>` +
-                    `<div class="dist">in ${fmtDist(toTurn)} &middot; ` +
-                    `${fmtDist(total-travelled)} left</div>`;
+
+    document.getElementById('nav-arrow').textContent = arrowFor(next || st);
+    document.getElementById('nav-road').textContent =
+      (next && next.name) ? next.name : (st.name || manText(next || st));
+    document.getElementById('nav-to').textContent =
+      fmtDist(toTurn) + ' · ' + manText(next || st);
+    renderLanes(st);
+
+    // Speed: derived from the simulated pace, capped for realism.
+    const kmh = Math.round((mPerTick/(tick/1000)) * 3.6 / SPEED_UP * SPEED_UP);
+    const limit = speeds[Math.min(seg, speeds.length-1)] || null;
+    const sp = document.getElementById('nav-speed');
+    sp.textContent = kmh + ' km/h';
+    const lim = document.getElementById('nav-limit');
+    lim.textContent = limit ? limit : '—';
+    sp.className = 'cur' + (limit && kmh > limit ? ' over' : '');
+
+    const remain = total - travelled;
+    const secsLeft = remain / (total/rtInfo.duration);
+    const eta = new Date(Date.now() + secsLeft*1000);
+    document.getElementById('eta-time').textContent =
+      Math.round(secsLeft/60) + ' min';
+    document.getElementById('eta-rest').textContent =
+      fmtDist(remain) + ' · ' +
+      eta.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
     renderSteps(idx);
   }, tick);
 }
@@ -310,7 +438,7 @@ async function route(){
   trip.style.display = 'block';
   trip.textContent = 'Routing…';
   try{
-    const j = await getJSON(`${OSRM}/route/v1/driving/${c}?overview=full&geometries=geojson&steps=true`);
+    const j = await getJSON(`${OSRM}/route/v1/driving/${c}?overview=full&geometries=geojson&steps=true&annotations=speed`);
     if(j.code !== 'Ok' || !j.routes.length){ trip.textContent = 'No route found.'; return; }
     const rt = j.routes[0];
     if(line) map.removeLayer(line);
@@ -323,6 +451,10 @@ async function route(){
 
     path = rt.geometry.coordinates;
     steps = (rt.legs || []).flatMap(l => l.steps || []);
+    // OSRM speed annotation is m/s per geometry segment — the closest thing
+    // to a speed limit available without maxspeed tags.
+    speeds = (rt.legs || []).flatMap(l => (l.annotation && l.annotation.speed) || [])
+                            .map(v => Math.round(v * 3.6 / 5) * 5);
     rtInfo = {distance: rt.distance, duration: rt.duration};
     document.getElementById('drive').style.display = 'block';
     renderSteps(-1);
@@ -342,6 +474,7 @@ map.on('click', async e => {
 document.getElementById('go').onclick = search;
 document.getElementById('q').addEventListener('keydown', e => { if(e.key === 'Enter') search(); });
 document.getElementById('start').onclick = startDrive;
+document.getElementById('nav-x').onclick = stopDrive;
 document.getElementById('stop').onclick  = stopDrive;
 document.getElementById('clear').onclick = () => {
   stopDrive();
