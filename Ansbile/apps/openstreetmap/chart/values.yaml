@@ -8,8 +8,9 @@ replicas: 1
 port: 80
 nodePort: 30330
 
-# Pin to the gateway VM so the local-path PVCs stay on one node.
-targetNode: gateway-server
+# Pinned to media-server: it is the only node with room for the import.
+# gateway-server has ~2.9Gi RAM / ~3G free disk — the import OOM-killed there.
+targetNode: media-server
 
 # One-time import of an OSM extract. The import Job runs before the server
 # starts and is skipped on re-sync once the database volume is populated.
@@ -18,7 +19,7 @@ pbfUrl: "https://download.geofabrik.de/africa/egypt-latest.osm.pbf"
 
 env:
   threads: 4
-  osm2pgsqlCacheMb: 2048
+  osm2pgsqlCacheMb: 1536
   autovacuum: "on"
   allowCors: "enabled"
 
@@ -37,13 +38,16 @@ resources:
     memory: "1Gi"
     cpu: "500m"
   limits:
-    memory: "6Gi"
-    cpu: "3"
+    memory: "3Gi"
+    cpu: "2"
 
+# The index-building phase is the memory peak; 8Gi OOM-killed (exit 137) on a
+# 3Gi node. media-server has ~12Gi, so cap below that and shrink osm2pgsql's
+# own cache to keep the total under the limit.
 importResources:
   requests:
     memory: "2Gi"
     cpu: "1"
   limits:
-    memory: "8Gi"
+    memory: "7Gi"
     cpu: "4"
