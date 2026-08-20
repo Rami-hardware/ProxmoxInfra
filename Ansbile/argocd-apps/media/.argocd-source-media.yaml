@@ -10,3 +10,4 @@ kustomize:
   - ghcr.io/thecfu/scraparr@sha256:0e294f66eba95ebdc441946de76aec32d09fec8dcce0df4938c13ce2affb5def
   - linuxserver/sonarr@sha256:373159ba768e23a3a1c497d9f2b936addf8fd5b1fdce7dd6a14080ac928bfda0
   - ghcr.io/connorgallopo/tracearr@sha256:0825937c93cf0eeabd4ef120dd5cd8d127ed4f7eed0049f94a45735f33265787
+  - stashapp/stash@sha256:df744af5a0c976e2ec671052ecc1f8a9aa757fa12b8f9930b59910b7295f0da6
