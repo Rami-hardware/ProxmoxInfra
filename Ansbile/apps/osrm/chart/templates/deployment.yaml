@@ -34,7 +34,11 @@ spec:
                 echo "Graph already built — no download needed."
                 exit 0
               fi
+{{- if .Values.clipToRegion }}
+              curl -fL --retry 5 --retry-delay 10 -C - -o /data/gcc.osm.pbf "${PBF_URL}"
+{{- else }}
               curl -fL --retry 5 --retry-delay 10 -C - -o /data/region.osm.pbf "${PBF_URL}"
+{{- end }}
           env:
             - name: PBF_URL
               value: "{{ .Values.pbfUrl }}"
@@ -52,6 +56,35 @@ spec:
             limits:
               memory: "256Mi"
               cpu: "500m"
+{{- if .Values.clipToRegion }}
+        # Geofabrik publishes no standalone Saudi file, so clip GCC States down
+        # to the Saudi boundary before building the routing graph.
+        - name: clip
+          image: {{ .Values.osmiumImage }}
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              [ -f /data/.osrm-ready ] && exit 0
+              [ -s /data/gcc.osm.pbf ] || exit 0
+              osmium extract -p /poly/region.poly /data/gcc.osm.pbf \
+                -o /data/region.osm.pbf --overwrite
+              rm -f /data/gcc.osm.pbf
+              ls -la /data/region.osm.pbf
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: poly
+              mountPath: /poly
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "2Gi"
+              cpu: "2"
+{{- end }}
         # OSRM needs a 3-stage preprocess (extract → partition → customize)
         # before it can serve. Guarded by a marker holding the source URL and
         # profile, so it runs once and re-runs only if either changes.
@@ -132,3 +165,8 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: osrm-data
+{{- if .Values.clipToRegion }}
+        - name: poly
+          configMap:
+            name: osrm-region-poly
+{{- end }}

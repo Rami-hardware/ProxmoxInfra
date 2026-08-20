@@ -19,14 +19,61 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: {{ .Values.targetNode }}
+{{- if .Values.clipToRegion }}
+      initContainers:
+        # Geofabrik has no standalone Saudi extract, so download GCC States and
+        # clip it to the Saudi boundary before Nominatim sees it. Skipped once
+        # the clipped file exists, so a restart does not redo the work.
+        - name: clip
+          image: {{ .Values.osmiumImage }}
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              SRC=/nominatim/gcc.osm.pbf
+              DST=/nominatim/data.osm.pbf
+              if [ -s "$DST" ] && [ -f /nominatim/.clipped ]; then
+                echo "Saudi extract already prepared — skipping."
+                exit 0
+              fi
+              echo "Downloading GCC extract..."
+              curl -fL --retry 5 --retry-delay 10 -C - -o "$SRC" "$PBF_URL"
+              echo "Clipping to Saudi Arabia..."
+              osmium extract -p /poly/region.poly "$SRC" -o "$DST" --overwrite
+              rm -f "$SRC"
+              touch /nominatim/.clipped
+              ls -la "$DST"
+          env:
+            - name: PBF_URL
+              value: "{{ .Values.pbfUrl }}"
+          volumeMounts:
+            - name: work
+              mountPath: /nominatim
+            - name: poly
+              mountPath: /poly
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "2Gi"
+              cpu: "2"
+{{- end }}
       containers:
         - name: nominatim
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           # The image imports on first start and reuses the volume afterwards.
           env:
+{{- if .Values.clipToRegion }}
+            # Already downloaded and clipped by the init container.
+            - name: PBF_PATH
+              value: "/nominatim/data.osm.pbf"
+{{- else }}
             - name: PBF_URL
               value: "{{ .Values.pbfUrl }}"
+{{- end }}
             - name: IMPORT_STYLE
               value: "{{ .Values.importStyle }}"
             - name: THREADS
@@ -75,3 +122,8 @@ spec:
         - name: work
           persistentVolumeClaim:
             claimName: nominatim-work
+{{- if .Values.clipToRegion }}
+        - name: poly
+          configMap:
+            name: nominatim-region-poly
+{{- end }}

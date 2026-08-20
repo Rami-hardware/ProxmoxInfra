@@ -61,7 +61,15 @@ spec:
 
               # Resume a partial download rather than restarting from zero.
               echo "Downloading extract: ${PBF_URL}"
-              curl -fL --retry 5 --retry-delay 10 -C - -o "${PBF}" "${PBF_URL}"
+              curl -fL --retry 5 --retry-delay 10 -C - -o "${PBF}.raw" "${PBF_URL}"
+{{- if .Values.clipToRegion }}
+              # Clip GCC States down to the Saudi boundary.
+              osmium extract -p /poly/region.poly "${PBF}.raw" -o "${PBF}" --overwrite \
+                || mv "${PBF}.raw" "${PBF}"
+              rm -f "${PBF}.raw"
+{{- else }}
+              mv "${PBF}.raw" "${PBF}"
+{{- end }}
               ln -sf "${PBF}" /data/region.osm.pbf
 
               echo "Starting import (this can take a long time)..."
