@@ -72,13 +72,22 @@ let marker = null, pts = [], line = null, pins = [];
 function esc(s){ return String(s).replace(/[&<>"']/g, c => (
   {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+// A 502/503 from nginx is an HTML error page, not JSON. Check the status
+// first so the user sees "still starting up" instead of a parser error.
+async function getJSON(url){
+  const r = await fetch(url);
+  if(r.status === 502 || r.status === 503)
+    throw new Error('service is still starting up — try again in a few minutes');
+  if(!r.ok) throw new Error(`server returned ${r.status}`);
+  return r.json();
+}
+
 async function search(){
   const q = document.getElementById('q').value.trim();
   if(!q) return;
   out.innerHTML = '<div class="hit muted">Searching…</div>';
   try{
-    const r = await fetch(`${NOMINATIM}/search?q=${encodeURIComponent(q)}&format=json&addressdetails=1&limit=10`);
-    const hits = await r.json();
+    const hits = await getJSON(`${NOMINATIM}/search?q=${encodeURIComponent(q)}&format=json&addressdetails=1&limit=10`);
     if(!hits.length){ out.innerHTML = '<div class="hit muted">No results.</div>'; return; }
     out.innerHTML = '';
     hits.forEach(h => {
@@ -98,8 +107,7 @@ async function search(){
 
 async function reverse(ll){
   try{
-    const r = await fetch(`${NOMINATIM}/reverse?lat=${ll.lat}&lon=${ll.lng}&format=json`);
-    const j = await r.json();
+    const j = await getJSON(`${NOMINATIM}/reverse?lat=${ll.lat}&lon=${ll.lng}&format=json`);
     return j.display_name || `${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}`;
   }catch{ return `${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}`; }
 }
@@ -109,8 +117,7 @@ async function route(){
   trip.style.display = 'block';
   trip.textContent = 'Routing…';
   try{
-    const r = await fetch(`${OSRM}/route/v1/driving/${c}?overview=full&geometries=geojson&steps=true`);
-    const j = await r.json();
+    const j = await getJSON(`${OSRM}/route/v1/driving/${c}?overview=full&geometries=geojson&steps=true`);
     if(j.code !== 'Ok' || !j.routes.length){ trip.textContent = 'No route found.'; return; }
     const rt = j.routes[0];
     if(line) map.removeLayer(line);
