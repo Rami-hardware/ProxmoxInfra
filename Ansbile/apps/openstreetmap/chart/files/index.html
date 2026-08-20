@@ -340,7 +340,14 @@ async function search(){
 
 async function reverse(ll){
   try{
-    const j = await getJSON(`${NOMINATIM}/reverse?lat=${ll.lat}&lon=${ll.lng}&format=json`);
+    // 4s ceiling: a stalled geocoder must never hold up the map.
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), 4000);
+    const r = await fetch(`${NOMINATIM}/reverse?lat=${ll.lat}&lon=${ll.lng}&format=json`,
+                          {signal: ac.signal});
+    clearTimeout(t);
+    if(!r.ok) throw new Error('geocoder unavailable');
+    const j = await r.json();
     return j.display_name || `${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}`;
   }catch(e){ return `${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}`; }
 }
@@ -541,8 +548,6 @@ async function route(){
     map.fitBounds(line.getBounds(), {padding:[40,40]});
     const km = (rt.distance/1000).toFixed(1);
     const min = Math.round(rt.duration/60);
-    sect.innerHTML = `${km} km &middot; about ${min} min by car`;
-
     path = rt.geometry.coordinates;
     steps = (rt.legs || []).flatMap(l => l.steps || []);
     // OSRM speed annotation is m/s per geometry segment — the closest thing
@@ -551,26 +556,31 @@ async function route(){
                             .map(v => Math.round(v * 3.6 / 5) * 5);
     rtInfo = {distance: rt.distance, duration: rt.duration};
     renderSteps(-1);
-    // Offer the drive straight from the results header.
-    const go = document.createElement('div');
-    go.className = 'hit';
-    go.innerHTML = '<div class="ico">▶</div><div><div class="hit-main">Start drive</div>'
-                 + '<div class="hit-sub">Turn-by-turn navigation</div></div>';
-    go.onclick = startDrive;
-    out.prepend(go);
+    // Live inside the header so renderSteps() — which rewrites `out` on every
+    // tick — cannot delete it mid-drive.
+    sect.innerHTML = `${km} km &middot; ${min} min ` +
+      `<span class="lnk" id="godrive">▶ Start drive</span>`;
+    document.getElementById('godrive').onclick = startDrive;
     sheetUp();
   }catch(e){ sect.textContent = 'Routing failed'; out.innerHTML =
       `<div class="muted">${esc(e.message)}</div>`; }
 }
 
-map.on('click', async e => {
+map.on('click', e => {
   if(pts.length >= 2) return;
   pts.push(e.latlng);
   const label = pts.length === 1 ? 'Start' : 'Destination';
-  const pin = L.marker(e.latlng).addTo(map).bindPopup(`${label}: loading…`).openPopup();
+  const pin = L.marker(e.latlng).addTo(map)
+               .bindPopup(`<b>${label}</b>`).openPopup();
   pins.push(pin);
-  pin.setPopupContent(`<b>${label}</b><br>` + esc(await reverse(e.latlng)));
+
+  // Route immediately — never behind reverse geocoding, which blocks for the
+  // proxy timeout whenever Nominatim is down and would strand the route.
   if(pts.length === 2) route();
+
+  // Fill in the street name afterwards, best-effort.
+  reverse(e.latlng).then(name =>
+    pin.setPopupContent(`<b>${label}</b><br>${esc(name)}`)).catch(() => {});
 });
 
 document.getElementById('q').addEventListener('keydown', e => { if(e.key === 'Enter') search(); });

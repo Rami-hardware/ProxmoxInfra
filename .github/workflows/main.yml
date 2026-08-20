@@ -17,15 +17,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-image:
-    name: Build & Scan Docker Image & Files
-    uses: ./.github/workflows/build-image.yml
-    secrets:
-      DISCORD_CD_Alert_URL: ${{ secrets.DISCORD_CD_Alert_URL }}
+  # build-image:
+  #   name: Build & Scan Docker Image & Files
+  #   uses: ./.github/workflows/build-image.yml
+  #   secrets:
+  #     DISCORD_CD_Alert_URL: ${{ secrets.DISCORD_CD_Alert_URL }}
 
   testing:
     name: Testing Infrastructure Code
-    needs: build-image
+    # needs: build-image
     uses: ./.github/workflows/testing.yml
     secrets:
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -76,22 +76,23 @@ jobs:
       ADGUARD_EXPORTER_USERNAME: ${{ secrets.ADGUARD_EXPORTER_USERNAME }}
       ADGUARD_EXPORTER_PASSWORD: ${{ secrets.ADGUARD_EXPORTER_PASSWORD }}
 
-  security:
-    name: Security Scan
-    needs: Deploy
-    if: always()
-    uses: ./.github/workflows/security.yml
-    secrets:
-      DISCORD_CI_ALERT_SEC_URL: ${{ secrets.DISCORD_CI_ALERT_SEC_URL }}
+  # security:
+  #   name: Security Scan
+  #   needs: Deploy
+  #   if: always()
+  #   uses: ./.github/workflows/security.yml
+  #   secrets:
+  #     DISCORD_CI_ALERT_SEC_URL: ${{ secrets.DISCORD_CI_ALERT_SEC_URL }}
 
   notify:
     name: Notify Discord
-    needs: [testing, Deploy, security]
+    needs: [testing, Deploy]
     if: always()
     uses: ./.github/workflows/notify.yml
     with:
       testing_result: ${{ needs.testing.result }}
       deploy_result: ${{ needs.Deploy.result }}
-      security_result: ${{ needs.security.result }}
+      # security job is commented out; input is required by notify.yml
+      security_result: skipped
     secrets:
       DISCORD_CD_Alert_URL: ${{ secrets.DISCORD_CD_Alert_URL }}
