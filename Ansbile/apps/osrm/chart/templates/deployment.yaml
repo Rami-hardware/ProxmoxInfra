@@ -82,7 +82,9 @@ spec:
               memory: "256Mi"
               cpu: "200m"
             limits:
-              memory: "2Gi"
+              # osmium extract with a 1810-point polygon needs real memory;
+              # 2Gi OOM-killed on the GCC extract.
+              memory: "5Gi"
               cpu: "2"
 {{- end }}
         # OSRM needs a 3-stage preprocess (extract → partition → customize)
