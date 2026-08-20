@@ -38,5 +38,5 @@ importResources:
     memory: "512Mi"
     cpu: "200m"
   limits:
-    memory: "5Gi"
-    cpu: "3"
+    memory: "3Gi"
+    cpu: "2"
