@@ -1,0 +1,6 @@
+apiVersion: v2
+name: openstreetmap
+description: Self-hosted OpenStreetMap tile server (renders tiles from an OSM extract)
+type: application
+version: 0.1.0
+appVersion: "latest"

@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openstreetmap-database
+  labels:
+    app: openstreetmap
+  annotations:
+    # Keep the imported PostGIS data if the release is ever uninstalled —
+    # a re-import costs hours.
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.persistence.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.database.size }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openstreetmap-tiles
+  labels:
+    app: openstreetmap
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.persistence.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.tiles.size }}

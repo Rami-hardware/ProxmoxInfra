@@ -1,0 +1,49 @@
+image:
+  repository: overv/openstreetmap-tile-server
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicas: 1
+
+port: 80
+nodePort: 30330
+
+# Pin to the gateway VM so the local-path PVCs stay on one node.
+targetNode: gateway-server
+
+# One-time import of an OSM extract. The import Job runs before the server
+# starts and is skipped on re-sync once the database volume is populated.
+# Full-planet is not viable here — use a regional/country extract.
+pbfUrl: "https://download.geofabrik.de/africa/egypt-latest.osm.pbf"
+
+env:
+  threads: 4
+  osm2pgsqlCacheMb: 2048
+  autovacuum: "on"
+  allowCors: "enabled"
+
+# shared memory for PostgreSQL during import/render
+shmSizeMb: 1024
+
+persistence:
+  storageClass: local-path
+  database:
+    size: 50Gi
+  tiles:
+    size: 10Gi
+
+resources:
+  requests:
+    memory: "1Gi"
+    cpu: "500m"
+  limits:
+    memory: "6Gi"
+    cpu: "3"
+
+importResources:
+  requests:
+    memory: "2Gi"
+    cpu: "1"
+  limits:
+    memory: "8Gi"
+    cpu: "4"
