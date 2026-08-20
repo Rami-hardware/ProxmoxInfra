@@ -6,37 +6,92 @@
 <title>Homelab Maps</title>
 <link rel="stylesheet" href="/vendor/leaflet.css">
 <style>
-  :root { --bg:#fff; --fg:#111; --panel:#f7f7f8; --border:#d8d8dc; --accent:#2b6cb0; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#16181d; --fg:#e8e8ea; --panel:#1f2229; --border:#333842; --accent:#5b9bd5; }
+  :root { --bg:#fff; --fg:#111; --panel:#f7f7f8; --border:#d8d8dc; --accent:#2b6cb0;
+          --sheet:#1c1f26; --sheet2:#262a33; --chip:#2a2e37; --txt:#e9eaee; --dim:#9aa0ad; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin:0; height:100%; overflow:hidden;
+               font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+               background:#11131a; color:var(--txt); }
+  #map { position:absolute; inset:0; background:#11131a; }
+
+  /* Permanent night map, like the reference. */
+  .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(.82) contrast(1.1) saturate(.7);
   }
-  * { box-sizing: border-box; }
-  html, body { margin:0; height:100%; font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-               background:var(--bg); color:var(--fg); }
-  #app { display:flex; height:100%; }
-  #side { width:340px; flex:none; background:var(--panel); border-right:1px solid var(--border);
-          display:flex; flex-direction:column; overflow:hidden; }
-  #map { flex:1; position:relative; }
-  h1 { font-size:15px; margin:0; padding:14px 16px; border-bottom:1px solid var(--border); font-weight:600; }
-  .box { padding:12px 16px; border-bottom:1px solid var(--border); }
-  label { display:block; font-size:11px; text-transform:uppercase; letter-spacing:.04em;
-          opacity:.65; margin-bottom:5px; }
-  input { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px;
-          background:var(--bg); color:var(--fg); font-size:14px; }
-  button { margin-top:8px; width:100%; padding:8px 10px; border:0; border-radius:6px;
-           background:var(--accent); color:#fff; font-size:13px; cursor:pointer; }
-  button.sec { background:transparent; color:var(--fg); border:1px solid var(--border); }
-  .results { overflow-y:auto; flex:1; }
-  .hit { padding:10px 16px; border-bottom:1px solid var(--border); cursor:pointer; font-size:13px; }
-  .hit:hover { background:var(--bg); }
-  .hit-main { font-weight:600; margin-bottom:2px; }
-  .hit-sub { opacity:.7; font-size:12px; line-height:1.35; }
-  .hit-meta { font-size:11px; opacity:.6; margin-top:4px; }
-  .lnk { color:var(--accent); cursor:pointer; }
-  .lnk:hover { text-decoration:underline; }
-  .muted { opacity:.6; font-size:12px; }
-  #trip { padding:10px 16px; font-size:13px; display:none; border-bottom:1px solid var(--border); }
-  #trip b { font-size:16px; }
+  .leaflet-control-zoom { display:none; }
+
+  /* ── Category chips ─────────────────────────────────────────────────── */
+  #chips { position:absolute; top:0; left:0; right:0; z-index:900;
+           display:flex; gap:9px; padding:12px 12px 6px;
+           overflow-x:auto; scrollbar-width:none; }
+  #chips::-webkit-scrollbar { display:none; }
+  .chip { flex:none; display:flex; align-items:center; gap:7px;
+          background:var(--sheet); color:var(--txt); border:0;
+          border-radius:999px; padding:9px 15px; font-size:13.5px; font-weight:600;
+          box-shadow:0 3px 12px rgba(0,0,0,.45); cursor:pointer; white-space:nowrap; }
+  .chip:hover { background:var(--sheet2); }
+  .chip.on { background:#1a73e8; color:#fff; }
+
+  /* ── Right-side floating controls ───────────────────────────────────── */
+  #tools { position:absolute; right:12px; top:50%; transform:translateY(-50%);
+           z-index:900; display:flex; flex-direction:column; gap:10px; }
+  .tool { width:46px; height:46px; border-radius:14px; border:0; cursor:pointer;
+          background:var(--sheet); color:var(--txt); font-size:17px; font-weight:700;
+          box-shadow:0 3px 12px rgba(0,0,0,.45);
+          display:flex; align-items:center; justify-content:center; }
+  .tool:hover { background:var(--sheet2); }
+  .tool.blue { color:#4c8dff; }
+
+  /* ── Bottom sheet ───────────────────────────────────────────────────── */
+  #sheet { position:absolute; left:0; right:0; bottom:0; z-index:950;
+           background:var(--sheet); border-radius:20px 20px 0 0;
+           box-shadow:0 -6px 30px rgba(0,0,0,.5);
+           transition:transform .25s ease; max-height:72%;
+           display:flex; flex-direction:column; }
+  #sheet.down { transform:translateY(calc(100% - 132px)); }
+  #grip { padding:9px 0 4px; display:flex; justify-content:center; cursor:grab; flex:none; }
+  #grip i { width:38px; height:4px; border-radius:3px; background:#4a505d; display:block; }
+  #searchbar { display:flex; align-items:center; gap:10px; margin:2px 14px 12px;
+               background:var(--sheet2); border-radius:999px; padding:11px 15px; flex:none; }
+  #searchbar input { flex:1; background:none; border:0; outline:0;
+                     color:var(--txt); font-size:15px; }
+  #searchbar input::placeholder { color:var(--dim); }
+  #searchbar .ic { color:var(--dim); font-size:15px; }
+  #quick { display:flex; gap:9px; padding:0 14px 12px; overflow-x:auto;
+           scrollbar-width:none; flex:none; }
+  #quick::-webkit-scrollbar { display:none; }
+  .q { flex:none; display:flex; align-items:center; gap:7px; background:var(--sheet2);
+       border:0; border-radius:999px; padding:9px 14px; color:var(--txt);
+       font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
+  .q:hover { filter:brightness(1.15); }
+  #sheetbody { overflow-y:auto; padding-bottom:14px; }
+  .sect { padding:4px 16px 10px; font-size:15px; font-weight:700; }
+
+  /* ── Result rows ────────────────────────────────────────────────────── */
+  .hit { padding:11px 16px; cursor:pointer; display:flex; gap:12px;
+         align-items:flex-start; border-bottom:1px solid #2b303a; }
+  .hit:hover { background:var(--sheet2); }
+  .hit .ico { width:38px; height:38px; border-radius:50%; flex:none;
+              background:var(--sheet2); display:flex; align-items:center;
+              justify-content:center; font-size:17px; }
+  .hit-main { font-weight:600; }
+  .hit-sub { color:var(--dim); font-size:12.5px; line-height:1.35; margin-top:2px;
+             overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .hit-meta { font-size:11.5px; color:var(--dim); margin-top:4px; }
+  .lnk { color:#4c8dff; cursor:pointer; font-weight:600; }
+  .muted { color:var(--dim); padding:12px 16px; font-size:13px; }
+
+  /* ── Map POI pins ───────────────────────────────────────────────────── */
+  .poi { display:flex; align-items:center; gap:5px; white-space:nowrap; }
+  .poi b { width:26px; height:26px; border-radius:50%; display:flex; flex:none;
+           align-items:center; justify-content:center; font-size:13px;
+           box-shadow:0 2px 6px rgba(0,0,0,.6); }
+  .poi span { font-size:11px; font-weight:700; color:#fff; max-width:118px;
+              overflow:hidden; text-overflow:ellipsis;
+              text-shadow:0 1px 3px #000, 0 0 6px #000; }
+  .me { width:16px; height:16px; border-radius:50%; background:#1a73e8;
+        border:3px solid #fff; box-shadow:0 0 0 4px rgba(26,115,232,.35); }
+
   /* ── Waze/Google-style navigation overlay ─────────────────────────────── */
   #nav { display:none; position:absolute; inset:0; z-index:1000; pointer-events:none;
          font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
@@ -96,54 +151,71 @@
 </style>
 </head>
 <body>
-<div id="app">
-  <div id="side">
-    <h1>Homelab Maps</h1>
-    <div class="box">
-      <label for="q">Search address</label>
-      <input id="q" placeholder="e.g. Al-Safa, Jeddah" autocomplete="off">
-      <button id="go">Search</button>
-    </div>
-    <div id="trip"></div>
-    <div id="drive">
-      <div class="row">
-        <button id="start">Start drive</button>
-        <button id="stop" class="sec">Stop</button>
-      </div>
-    </div>
-    <div id="now"></div>
-    <div class="box muted" id="hint">
-      Click the map to set <b>start</b>, click again for <b>destination</b>.
-      <button class="sec" id="clear">Clear route</button>
-    </div>
-    <div class="results" id="out"></div>
-  </div>
-  <div id="map">
-    <div id="nav">
-      <div class="top">
-        <div id="lanes"></div>
-        <div id="banner">
-          <div class="arrow" id="nav-arrow">↑</div>
-          <div class="txt">
-            <div class="road" id="nav-road"></div>
-            <div class="to"  id="nav-to"></div>
-          </div>
+<div id="map">
+  <div id="nav">
+    <div class="top">
+      <div id="lanes"></div>
+      <div id="banner">
+        <div class="arrow" id="nav-arrow">↑</div>
+        <div class="txt">
+          <div class="road" id="nav-road"></div>
+          <div class="to"  id="nav-to"></div>
         </div>
       </div>
-      <div id="speed">
-        <div class="limit" id="nav-limit">—</div>
-        <div class="cur" id="nav-speed">0 km/h</div>
+    </div>
+    <div id="speed">
+      <div class="limit" id="nav-limit">—</div>
+      <div class="cur" id="nav-speed">0 km/h</div>
+    </div>
+    <div id="eta">
+      <div>
+        <div class="big" id="eta-time"></div>
+        <div class="sub" id="eta-rest"></div>
       </div>
-      <div id="eta">
-        <div>
-          <div class="big" id="eta-time"></div>
-          <div class="sub" id="eta-rest"></div>
-        </div>
-        <button class="x" id="nav-x" title="End navigation">✕</button>
-      </div>
+      <button class="x" id="nav-x" title="End navigation">✕</button>
     </div>
   </div>
 </div>
+
+<div id="chips">
+  <button class="chip" data-cat="restaurant">🍽️ Restaurants</button>
+  <button class="chip" data-cat="cafe">☕ Coffee</button>
+  <button class="chip" data-cat="fuel">⛽ Fuel</button>
+  <button class="chip" data-cat="pharmacy">💊 Pharmacy</button>
+  <button class="chip" data-cat="hospital">🏥 Hospitals</button>
+  <button class="chip" data-cat="supermarket">🛒 Groceries</button>
+  <button class="chip" data-cat="mall">🛍️ Malls</button>
+  <button class="chip" data-cat="mosque">🕌 Mosques</button>
+  <button class="chip" data-cat="atm">🏧 ATMs</button>
+  <button class="chip" data-cat="park">🌳 Parks</button>
+</div>
+
+<div id="tools">
+  <button class="tool" id="t-layers" title="Toggle night mode">◈</button>
+  <button class="tool" id="t-zin"    title="Zoom in">＋</button>
+  <button class="tool" id="t-zout"   title="Zoom out">－</button>
+  <button class="tool blue" id="t-me" title="Recentre">➤</button>
+</div>
+
+<div id="sheet">
+  <div id="grip"><i></i></div>
+  <div id="searchbar">
+    <span class="ic">🔍</span>
+    <input id="q" placeholder="Search here" autocomplete="off">
+    <span class="ic" id="clearq" style="cursor:pointer">✕</span>
+  </div>
+  <div id="quick">
+    <button class="q" id="qh">🏠 Home</button>
+    <button class="q" id="qw">💼 Work</button>
+    <button class="q" id="qs">🔖 Saved</button>
+    <button class="q" id="qr">🧭 Route</button>
+  </div>
+  <div id="sheetbody">
+    <div class="sect" id="sect">Explore nearby</div>
+    <div id="out"></div>
+  </div>
+</div>
+
 <script src="/vendor/leaflet.js"></script>
 <script>
 // Same-origin paths: nginx proxies these to Nominatim and OSRM, so the page
@@ -151,14 +223,21 @@
 const NOMINATIM = '/geocode';
 const OSRM      = '';
 
-const map = L.map('map').setView([21.54, 39.19], 11);   // Jeddah
+const map = L.map('map', {zoomControl:false}).setView([21.54, 39.19], 15);
 L.tileLayer('/tile/{z}/{x}/{y}.png', {
   maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
 
-const out = document.getElementById('out');
-const trip = document.getElementById('trip');
+const out   = document.getElementById('out');
+const sheet = document.getElementById('sheet');
+const sect  = document.getElementById('sect');
 let marker = null, pts = [], line = null, pins = [];
+
+// The sheet collapses to just the search bar so the map stays the focus.
+function sheetDown(){ sheet.classList.add('down'); }
+function sheetUp(){ sheet.classList.remove('down'); }
+document.getElementById('grip').onclick = () =>
+  sheet.classList.contains('down') ? sheetUp() : sheetDown();
 
 function esc(s){ return String(s).replace(/[&<>"']/g, c => (
   {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -336,6 +415,22 @@ function renderLanes(st){
   }).join('');
 }
 
+// Turn list in the sheet: completed steps dim, the active one highlights.
+function renderSteps(activeIdx){
+  out.innerHTML = '';
+  steps.forEach((st,i) => {
+    const d = document.createElement('div');
+    d.className = 'hit';
+    d.style.opacity = i < activeIdx ? '.45' : '1';
+    if(i === activeIdx) d.style.background = 'var(--sheet2)';
+    d.innerHTML = `<div class="ico">${arrowFor(st)}</div>` +
+      `<div style="min-width:0;flex:1"><div class="hit-main">${esc(manText(st))}</div>` +
+      `<div class="hit-sub">${esc(st.name || '')}</div></div>` +
+      `<div class="hit-meta">${fmtDist(st.distance)}</div>`;
+    out.appendChild(d);
+  });
+}
+
 function stopDrive(){
   if(drive){ clearInterval(drive); drive = null; }
   if(car){ map.removeLayer(car); car = null; }
@@ -435,11 +530,10 @@ function startDrive(){
 
 async function route(){
   const c = pts.map(p => `${p.lng},${p.lat}`).join(';');
-  trip.style.display = 'block';
-  trip.textContent = 'Routing…';
+  sect.textContent = 'Routing…';
   try{
     const j = await getJSON(`${OSRM}/route/v1/driving/${c}?overview=full&geometries=geojson&steps=true&annotations=speed`);
-    if(j.code !== 'Ok' || !j.routes.length){ trip.textContent = 'No route found.'; return; }
+    if(j.code !== 'Ok' || !j.routes.length){ sect.textContent = 'No route found.'; return; }
     const rt = j.routes[0];
     if(line) map.removeLayer(line);
     line = L.geoJSON({type:'Feature', geometry: rt.geometry},
@@ -447,7 +541,7 @@ async function route(){
     map.fitBounds(line.getBounds(), {padding:[40,40]});
     const km = (rt.distance/1000).toFixed(1);
     const min = Math.round(rt.duration/60);
-    trip.innerHTML = `<b>${km} km</b> &middot; about ${min} min by car`;
+    sect.innerHTML = `${km} km &middot; about ${min} min by car`;
 
     path = rt.geometry.coordinates;
     steps = (rt.legs || []).flatMap(l => l.steps || []);
@@ -456,9 +550,17 @@ async function route(){
     speeds = (rt.legs || []).flatMap(l => (l.annotation && l.annotation.speed) || [])
                             .map(v => Math.round(v * 3.6 / 5) * 5);
     rtInfo = {distance: rt.distance, duration: rt.duration};
-    document.getElementById('drive').style.display = 'block';
     renderSteps(-1);
-  }catch(e){ trip.textContent = 'Routing failed: ' + esc(e.message); }
+    // Offer the drive straight from the results header.
+    const go = document.createElement('div');
+    go.className = 'hit';
+    go.innerHTML = '<div class="ico">▶</div><div><div class="hit-main">Start drive</div>'
+                 + '<div class="hit-sub">Turn-by-turn navigation</div></div>';
+    go.onclick = startDrive;
+    out.prepend(go);
+    sheetUp();
+  }catch(e){ sect.textContent = 'Routing failed'; out.innerHTML =
+      `<div class="muted">${esc(e.message)}</div>`; }
 }
 
 map.on('click', async e => {
@@ -471,20 +573,190 @@ map.on('click', async e => {
   if(pts.length === 2) route();
 });
 
-document.getElementById('go').onclick = search;
 document.getElementById('q').addEventListener('keydown', e => { if(e.key === 'Enter') search(); });
-document.getElementById('start').onclick = startDrive;
 document.getElementById('nav-x').onclick = stopDrive;
-document.getElementById('stop').onclick  = stopDrive;
-document.getElementById('clear').onclick = () => {
-  stopDrive();
-  pts = []; pins.forEach(p => map.removeLayer(p)); pins = [];
-  if(line){ map.removeLayer(line); line = null; }
-  trip.style.display = 'none';
-  document.getElementById('drive').style.display = 'none';
-  path = []; steps = []; rtInfo = null;
-  out.innerHTML = '';
+
+// ── Category browse ─────────────────────────────────────────────────────────
+// Nominatim's amenity search over the current viewport, so chips behave like
+// the "Restaurants / Coffee" row in Google Maps.
+const CAT_COLOR = {
+  restaurant:'#ef6c3b', cafe:'#ef6c3b', fuel:'#3b82f6', pharmacy:'#16a34a',
+  hospital:'#16a34a', supermarket:'#f59e0b', mall:'#a855f7', mosque:'#14b8a6',
+  atm:'#6366f1', park:'#22c55e'
 };
+let poiPins = [];
+function clearPois(){ poiPins.forEach(p => map.removeLayer(p)); poiPins = []; }
+
+function poiIcon(cat, label){
+  const c = CAT_COLOR[cat] || '#7c8496';
+  const g = KIND[cat] || '📍';
+  return L.divIcon({className:'', iconSize:[0,0], iconAnchor:[13,13],
+    html:`<div class="poi"><b style="background:${c}">${g}</b>` +
+         `<span>${label.replace(/[<>&]/g,'')}</span></div>`});
+}
+
+async function browse(cat, btn){
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+  if(btn) btn.classList.add('on');
+  sect.textContent = 'Loading…';
+  sheetUp();
+  out.innerHTML = '<div class="muted">Searching nearby…</div>';
+  const b = map.getBounds();
+  const vb = [b.getWest(), b.getNorth(), b.getEast(), b.getSouth()].join(',');
+  try{
+    const hits = await getJSON(`${NOMINATIM}/search?q=${encodeURIComponent(cat)}`
+      + `&format=json&addressdetails=1&limit=25&viewbox=${vb}&bounded=1`);
+    clearPois();
+    if(!hits.length){
+      sect.textContent = 'Nothing found nearby';
+      out.innerHTML = '<div class="muted">No ' + esc(cat)
+        + ' mapped in this area. Try zooming out, or search in Arabic.</div>';
+      return;
+    }
+    sect.textContent = hits.length + ' ' + cat + ' nearby';
+    renderHits(hits, cat);
+    hits.forEach(h => {
+      const [primary] = splitName(h);
+      poiPins.push(L.marker([+h.lat, +h.lon], {icon: poiIcon(cat, primary)})
+                    .addTo(map).on('click', () => focusHit(h)));
+    });
+  }catch(e){
+    sect.textContent = 'Explore nearby';
+    out.innerHTML = `<div class="muted">${esc(e.message)}</div>`;
+  }
+}
+
+function focusHit(h){
+  const [primary, rest] = splitName(h);
+  map.setView([+h.lat, +h.lon], 17);
+  if(marker) map.removeLayer(marker);
+  marker = L.marker([+h.lat, +h.lon]).addTo(map)
+            .bindPopup(`<b>${esc(primary)}</b><br>${esc(rest)}`).openPopup();
+  sheetDown();
+}
+
+// Shared renderer for chip browse and free-text search.
+function renderHits(hits, cat){
+  out.innerHTML = '';
+  hits.forEach(h => {
+    const [primary, rest] = splitName(h);
+    const icon = KIND[h.type] || KIND[cat] || KIND[h.class] || '📍';
+    const km = map.distance(map.getCenter(), [+h.lat, +h.lon]) / 1000;
+    const d = document.createElement('div');
+    d.className = 'hit';
+    d.innerHTML =
+      `<div class="ico">${icon}</div>` +
+      `<div style="min-width:0;flex:1">` +
+        `<div class="hit-main">${esc(primary)}</div>` +
+        `<div class="hit-sub">${esc(rest)}</div>` +
+        `<div class="hit-meta">${km < 1 ? Math.round(km*1000)+' m' : km.toFixed(1)+' km'} away` +
+        ` &middot; <span class="lnk" data-act="route">Directions</span></div>` +
+      `</div>`;
+    d.onclick = ev => {
+      if(ev.target.dataset.act === 'route'){ routeTo(h); return; }
+      focusHit(h);
+    };
+    out.appendChild(d);
+  });
+}
+
+// Route from the map centre (the "you are here" dot) to the chosen place.
+function routeTo(h){
+  const dest = L.latLng(+h.lat, +h.lon);
+  pins.forEach(p => map.removeLayer(p)); pins = [];
+  pts = [map.getCenter(), dest];
+  pins.push(L.marker(pts[0]).addTo(map).bindPopup('Start'));
+  pins.push(L.marker(dest).addTo(map).bindPopup('Destination'));
+  sheetUp();
+  route();
+}
+
+document.querySelectorAll('.chip').forEach(btn => {
+  btn.onclick = () => browse(btn.dataset.cat, btn);
+});
+
+// ── Search bar ──────────────────────────────────────────────────────────────
+const qEl = document.getElementById('q');
+qEl.addEventListener('keydown', e => { if(e.key === 'Enter'){ sheetUp(); search(); } });
+qEl.addEventListener('focus', sheetUp);
+document.getElementById('clearq').onclick = () => {
+  qEl.value = ''; out.innerHTML = ''; clearPois();
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+  sect.textContent = 'Explore nearby';
+};
+
+// ── Tools ───────────────────────────────────────────────────────────────────
+document.getElementById('t-zin').onclick  = () => map.zoomIn();
+document.getElementById('t-zout').onclick = () => map.zoomOut();
+document.getElementById('t-layers').onclick = () =>
+  document.body.classList.toggle('daylight');
+document.getElementById('t-me').onclick = () => {
+  if(!navigator.geolocation){ map.setView([21.54,39.19], 15); return; }
+  navigator.geolocation.getCurrentPosition(
+    p => { const ll=[p.coords.latitude,p.coords.longitude];
+           map.setView(ll,16); setMe(ll); },
+    () => map.setView([21.54,39.19], 15));
+};
+
+// Blue "you are here" dot. Real geolocation needs a trusted HTTPS cert;
+// without it we simply show the map centre as the reference point.
+let mePin = null;
+function setMe(ll){
+  if(mePin) map.removeLayer(mePin);
+  mePin = L.marker(ll, {icon: L.divIcon({className:'', html:'<div class="me"></div>',
+          iconSize:[16,16], iconAnchor:[8,8]}), interactive:false}).addTo(map);
+}
+setMe([21.54, 39.19]);
+
+// ── Quick actions ───────────────────────────────────────────────────────────
+function saved(k){ try { return JSON.parse(localStorage.getItem(k) || 'null'); }
+                   catch(e){ return null; } }
+function setSaved(k, ll){ localStorage.setItem(k, JSON.stringify(ll)); }
+function quick(k, label){
+  const v = saved(k);
+  if(v){ map.setView(v, 16); sheetDown(); }
+  else if(confirm(`Save the current map centre as ${label}?`)){
+    const c = map.getCenter(); setSaved(k, [c.lat, c.lng]);
+  }
+}
+document.getElementById('qh').onclick = () => quick('home', 'Home');
+document.getElementById('qw').onclick = () => quick('work', 'Work');
+document.getElementById('qs').onclick = () => {
+  out.innerHTML = '';
+  sect.textContent = 'Saved places';
+  const rows = [['home','🏠 Home'],['work','💼 Work']]
+    .filter(([k]) => saved(k));
+  if(!rows.length){ out.innerHTML =
+    '<div class="muted">Nothing saved yet — tap Home or Work to save the current spot.</div>';
+    return; }
+  rows.forEach(([k,label]) => {
+    const d=document.createElement('div'); d.className='hit';
+    d.innerHTML=`<div class="ico">📍</div><div><div class="hit-main">${label}</div></div>`;
+    d.onclick=()=>{ map.setView(saved(k),16); sheetDown(); };
+    out.appendChild(d);
+  });
+  sheetUp();
+};
+document.getElementById('qr').onclick = () => {
+  sect.textContent = 'Directions';
+  out.innerHTML = '<div class="muted">Tap the map for a start point, then again '
+                + 'for the destination — or use “Directions” on any result.</div>';
+  sheetUp();
+};
+
+// Map clicks still build a route, as before.
+map.on('click', async e => {
+  if(pts.length >= 2) return;
+  pts.push(e.latlng);
+  const label = pts.length === 1 ? 'Start' : 'Destination';
+  const pin = L.marker(e.latlng).addTo(map).bindPopup(`${label}: loading…`).openPopup();
+  pins.push(pin);
+  pin.setPopupContent(`<b>${label}</b><br>` + esc(await reverse(e.latlng)));
+  if(pts.length === 2) route();
+});
+
+sheetDown();
 </script>
+
 </body>
 </html>
