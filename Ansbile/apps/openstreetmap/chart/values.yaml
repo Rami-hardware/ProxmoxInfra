@@ -12,10 +12,12 @@ nodePort: 30330
 # gateway-server has ~2.9Gi RAM / ~3G free disk — the import OOM-killed there.
 targetNode: media-server
 
-# One-time import of an OSM extract. The import Job runs before the server
-# starts and is skipped on re-sync once the database volume is populated.
+# One-time import of an OSM extract. The import runs before the server starts
+# and is skipped on re-sync once the database volume is populated.
 # Full-planet is not viable here — use a regional/country extract.
-pbfUrl: "https://download.geofabrik.de/africa/egypt-latest.osm.pbf"
+# Geofabrik has no standalone Saudi Arabia file; Saudi ships inside the
+# GCC States region (Saudi, UAE, Oman, Qatar, Kuwait, Bahrain) — ~241 MB.
+pbfUrl: "https://download.geofabrik.de/asia/gcc-states-latest.osm.pbf"
 
 env:
   threads: 4
