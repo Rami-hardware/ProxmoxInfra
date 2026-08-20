@@ -20,10 +20,10 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: {{ .Values.targetNode }}
       initContainers:
-        # Downloads the extract and runs the image's `import` mode, but only
-        # when the database volume is still empty. On every later restart or
-        # ArgoCD re-sync this exits immediately, so the (multi-hour) import
-        # happens exactly once.
+        # Runs the image's `import` mode once, then writes a completion marker.
+        # Guarding on the marker (not PG_VERSION) means an import that dies
+        # midway — OOM, node reboot, cancelled sync — is retried instead of
+        # leaving a half-populated database that looks "done" forever.
         - name: import
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -32,17 +32,34 @@ spec:
             - -c
             - |
               set -euo pipefail
-              if [ -f /data/database/PG_VERSION ]; then
-                echo "OSM database already imported — skipping import."
+              MARKER=/data/database/.import-complete
+              PBF=/data/database/region.osm.pbf
+
+              if [ -f "${MARKER}" ] && [ "$(cat "${MARKER}")" = "${PBF_URL}" ]; then
+                echo "Import already complete for ${PBF_URL} — skipping."
                 exit 0
               fi
+
+              # A marker for a *different* extract means the URL changed:
+              # wipe the old database so the new region imports cleanly.
+              if [ -f "${MARKER}" ]; then
+                echo "Extract changed to ${PBF_URL} — clearing previous import."
+                rm -rf /data/database/postgres "${MARKER}"
+              fi
+
+              # Resume a partial download rather than restarting from zero.
               echo "Downloading extract: ${PBF_URL}"
-              # Download onto the database PVC, not the container layer.
-              curl -fsSL --retry 3 -o /data/database/region.osm.pbf "${PBF_URL}"
-              ln -sf /data/database/region.osm.pbf /data/region.osm.pbf
-              echo "Starting import (this can take hours)..."
+              curl -fL --retry 5 --retry-delay 10 -C - -o "${PBF}" "${PBF_URL}"
+              ln -sf "${PBF}" /data/region.osm.pbf
+
+              echo "Starting import (this can take a long time)..."
               /run.sh import
-              rm -f /data/database/region.osm.pbf
+
+              # Only reached when /run.sh exits 0 (set -e), so the marker can
+              # never claim success for a failed import.
+              echo -n "${PBF_URL}" > "${MARKER}"
+              rm -f "${PBF}"
+              echo "Import complete."
           env:
             - name: PBF_URL
               value: "{{ .Values.pbfUrl }}"
