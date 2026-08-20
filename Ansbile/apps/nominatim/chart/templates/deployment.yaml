@@ -28,7 +28,7 @@ spec:
             - name: PBF_URL
               value: "{{ .Values.pbfUrl }}"
             - name: IMPORT_STYLE
-              value: "address"
+              value: "{{ .Values.importStyle }}"
             - name: THREADS
               value: "{{ .Values.importThreads }}"
             - name: NOMINATIM_PASSWORD

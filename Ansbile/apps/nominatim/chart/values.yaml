@@ -17,6 +17,13 @@ pbfUrl: "https://download.geofabrik.de/asia/gcc-states-latest.osm.pbf"
 # Nominatim's own import threads.
 importThreads: 4
 
+# Import style. "address" indexes only addresses — no hospitals, schools,
+# shops or other POIs, so name searches like "Al Jedaani Hospital" return
+# nothing. "extratags" keeps POIs (and their extra tags) so places are
+# searchable by name, the way Google Maps behaves.
+# Options: admin | street | address | full | extratags
+importStyle: extratags
+
 persistence:
   storageClass: local-path
   data:

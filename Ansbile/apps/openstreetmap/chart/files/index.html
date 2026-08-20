@@ -29,6 +29,11 @@
   .results { overflow-y:auto; flex:1; }
   .hit { padding:10px 16px; border-bottom:1px solid var(--border); cursor:pointer; font-size:13px; }
   .hit:hover { background:var(--bg); }
+  .hit-main { font-weight:600; margin-bottom:2px; }
+  .hit-sub { opacity:.7; font-size:12px; line-height:1.35; }
+  .hit-meta { font-size:11px; opacity:.6; margin-top:4px; }
+  .lnk { color:var(--accent); cursor:pointer; }
+  .lnk:hover { text-decoration:underline; }
   .muted { opacity:.6; font-size:12px; }
   #trip { padding:10px 16px; font-size:13px; display:none; border-bottom:1px solid var(--border); }
   #trip b { font-size:16px; }
@@ -101,23 +106,86 @@ async function getJSON(url){
   return r.json();
 }
 
+// Split "Name, District" into the display name and the rest of the address,
+// so a result reads like a place card rather than one long string.
+function splitName(h){
+  const parts = h.display_name.split(',');
+  const primary = (h.name && h.name.trim()) ? h.name.trim() : parts[0].trim();
+  const rest = h.display_name.startsWith(primary)
+    ? parts.slice(1).join(',').trim()
+    : parts.slice(1).join(',').trim();
+  return [primary, rest];
+}
+
+const KIND = {
+  hospital:'🏥', clinic:'🏥', doctors:'🏥', pharmacy:'💊',
+  school:'🏫', university:'🎓', college:'🎓',
+  restaurant:'🍽️', cafe:'☕', fast_food:'🍔',
+  supermarket:'🛒', mall:'🛍️', bank:'🏦', atm:'🏧',
+  fuel:'⛽', hotel:'🏨', mosque:'🕌', place_of_worship:'🕌',
+  parking:'🅿️', police:'👮', fire_station:'🚒', park:'🌳',
+  city:'🏙️', town:'🏙️', village:'🏘️', suburb:'🏘️', neighbourhood:'🏘️',
+  postcode:'📮', residential:'🛣️', secondary:'🛣️', primary:'🛣️',
+  trunk:'🛣️', tertiary:'🛣️', motorway:'🛣️'
+};
+
+let searchPins = [];
+function clearSearchPins(){ searchPins.forEach(p => map.removeLayer(p)); searchPins = []; }
+
 async function search(){
   const q = document.getElementById('q').value.trim();
   if(!q) return;
   out.innerHTML = '<div class="hit muted">Searching…</div>';
   try{
-    const hits = await getJSON(`${NOMINATIM}/search?q=${encodeURIComponent(q)}&format=json&addressdetails=1&limit=10`);
-    if(!hits.length){ out.innerHTML = '<div class="hit muted">No results.</div>'; return; }
+    // Bias results toward what the user is looking at, like Google Maps does,
+    // but do not hard-restrict to it — a match outside the view still shows.
+    const b = map.getBounds();
+    const vb = [b.getWest(), b.getNorth(), b.getEast(), b.getSouth()].join(',');
+    const url = `${NOMINATIM}/search?q=${encodeURIComponent(q)}`
+              + `&format=json&addressdetails=1&namedetails=1&limit=15`
+              + `&viewbox=${vb}&bounded=0`;
+    const hits = await getJSON(url);
+    if(!hits.length){
+      out.innerHTML = '<div class="hit muted">No results. Try Arabic — most '
+                    + 'Saudi places are tagged in Arabic (e.g. مستشفى instead '
+                    + 'of hospital).</div>';
+      return;
+    }
     out.innerHTML = '';
+    clearSearchPins();
     hits.forEach(h => {
+      const [primary, rest] = splitName(h);
+      const icon = KIND[h.type] || KIND[h.class] || '📍';
+      const km = map.distance(map.getCenter(), [+h.lat, +h.lon]) / 1000;
       const d = document.createElement('div');
       d.className = 'hit';
-      d.innerHTML = `<div>${esc(h.display_name)}</div>`;
-      d.onclick = () => {
+      d.innerHTML =
+        `<div class="hit-main">${icon} ${esc(primary)}</div>` +
+        `<div class="hit-sub">${esc(rest)}</div>` +
+        `<div class="hit-meta">${km < 1 ? Math.round(km*1000)+' m' : km.toFixed(1)+' km'} away` +
+        ` &middot; <span class="lnk" data-act="route">Route here</span></div>`;
+
+      const go = () => {
         map.setView([+h.lat, +h.lon], 17);
         if(marker) map.removeLayer(marker);
         marker = L.marker([+h.lat, +h.lon]).addTo(map)
-                  .bindPopup(esc(h.display_name)).openPopup();
+                  .bindPopup(`<b>${esc(primary)}</b><br>${esc(rest)}`).openPopup();
+      };
+      d.onclick = ev => {
+        if(ev.target.dataset.act === 'route'){
+          // Use it as the destination: keep any existing start point.
+          const dest = L.latLng(+h.lat, +h.lon);
+          if(pts.length >= 2){ pts = [pts[0]]; pins.slice(1).forEach(p=>map.removeLayer(p)); pins = pins.slice(0,1); }
+          if(pts.length === 0){
+            alert('Click your starting point on the map first, then choose "Route here".');
+            return;
+          }
+          pts.push(dest);
+          pins.push(L.marker(dest).addTo(map).bindPopup('Destination: ' + esc(primary)));
+          route();
+          return;
+        }
+        go();
       };
       out.appendChild(d);
     });
