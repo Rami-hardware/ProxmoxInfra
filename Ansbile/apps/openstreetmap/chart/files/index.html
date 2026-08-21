@@ -467,11 +467,146 @@ function renderSteps(activeIdx){
 
 function stopDrive(){
   if(drive){ clearInterval(drive); drive = null; }
+  if(watchId !== null){ navigator.geolocation.clearWatch(watchId); watchId = null; }
+  liveMode = false;
   if(car){ map.removeLayer(car); car = null; }
   if(roadLabel){ map.removeLayer(roadLabel); roadLabel = null; }
   document.getElementById('prog-i').style.width = '0%';
   document.getElementById('nav').style.display = 'none';
   document.body.classList.remove('navigating');
+}
+
+// ── Live GPS navigation ─────────────────────────────────────────────────────
+// watchPosition() streams real fixes; each one is snapped onto the route so
+// distance-to-turn and the step list track actual movement rather than a
+// simulated pace.
+let watchId = null, liveMode = false, lastFix = null;
+
+// Perpendicular distance from p to segment a-b, plus how far along a-b the
+// closest point lies. Works in metres via a local equirectangular projection.
+function projectOnSeg(p, a, b){
+  const t = Math.PI/180, R = 6371000;
+  const latRef = (a[1] + b[1]) / 2 * t;
+  const px = (p.lng - a[0]) * t * Math.cos(latRef) * R;
+  const py = (p.lat - a[1]) * t * R;
+  const bx = (b[0] - a[0]) * t * Math.cos(latRef) * R;
+  const by = (b[1] - a[1]) * t * R;
+  const len2 = bx*bx + by*by;
+  let u = len2 ? (px*bx + py*by) / len2 : 0;
+  u = Math.max(0, Math.min(1, u));
+  const dx = px - bx*u, dy = py - by*u;
+  return {dist: Math.hypot(dx, dy), along: u * Math.sqrt(len2)};
+}
+
+// Nearest point on the whole route: returns cumulative metres travelled and
+// how far off-route we are.
+function snapToRoute(ll){
+  let best = null, acc = 0;
+  for(let i = 0; i < path.length - 1; i++){
+    const segLen = dist(path[i], path[i+1]);
+    const pr = projectOnSeg(ll, path[i], path[i+1]);
+    if(!best || pr.dist < best.off){
+      best = {off: pr.dist, travelled: acc + pr.along, seg: i};
+    }
+    acc += segLen;
+  }
+  return best;
+}
+
+function startLiveNav(){
+  if(!path.length || !rtInfo) return;
+  if(!navigator.geolocation || !window.isSecureContext){
+    sect.textContent = 'Live navigation needs HTTPS';
+    out.innerHTML = '<div class="muted">Browsers only stream GPS over a secure '
+                  + 'connection. Open <b>https://maps.homelab.lan</b> to '
+                  + 'navigate with your real position.</div>';
+    sheetUp();
+    return;
+  }
+  stopDrive();
+  liveMode = true;
+  document.getElementById('nav').style.display = 'block';
+  document.body.classList.add('navigating');
+  map.setZoom(17);
+
+  watchId = navigator.geolocation.watchPosition(onFix, onFixError,
+    {enableHighAccuracy: true, maximumAge: 1000, timeout: 15000});
+}
+
+function onFixError(){
+  document.getElementById('nav-road').textContent = 'Waiting for GPS…';
+  document.getElementById('nav-to').textContent = 'No signal';
+}
+
+function onFix(p){
+  const ll = L.latLng(p.coords.latitude, p.coords.longitude);
+  const snap = snapToRoute(ll);
+  if(!snap) return;
+
+  if(!car){
+    car = L.marker(ll, {icon: puckIcon, zIndexOffset: 1000}).addTo(map);
+  } else {
+    car.setLatLng(ll);
+  }
+  map.panTo(ll, {animate: true, duration: .5});
+
+  // Heading: prefer the device compass, fall back to the route direction.
+  let brg = p.coords.heading;
+  if(brg == null || isNaN(brg)){
+    const i = Math.min(snap.seg, path.length - 2);
+    brg = bearing(path[i], path[i+1]);
+  }
+  const el = car.getElement() && car.getElement().querySelector('i');
+  if(el) el.style.transform = `rotate(${brg}deg)`;
+
+  const total = rtInfo.distance;
+  const travelled = Math.min(snap.travelled, total);
+  const remain = Math.max(0, total - travelled);
+
+  // Which step are we on?
+  let acc = 0, idx = 0;
+  for(let i = 0; i < steps.length; i++){
+    if(travelled < acc + steps[i].distance){ idx = i; break; }
+    acc += steps[i].distance; idx = i;
+  }
+  const st = steps[idx], next = steps[idx+1];
+  const toTurn = Math.max(0, (acc + st.distance) - travelled);
+
+  document.getElementById('nav-arrow').textContent = arrowFor(next || st);
+  document.getElementById('nav-road').textContent =
+    (next && next.name) ? next.name : (st.name || manText(next || st));
+  document.getElementById('nav-to').textContent =
+    (snap.off > 40 ? 'Off route · ' : '') +
+    fmtDist(toTurn) + ' · ' + manText(next || st);
+  renderLanes(st);
+
+  // Real speed from the GPS fix, in km/h.
+  const kmh = (p.coords.speed != null && !isNaN(p.coords.speed))
+            ? Math.round(p.coords.speed * 3.6) : 0;
+  const limit = speeds[Math.min(snap.seg, speeds.length-1)] || null;
+  const sp = document.getElementById('nav-speed');
+  sp.innerHTML = kmh + '<small>km/h</small>';
+  document.getElementById('nav-limit').textContent = limit ? limit : '—';
+  sp.className = 'cur' + (limit && kmh > limit ? ' over' : '');
+
+  document.getElementById('prog-i').style.width =
+    Math.min(100, (travelled/total)*100).toFixed(1) + '%';
+
+  // ETA from the route's own average pace over the distance still to go.
+  const secsLeft = remain / (total / rtInfo.duration);
+  const eta = new Date(Date.now() + secsLeft*1000);
+  document.getElementById('eta-time').textContent = Math.round(secsLeft/60) + ' min';
+  document.getElementById('eta-rest').textContent =
+    fmtDist(remain) + ' · ' + eta.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  renderSteps(idx);
+
+  if(remain < 30){
+    document.getElementById('nav-arrow').textContent = '⚑';
+    document.getElementById('nav-road').textContent = 'Arrived';
+    document.getElementById('nav-to').textContent = '';
+    document.getElementById('prog-i').style.width = '100%';
+  }
+  lastFix = ll;
 }
 
 function startDrive(){
@@ -617,7 +752,9 @@ async function route(){
     // Live inside the header so renderSteps() — which rewrites `out` on every
     // tick — cannot delete it mid-drive.
     sect.innerHTML = `${km} km &middot; ${min} min ` +
-      `<span class="lnk" id="godrive">▶ Start drive</span>`;
+      `<span class="lnk" id="golive">➤ Navigate</span> ` +
+      `<span class="lnk" id="godrive" style="opacity:.7">▶ Preview</span>`;
+    document.getElementById('golive').onclick = startLiveNav;
     document.getElementById('godrive').onclick = startDrive;
     sheetUp();
   }catch(e){ sect.textContent = 'Routing failed'; out.innerHTML =
