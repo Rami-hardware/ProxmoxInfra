@@ -144,6 +144,21 @@
   #eta .x { background:#e11d48; border:0; color:#fff; width:38px; height:38px;
             border-radius:50%; font-size:17px; cursor:pointer; margin:0; flex:none; }
 
+  /* Heading-up: rotate the map panes under a fixed, upward-pointing puck,
+     the way Google and Waze orient the view. Leaflet cannot rotate tiles
+     natively, so the transform is applied to the container instead and the
+     puck stays visually vertical. */
+  body.heading-up #map .leaflet-map-pane {
+    transition: transform .45s ease-out;
+    transform-origin: 50% 50%;
+  }
+  /* Rotating a rectangle leaves empty corners, so grow the map beyond the
+     viewport while heading-up is active and clip at the container. */
+  body.heading-up #map { overflow:hidden; }
+  body.heading-up #map .leaflet-pane > .leaflet-tile-container { will-change:transform; }
+  /* Counter-rotate labels so text is never upside down. */
+  body.heading-up .poi span, body.heading-up .roadlabel { transform:none; }
+
   body.navigating .leaflet-tile-pane {
     filter: invert(1) hue-rotate(180deg) brightness(.82) contrast(1.12) saturate(.7);
   }
@@ -478,6 +493,9 @@ function stopDrive(){
   if(drive){ clearInterval(drive); drive = null; }
   if(watchId !== null){ navigator.geolocation.clearWatch(watchId); watchId = null; }
   liveMode = false;
+  document.body.classList.remove('heading-up');
+  const pane = document.querySelector('#map .leaflet-map-pane');
+  if(pane) pane.style.transform = pane.style.transform.replace(/ ?rotate\([^)]*\)/, '');
   if(car){ map.removeLayer(car); car = null; }
   if(roadLabel){ map.removeLayer(roadLabel); roadLabel = null; }
   document.getElementById('prog-i').style.width = '0%';
@@ -490,6 +508,8 @@ function stopDrive(){
 // distance-to-turn and the step list track actual movement rather than a
 // simulated pace.
 let watchId = null, liveMode = false, lastFix = null;
+// Heading-up rotates the map so travel direction is always up (Google style).
+let headingUp = true;
 
 // Perpendicular distance from p to segment a-b, plus how far along a-b the
 // closest point lies. Works in metres via a local equirectangular projection.
@@ -542,6 +562,7 @@ function startLiveNav(){
   stopDrive();
   liveMode = true;
   hideStartMarkers();
+  if(headingUp) document.body.classList.add('heading-up');
   document.getElementById('nav').style.display = 'block';
   document.body.classList.add('navigating');
   map.setZoom(17);
@@ -565,7 +586,10 @@ function onFix(p){
   } else {
     car.setLatLng(ll);
   }
-  map.panTo(ll, {animate: true, duration: .5});
+    // Keep the driver low on screen so the road ahead fills the view.
+  const off = map.getSize().y * 0.18;
+  map.panTo(map.containerPointToLatLng(
+    map.latLngToContainerPoint(ll).add([0, off])), {animate:true, duration:.5});
 
   // Heading: prefer the device compass, fall back to the route direction.
   let brg = p.coords.heading;
@@ -574,7 +598,15 @@ function onFix(p){
     brg = bearing(path[i], path[i+1]);
   }
   const el = car.getElement() && car.getElement().querySelector('i');
-  if(el) el.style.transform = `rotate(${brg}deg)`;
+  if(headingUp){
+    // The map turns, so the puck itself stays pointing straight ahead.
+    if(el) el.style.transform = 'rotate(0deg)';
+    const pane = document.querySelector('#map .leaflet-map-pane');
+    if(pane) pane.style.transform =
+      pane.style.transform.replace(/ ?rotate\([^)]*\)/, '') + ` rotate(${-brg}deg)`;
+  } else if(el){
+    el.style.transform = `rotate(${brg}deg)`;
+  }
 
   const total = rtInfo.distance;
   const travelled = Math.min(snap.travelled, total);
@@ -967,8 +999,20 @@ document.getElementById('clearq').onclick = () => {
 // ── Tools ───────────────────────────────────────────────────────────────────
 document.getElementById('t-zin').onclick  = () => map.zoomIn();
 document.getElementById('t-zout').onclick = () => map.zoomOut();
-document.getElementById('t-layers').onclick = () =>
+document.getElementById('t-layers').onclick = () => {
+  if(liveMode){
+    // While navigating this switches between heading-up and north-up.
+    headingUp = !headingUp;
+    document.body.classList.toggle('heading-up', headingUp);
+    if(!headingUp){
+      const pane = document.querySelector('#map .leaflet-map-pane');
+      if(pane) pane.style.transform =
+        pane.style.transform.replace(/ ?rotate\([^)]*\)/, '');
+    }
+    return;
+  }
   document.body.classList.toggle('daylight');
+};
 document.getElementById('t-me').onclick = async () => {
   const ll = await locate();
   if(ll){ map.setView(ll, 17); setMe(ll); return; }
