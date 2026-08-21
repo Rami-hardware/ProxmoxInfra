@@ -301,6 +301,7 @@ async function search(){
   if(!q) return;
   // Clear any header left over from a previous action (a route error, a
   // category browse) so it cannot sit above unrelated results.
+  clearMap();
   sect.textContent = 'Searching…';
   out.innerHTML = '<div class="hit muted">Searching…</div>';
   try{
@@ -654,6 +655,19 @@ const CAT_COLOR = {
 let poiPins = [];
 function clearPois(){ poiPins.forEach(p => map.removeLayer(p)); poiPins = []; }
 
+// Remove every transient layer: the single search pin, route start/end pins,
+// the drawn route, and the drive overlay. Without this the pins from an
+// earlier search stay on the map with no way to dismiss them.
+function clearMap(){
+  stopDrive();
+  clearPois();
+  if(marker){ map.removeLayer(marker); marker = null; }
+  pins.forEach(p => map.removeLayer(p)); pins = [];
+  pts = [];
+  if(line){ map.removeLayer(line); line = null; }
+  path = []; steps = []; rtInfo = null;
+}
+
 function poiIcon(cat, label){
   const c = CAT_COLOR[cat] || '#7c8496';
   const g = KIND[cat] || '📍';
@@ -665,6 +679,7 @@ function poiIcon(cat, label){
 async function browse(cat, btn){
   document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
   if(btn) btn.classList.add('on');
+  clearMap();
   sect.textContent = 'Loading…';
   sheetUp();
   out.innerHTML = '<div class="muted">Searching nearby…</div>';
@@ -789,7 +804,7 @@ const qEl = document.getElementById('q');
 qEl.addEventListener('keydown', e => { if(e.key === 'Enter'){ sheetUp(); search(); } });
 qEl.addEventListener('focus', sheetUp);
 document.getElementById('clearq').onclick = () => {
-  qEl.value = ''; out.innerHTML = ''; clearPois();
+  qEl.value = ''; out.innerHTML = ''; clearMap();
   document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
   sect.textContent = 'Explore nearby';
 };
