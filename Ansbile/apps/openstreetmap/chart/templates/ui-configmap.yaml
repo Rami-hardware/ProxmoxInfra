@@ -55,4 +55,11 @@ metadata:
     app: openstreetmap-ui
 binaryData:
   leaflet.js: {{ .Files.Get "files/leaflet.js" | b64enc }}
+  # Leaflet builds marker URLs relative to its own CSS, so these must be
+  # served alongside it or every pin 404s and renders as a broken image.
+  marker-icon.png: {{ .Files.Get "files/images/marker-icon.png" | b64enc }}
+  marker-icon-2x.png: {{ .Files.Get "files/images/marker-icon-2x.png" | b64enc }}
+  marker-shadow.png: {{ .Files.Get "files/images/marker-shadow.png" | b64enc }}
+  layers.png: {{ .Files.Get "files/images/layers.png" | b64enc }}
+  layers-2x.png: {{ .Files.Get "files/images/layers-2x.png" | b64enc }}
 {{- end }}

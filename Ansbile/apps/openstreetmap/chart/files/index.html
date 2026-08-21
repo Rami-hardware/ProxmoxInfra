@@ -299,6 +299,9 @@ function clearSearchPins(){ searchPins.forEach(p => map.removeLayer(p)); searchP
 async function search(){
   const q = document.getElementById('q').value.trim();
   if(!q) return;
+  // Clear any header left over from a previous action (a route error, a
+  // category browse) so it cannot sit above unrelated results.
+  sect.textContent = 'Searching…';
   out.innerHTML = '<div class="hit muted">Searching…</div>';
   try{
     // Bias results toward what the user is looking at, like Google Maps does,
@@ -327,7 +330,9 @@ async function search(){
                     + 'of hospital).</div>';
       return;
     }
-    if(viaAddr) sect.textContent = hits.length + ' address matches';
+    sect.textContent = viaAddr
+      ? hits.length + ' address matches'
+      : hits.length + ' results';
     out.innerHTML = '';
     clearSearchPins();
     hits.forEach(h => {

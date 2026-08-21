@@ -33,6 +33,21 @@ spec:
             - name: uijs
               mountPath: /usr/share/nginx/html/vendor/leaflet.js
               subPath: leaflet.js
+            - name: uijs
+              mountPath: /usr/share/nginx/html/vendor/images/marker-icon.png
+              subPath: marker-icon.png
+            - name: uijs
+              mountPath: /usr/share/nginx/html/vendor/images/marker-icon-2x.png
+              subPath: marker-icon-2x.png
+            - name: uijs
+              mountPath: /usr/share/nginx/html/vendor/images/marker-shadow.png
+              subPath: marker-shadow.png
+            - name: uijs
+              mountPath: /usr/share/nginx/html/vendor/images/layers.png
+              subPath: layers.png
+            - name: uijs
+              mountPath: /usr/share/nginx/html/vendor/images/layers-2x.png
+              subPath: layers-2x.png
             - name: ui
               mountPath: /etc/nginx/conf.d/default.conf
               subPath: nginx.conf
