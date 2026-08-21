@@ -75,14 +75,6 @@ nginx_services:
     namespace: network
     k8s_service: adguard-home
 
-  - name: openstreetmap
-    ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
-    port: 30330
-    namespace: network
-    cache_paths:
-      - /tile
-    cache_ttl: "30d"
-
 nginx_services_local:
   - name: jellyfin
     namespace: media
@@ -185,28 +177,4 @@ nginx_services_local:
     ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
     port: 30324
     namespace: media
-    auth: false
-
-  - name: openstreetmap
-    ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
-    port: 30330
-    namespace: network
-    auth: false
-
-  - name: maps
-    ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
-    port: 30333
-    namespace: network
-    auth: false
-
-  - name: nominatim
-    ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
-    port: 30331
-    namespace: network
-    auth: false
-
-  - name: osrm
-    ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
-    port: 30332
-    namespace: network
     auth: false
