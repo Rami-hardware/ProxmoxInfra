@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Homelab Maps</title>
-<link rel="stylesheet" href="/vendor/leaflet.css">
+<link rel="stylesheet" href="/vendor/maplibre-gl.css">
 <style>
+
   :root { --bg:#fff; --fg:#111; --panel:#f7f7f8; --border:#d8d8dc; --accent:#2b6cb0;
           --sheet:#1c1f26; --sheet2:#262a33; --chip:#2a2e37; --txt:#e9eaee; --dim:#9aa0ad; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -15,10 +16,19 @@
   #map { position:absolute; inset:0; background:#11131a; }
 
   /* Permanent night map, like the reference. */
-  .leaflet-tile-pane {
-    filter: invert(1) hue-rotate(180deg) brightness(.82) contrast(1.1) saturate(.7);
-  }
-  .leaflet-control-zoom { display:none; }
+  /* MapLibre marker elements are plain divs we style ourselves. */
+  .pin { width:22px; height:32px; cursor:pointer;
+         background:#3b82f6; border:2px solid #fff; border-radius:50% 50% 50% 0;
+         transform:rotate(-45deg); box-shadow:0 3px 8px rgba(0,0,0,.55); }
+  .poiwrap, .lblwrap, .mewrap { cursor:pointer; }
+  .maplibregl-popup-content { background:var(--sheet); color:var(--txt);
+                              border-radius:12px; padding:12px 14px;
+                              box-shadow:0 8px 30px rgba(0,0,0,.5); font-size:13px; }
+  .maplibregl-popup-tip { border-top-color:var(--sheet) !important;
+                          border-bottom-color:var(--sheet) !important; }
+  .maplibregl-popup-close-button { color:var(--dim); font-size:17px; }
+  /* MapLibre renders the dark style directly — no CSS filter needed. */
+  .maplibregl-ctrl-attrib { font-size:10px; opacity:.5; }
 
   /* ── Category chips ─────────────────────────────────────────────────── */
   #chips { position:absolute; top:0; left:0; right:0; z-index:900;
@@ -148,26 +158,10 @@
      the way Google and Waze orient the view. Leaflet cannot rotate tiles
      natively, so the transform is applied to the container instead and the
      puck stays visually vertical. */
-  /* Rotate the map element itself. Leaflet owns the transform on
-     .leaflet-map-pane and rewrites it on every pan, so rotating that pane is
-     immediately undone — the wrapper is the only stable place to do this. */
-  body.heading-up #map {
-    transition: transform .45s ease-out;
-    transform-origin: 50% 50%;
-  }
   /* A rotated rectangle leaves empty corners, so oversize the element and
      clip at the body. 1.5x covers rotation at any angle. */
-  body.heading-up #map {
-    width:150%; height:150%; left:-25%; top:-25%;
-  }
-  body.heading-up { overflow:hidden; }
-  /* #nav and #tools are siblings of #map, so the rotation never reaches them. */
   /* Counter-rotate labels so text is never upside down. */
-  body.heading-up .poi span, body.heading-up .roadlabel { transform:none; }
 
-  body.navigating .leaflet-tile-pane {
-    filter: invert(1) hue-rotate(180deg) brightness(.82) contrast(1.12) saturate(.7);
-  }
   /* Position puck: a single green chevron with a soft halo, like the
      reference app. Nothing else marks the driver while navigating. */
   .puck { width:0; height:0; }
@@ -264,25 +258,40 @@
   </div>
 </div>
 
-<script src="/vendor/leaflet.js"></script>
+<script src="/vendor/pmtiles.js"></script>
+<script src="/vendor/maplibre-gl.js"></script>
 <script>
-// Same-origin paths: nginx proxies these to Nominatim and OSRM, so the page
-// works on any host or port it is served from, with no CORS and no extra DNS.
+// ── Map ─────────────────────────────────────────────────────────────────────
+// MapLibre GL renders vector tiles, so the map can rotate and tilt while
+// labels stay upright — the reason for moving off raster tiles.
 const NOMINATIM = '/geocode';
 const OSRM      = '';
 
-const map = L.map('map', {zoomControl:false}).setView([21.54, 39.19], 15);
-L.tileLayer('/tile/{z}/{x}/{y}.png', {
-  maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'
-}).addTo(map);
+// Arabic needs shaping; without this plugin letters render disconnected.
+maplibregl.setRTLTextPlugin('/vendor/mapbox-gl-rtl-text.js', null, true);
+
+const protocol = new pmtiles.Protocol();
+maplibregl.addProtocol('pmtiles', protocol.tile);
+
+const map = new maplibregl.Map({
+  container: 'map',
+  style: '/style-dark.json',
+  center: [39.19, 21.54],          // Jeddah, [lng,lat]
+  zoom: 14,
+  pitch: 0,
+  bearing: 0,
+  attributionControl: {compact: true}
+});
+map.on('error', e => console.warn('map:', e && e.error && e.error.message));
 
 const out   = document.getElementById('out');
 const sheet = document.getElementById('sheet');
 const sect  = document.getElementById('sect');
-let marker = null, pts = [], line = null, pins = [];
-let mePin = null;   // declared here: routeTo() reads it before setMe() runs
 
-// The sheet collapses to just the search bar so the map stays the focus.
+// Leaflet handed back layer objects; MapLibre markers are plain objects we
+// track ourselves.
+let marker = null, pts = [], pins = [], routeAdded = false;
+
 function sheetDown(){ sheet.classList.add('down'); }
 function sheetUp(){ sheet.classList.remove('down'); }
 document.getElementById('grip').onclick = () =>
@@ -291,8 +300,6 @@ document.getElementById('grip').onclick = () =>
 function esc(s){ return String(s).replace(/[&<>"']/g, c => (
   {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-// A 502/503 from nginx is an HTML error page, not JSON. Check the status
-// first so the user sees "still starting up" instead of a parser error.
 async function getJSON(url){
   const r = await fetch(url);
   if(r.status === 502 || r.status === 503)
@@ -301,15 +308,73 @@ async function getJSON(url){
   return r.json();
 }
 
-// Split "Name, District" into the display name and the rest of the address,
-// so a result reads like a place card rather than one long string.
+// ── Geometry helpers (metres) ───────────────────────────────────────────────
+function dist(a, b){                      // a,b = [lng,lat]
+  const R = 6371000, t = Math.PI/180;
+  const dLat = (b[1]-a[1])*t, dLon = (b[0]-a[0])*t;
+  const la1 = a[1]*t, la2 = b[1]*t;
+  const h = Math.sin(dLat/2)**2 + Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+function bearing(a, b){
+  const t = Math.PI/180;
+  const y = Math.sin((b[0]-a[0])*t)*Math.cos(b[1]*t);
+  const x = Math.cos(a[1]*t)*Math.sin(b[1]*t) -
+            Math.sin(a[1]*t)*Math.cos(b[1]*t)*Math.cos((b[0]-a[0])*t);
+  return (Math.atan2(y,x)/t + 360) % 360;
+}
+function fmtDist(m){ return m >= 1000 ? (m/1000).toFixed(1)+' km' : Math.round(m)+' m'; }
+
+// ── Markers ─────────────────────────────────────────────────────────────────
+function makeMarker(lngLat, html, cls){
+  const el = document.createElement('div');
+  el.className = cls || 'pin';
+  el.innerHTML = html || '';
+  return new maplibregl.Marker({element: el, anchor: cls === 'puck' ? 'center' : 'bottom'})
+           .setLngLat(lngLat).addTo(map);
+}
+function popup(lngLat, html){
+  return new maplibregl.Popup({closeButton:true, offset:26})
+           .setLngLat(lngLat).setHTML(html).addTo(map);
+}
+
+// ── Route line ──────────────────────────────────────────────────────────────
+// Leaflet added a GeoJSON layer; MapLibre wants a source plus layers, added
+// once and updated in place.
+function drawRoute(geojson){
+  const data = {type:'Feature', geometry: geojson};
+  if(!routeAdded){
+    map.addSource('route', {type:'geojson', data});
+    map.addLayer({id:'route-casing', type:'line', source:'route',
+      layout:{'line-cap':'round','line-join':'round'},
+      paint:{'line-color':'#0b3f8f','line-width':11,'line-opacity':.9}});
+    map.addLayer({id:'route-line', type:'line', source:'route',
+      layout:{'line-cap':'round','line-join':'round'},
+      paint:{'line-color':'#3b82f6','line-width':7}});
+    routeAdded = true;
+  } else {
+    map.getSource('route').setData(data);
+    map.setLayoutProperty('route-casing','visibility','visible');
+    map.setLayoutProperty('route-line','visibility','visible');
+  }
+}
+function hideRoute(){
+  if(routeAdded){
+    map.setLayoutProperty('route-casing','visibility','none');
+    map.setLayoutProperty('route-line','visibility','none');
+  }
+}
+function fitTo(coords){
+  const b = coords.reduce((acc,c) => acc.extend(c),
+                          new maplibregl.LngLatBounds(coords[0], coords[0]));
+  map.fitBounds(b, {padding:{top:90,bottom:220,left:60,right:60}, duration:600});
+}
+
+// ── Result helpers ──────────────────────────────────────────────────────────
 function splitName(h){
   const parts = h.display_name.split(',');
   const primary = (h.name && h.name.trim()) ? h.name.trim() : parts[0].trim();
-  const rest = h.display_name.startsWith(primary)
-    ? parts.slice(1).join(',').trim()
-    : parts.slice(1).join(',').trim();
-  return [primary, rest];
+  return [primary, parts.slice(1).join(',').trim()];
 }
 
 const KIND = {
@@ -321,600 +386,47 @@ const KIND = {
   parking:'🅿️', police:'👮', fire_station:'🚒', park:'🌳',
   city:'🏙️', town:'🏙️', village:'🏘️', suburb:'🏘️', neighbourhood:'🏘️',
   postcode:'📮', residential:'🛣️', secondary:'🛣️', primary:'🛣️',
-  trunk:'🛣️', tertiary:'🛣️', motorway:'🛣️'
+  trunk:'🛣️', tertiary:'🛣️', motorway:'🛣️', house:'🏠'
 };
-
-let searchPins = [];
-function clearSearchPins(){ searchPins.forEach(p => map.removeLayer(p)); searchPins = []; }
-
-async function search(){
-  const q = document.getElementById('q').value.trim();
-  if(!q) return;
-  // Clear any header left over from a previous action (a route error, a
-  // category browse) so it cannot sit above unrelated results.
-  clearMap();
-  sect.textContent = 'Searching…';
-  out.innerHTML = '<div class="hit muted">Searching…</div>';
-  try{
-    // Bias results toward what the user is looking at, like Google Maps does,
-    // but do not hard-restrict to it — a match outside the view still shows.
-    const b = map.getBounds();
-    const vb = [b.getWest(), b.getNorth(), b.getEast(), b.getSouth()].join(',');
-    const url = `${NOMINATIM}/search?q=${encodeURIComponent(q)}`
-              + `&format=json&addressdetails=1&namedetails=1&limit=15`
-              + `&viewbox=${vb}&bounded=0`;
-    let hits = await getJSON(url);
-
-    // OSM leaves most Saudi residential streets unnamed, so anything Nominatim
-    // cannot answer is retried against the Saudi National Address index. That
-    // is what makes a pasted Google-style address resolve to a building.
-    let viaAddr = false;
-    if(!hits.length){
-      try{
-        const alt = await getJSON(`/addr/search?q=${encodeURIComponent(q)}&limit=10`);
-        if(alt.length){ hits = alt; viaAddr = true; }
-      }catch(e){ /* fallback is best-effort */ }
-    }
-
-    if(!hits.length){
-      out.innerHTML = '<div class="hit muted">No results. Try Arabic — most '
-                    + 'Saudi places are tagged in Arabic (e.g. مستشفى instead '
-                    + 'of hospital).</div>';
-      return;
-    }
-    sect.textContent = viaAddr
-      ? hits.length + ' address matches'
-      : hits.length + ' results';
-    out.innerHTML = '';
-    clearSearchPins();
-    hits.forEach(h => {
-      const [primary, rest] = splitName(h);
-      const icon = KIND[h.type] || KIND[h.class] || '📍';
-      const km = map.distance(map.getCenter(), [+h.lat, +h.lon]) / 1000;
-      const d = document.createElement('div');
-      d.className = 'hit';
-      d.innerHTML =
-        `<div class="hit-main">${icon} ${esc(primary)}</div>` +
-        `<div class="hit-sub">${esc(rest)}</div>` +
-        `<div class="hit-meta">${km < 1 ? Math.round(km*1000)+' m' : km.toFixed(1)+' km'} away` +
-        ` &middot; <span class="lnk" data-act="route">Route here</span></div>`;
-
-      const go = () => {
-        map.setView([+h.lat, +h.lon], 17);
-        if(marker) map.removeLayer(marker);
-        marker = L.marker([+h.lat, +h.lon]).addTo(map)
-                  .bindPopup(`<b>${esc(primary)}</b><br>${esc(rest)}`).openPopup();
-      };
-      d.onclick = ev => {
-        // Same path as every other result: routeTo() gets a GPS fix itself.
-        if(ev.target.dataset.act === 'route'){ routeTo(h); return; }
-        go();
-      };
-      out.appendChild(d);
-    });
-  }catch(e){ out.innerHTML = `<div class="hit muted">Search failed: ${esc(e.message)}</div>`; }
-}
-
-async function reverse(ll){
-  try{
-    // 4s ceiling: a stalled geocoder must never hold up the map.
-    const ac = new AbortController();
-    const t = setTimeout(() => ac.abort(), 4000);
-    const r = await fetch(`${NOMINATIM}/reverse?lat=${ll.lat}&lon=${ll.lng}&format=json`,
-                          {signal: ac.signal});
-    clearTimeout(t);
-    if(!r.ok) throw new Error('geocoder unavailable');
-    const j = await r.json();
-    return j.display_name || `${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}`;
-  }catch(e){ return `${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}`; }
-}
-
-// ── Drive simulation ────────────────────────────────────────────────────────
-// The route geometry is a list of [lng,lat] points. We walk it at a speed
-// derived from OSRM's own duration estimate, so the drive takes roughly the
-// time the route claims, and surface the matching turn instruction as we go.
-const puckIcon = L.divIcon({className:'puck', html:'<i></i>',
-                            iconSize:[0,0], iconAnchor:[0,0]});
-let car = null, drive = null, path = [], steps = [], rtInfo = null, speeds = [];
-let roadLabel = null;
-
-const MAN = {
-  'depart':'Start', 'arrive':'Arrive', 'turn':'Turn', 'new name':'Continue',
-  'merge':'Merge', 'on ramp':'Take the ramp', 'off ramp':'Take the exit',
-  'fork':'Keep', 'end of road':'At the end of the road', 'continue':'Continue',
-  'roundabout':'Enter the roundabout', 'rotary':'Enter the rotary',
-  'exit roundabout':'Exit the roundabout', 'exit rotary':'Exit the rotary'
-};
-// Big directional glyph for the banner, chosen from the maneuver modifier.
-const ARROW = {
-  'left':'↰', 'slight left':'↖', 'sharp left':'↰',
-  'right':'↱', 'slight right':'↗', 'sharp right':'↱',
-  'straight':'↑', 'uturn':'↩'
-};
-function arrowFor(st){
-  const m = st.maneuver;
-  if(m.type === 'arrive') return '⚑';
-  if(m.type === 'depart') return '↑';
-  if(m.type.indexOf('roundabout') === 0 || m.type.indexOf('rotary') === 0) return '↻';
-  return ARROW[m.modifier] || '↑';
-}
-function manText(st){
-  const m = st.maneuver;
-  const head = MAN[m.type] || 'Continue';
-  const mod = m.modifier ? ' ' + m.modifier : '';
-  if(m.type === 'arrive') return 'Arrive at destination';
-  if(m.type === 'depart') return 'Head ' + (m.modifier || 'off');
-  return head + mod;
-}
-function fmtDist(m){ return m >= 1000 ? (m/1000).toFixed(1)+' km' : Math.round(m)+' m'; }
-
-function dist(a,b){
-  const R=6371000, t=Math.PI/180;
-  const dLat=(b[1]-a[1])*t, dLon=(b[0]-a[0])*t;
-  const la1=a[1]*t, la2=b[1]*t;
-  const h=Math.sin(dLat/2)**2 + Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)**2;
-  return 2*R*Math.asin(Math.sqrt(h));
-}
-// Compass bearing a→b, degrees clockwise from north.
-function bearing(a,b){
-  const t=Math.PI/180;
-  const y=Math.sin((b[0]-a[0])*t)*Math.cos(b[1]*t);
-  const x=Math.cos(a[1]*t)*Math.sin(b[1]*t) -
-          Math.sin(a[1]*t)*Math.cos(b[1]*t)*Math.cos((b[0]-a[0])*t);
-  return (Math.atan2(y,x)/t + 360) % 360;
-}
-
-// Lane guidance. The extract carries no turn:lanes tags, so approximate it
-// from the intersection's own bearings: one arrow per available exit, with
-// the one we actually take highlighted.
-function renderLanes(st){
-  const el = document.getElementById('lanes');
-  const ins = (st.intersections && st.intersections[0]) || null;
-  if(!ins || !ins.bearings || ins.bearings.length < 2){ el.innerHTML = ''; return; }
-  const outB = ins.bearings[ins.out !== undefined ? ins.out : 0];
-  el.innerHTML = ins.bearings.map((b,i) => {
-    const rel = ((b - ins.bearings[ins.in !== undefined ? ins.in : 0] + 540) % 360) - 180;
-    const g = Math.abs(rel) < 25 ? '↑' : rel > 0 ? '↱' : '↰';
-    const on = (b === outB) ? ' on' : '';
-    return `<div class="ln${on}">${g}</div>`;
-  }).join('');
-}
-
-// Turn list in the sheet: completed steps dim, the active one highlights.
-function renderSteps(activeIdx){
-  out.innerHTML = '';
-  steps.forEach((st,i) => {
-    const d = document.createElement('div');
-    d.className = 'hit';
-    d.style.opacity = i < activeIdx ? '.45' : '1';
-    if(i === activeIdx) d.style.background = 'var(--sheet2)';
-    d.innerHTML = `<div class="ico">${arrowFor(st)}</div>` +
-      `<div style="min-width:0;flex:1"><div class="hit-main">${esc(manText(st))}</div>` +
-      `<div class="hit-sub">${esc(st.name || '')}</div></div>` +
-      `<div class="hit-meta">${fmtDist(st.distance)}</div>`;
-    out.appendChild(d);
-  });
-}
-
-function stopDrive(){
-  if(drive){ clearInterval(drive); drive = null; }
-  if(watchId !== null){ navigator.geolocation.clearWatch(watchId); watchId = null; }
-  liveMode = false;
-  document.body.classList.remove('heading-up');
-  document.getElementById('map').style.transform = '';
-  if(car){ map.removeLayer(car); car = null; }
-  if(roadLabel){ map.removeLayer(roadLabel); roadLabel = null; }
-  document.getElementById('prog-i').style.width = '0%';
-  document.getElementById('nav').style.display = 'none';
-  document.body.classList.remove('navigating');
-}
-
-// ── Live GPS navigation ─────────────────────────────────────────────────────
-// watchPosition() streams real fixes; each one is snapped onto the route so
-// distance-to-turn and the step list track actual movement rather than a
-// simulated pace.
-let watchId = null, liveMode = false, lastFix = null;
-// Heading-up rotates the map so travel direction is always up (Google style).
-let headingUp = true;
-
-// Perpendicular distance from p to segment a-b, plus how far along a-b the
-// closest point lies. Works in metres via a local equirectangular projection.
-function projectOnSeg(p, a, b){
-  const t = Math.PI/180, R = 6371000;
-  const latRef = (a[1] + b[1]) / 2 * t;
-  const px = (p.lng - a[0]) * t * Math.cos(latRef) * R;
-  const py = (p.lat - a[1]) * t * R;
-  const bx = (b[0] - a[0]) * t * Math.cos(latRef) * R;
-  const by = (b[1] - a[1]) * t * R;
-  const len2 = bx*bx + by*by;
-  let u = len2 ? (px*bx + py*by) / len2 : 0;
-  u = Math.max(0, Math.min(1, u));
-  const dx = px - bx*u, dy = py - by*u;
-  return {dist: Math.hypot(dx, dy), along: u * Math.sqrt(len2)};
-}
-
-// Nearest point on the whole route: returns cumulative metres travelled and
-// how far off-route we are.
-function snapToRoute(ll){
-  let best = null, acc = 0;
-  for(let i = 0; i < path.length - 1; i++){
-    const segLen = dist(path[i], path[i+1]);
-    const pr = projectOnSeg(ll, path[i], path[i+1]);
-    if(!best || pr.dist < best.off){
-      best = {off: pr.dist, travelled: acc + pr.along, seg: i};
-    }
-    acc += segLen;
-  }
-  return best;
-}
-
-// While navigating the puck is the only position marker: the start pin and
-// the blue "me" dot would otherwise stack on top of it.
-function hideStartMarkers(){
-  if(pins.length){ map.removeLayer(pins[0]); }
-  if(mePin){ map.removeLayer(mePin); mePin = null; }
-}
-
-function startLiveNav(){
-  if(!path.length || !rtInfo) return;
-  if(!navigator.geolocation || !window.isSecureContext){
-    sect.textContent = 'Live navigation needs HTTPS';
-    out.innerHTML = '<div class="muted">Browsers only stream GPS over a secure '
-                  + 'connection. Open <b>https://maps.homelab.lan</b> to '
-                  + 'navigate with your real position.</div>';
-    sheetUp();
-    return;
-  }
-  stopDrive();
-  liveMode = true;
-  hideStartMarkers();
-  if(headingUp) document.body.classList.add('heading-up');
-  document.getElementById('nav').style.display = 'block';
-  document.body.classList.add('navigating');
-  map.setZoom(17);
-
-  watchId = navigator.geolocation.watchPosition(onFix, onFixError,
-    {enableHighAccuracy: true, maximumAge: 1000, timeout: 15000});
-}
-
-function onFixError(){
-  document.getElementById('nav-road').textContent = 'Waiting for GPS…';
-  document.getElementById('nav-to').textContent = 'No signal';
-}
-
-function onFix(p){
-  const ll = L.latLng(p.coords.latitude, p.coords.longitude);
-  const snap = snapToRoute(ll);
-  if(!snap) return;
-
-  if(!car){
-    car = L.marker(ll, {icon: puckIcon, zIndexOffset: 1000}).addTo(map);
-  } else {
-    car.setLatLng(ll);
-  }
-    // Keep the driver low on screen so the road ahead fills the view.
-  const off = map.getSize().y * 0.18;
-  map.panTo(map.containerPointToLatLng(
-    map.latLngToContainerPoint(ll).add([0, off])), {animate:true, duration:.5});
-
-  // Heading: prefer the device compass, fall back to the route direction.
-  let brg = p.coords.heading;
-  if(brg == null || isNaN(brg)){
-    const i = Math.min(snap.seg, path.length - 2);
-    brg = bearing(path[i], path[i+1]);
-  }
-  const el = car.getElement() && car.getElement().querySelector('i');
-  if(headingUp){
-    // The map turns, so the puck itself stays pointing straight ahead.
-    if(el) el.style.transform = 'rotate(0deg)';
-    document.getElementById('map').style.transform = `rotate(${-brg}deg)`;
-  } else if(el){
-    el.style.transform = `rotate(${brg}deg)`;
-  }
-
-  const total = rtInfo.distance;
-  const travelled = Math.min(snap.travelled, total);
-  const remain = Math.max(0, total - travelled);
-
-  // Which step are we on?
-  let acc = 0, idx = 0;
-  for(let i = 0; i < steps.length; i++){
-    if(travelled < acc + steps[i].distance){ idx = i; break; }
-    acc += steps[i].distance; idx = i;
-  }
-  const st = steps[idx], next = steps[idx+1];
-  const toTurn = Math.max(0, (acc + st.distance) - travelled);
-
-  document.getElementById('nav-arrow').textContent = arrowFor(next || st);
-  document.getElementById('nav-road').textContent =
-    (next && next.name) ? next.name : (st.name || manText(next || st));
-  document.getElementById('nav-to').textContent =
-    (snap.off > 40 ? 'Off route · ' : '') +
-    fmtDist(toTurn) + ' · ' + manText(next || st);
-  renderLanes(st);
-
-  // Real speed from the GPS fix, in km/h.
-  const kmh = (p.coords.speed != null && !isNaN(p.coords.speed))
-            ? Math.round(p.coords.speed * 3.6) : 0;
-  const limit = speeds[Math.min(snap.seg, speeds.length-1)] || null;
-  const sp = document.getElementById('nav-speed');
-  sp.innerHTML = kmh + '<small>km/h</small>';
-  document.getElementById('nav-limit').textContent = limit ? limit : '—';
-  sp.className = 'cur' + (limit && kmh > limit ? ' over' : '');
-
-  document.getElementById('prog-i').style.width =
-    Math.min(100, (travelled/total)*100).toFixed(1) + '%';
-
-  // ETA from the route's own average pace over the distance still to go.
-  const secsLeft = remain / (total / rtInfo.duration);
-  const eta = new Date(Date.now() + secsLeft*1000);
-  document.getElementById('eta-time').textContent = Math.round(secsLeft/60) + ' min';
-  document.getElementById('eta-rest').textContent =
-    fmtDist(remain) + ' · ' + eta.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-  renderSteps(idx);
-
-  if(remain < 30){
-    document.getElementById('nav-arrow').textContent = '⚑';
-    document.getElementById('nav-road').textContent = 'Arrived';
-    document.getElementById('nav-to').textContent = '';
-    document.getElementById('prog-i').style.width = '100%';
-  }
-  lastFix = ll;
-}
-
-function startDrive(){
-  if(!path.length || !rtInfo || !(rtInfo.duration > 0) || !(rtInfo.distance > 0)) return;
-  stopDrive();
-  hideStartMarkers();
-  const nav = document.getElementById('nav');
-  nav.style.display = 'block';
-  document.body.classList.add('navigating');
-  car = L.marker([path[0][1], path[0][0]], {icon:puckIcon, zIndexOffset:1000}).addTo(map);
-
-  let seg = 0, along = 0, travelled = 0;
-  const total = rtInfo.distance;
-  const SPEED_UP = 8, tick = 100;
-  const mPerTick = (total / rtInfo.duration) * (tick/1000) * SPEED_UP;
-  const started = Date.now();
-
-  map.setZoom(17);
-
-  drive = setInterval(() => {
-    let need = mPerTick;
-    while(need > 0 && seg < path.length-1){
-      const segLen = dist(path[seg], path[seg+1]);
-      const left = segLen - along;
-      if(need < left){ along += need; need = 0; }
-      else { need -= left; seg++; along = 0; }
-    }
-    travelled = Math.min(travelled + mPerTick, total);
-
-    if(seg >= path.length-1){
-      const end = path[path.length-1];
-      car.setLatLng([end[1], end[0]]);
-      document.getElementById('nav-arrow').textContent = '⚑';
-      document.getElementById('nav-road').textContent = 'Arrived';
-      document.getElementById('nav-to').textContent = '';
-      document.getElementById('lanes').innerHTML = '';
-      document.getElementById('eta-rest').textContent = '0 m remaining';
-      document.getElementById('prog-i').style.width = '100%';
-      if(roadLabel){ map.removeLayer(roadLabel); roadLabel = null; }
-      renderSteps(steps.length);
-      clearInterval(drive); drive = null;
-      return;
-    }
-
-    const a = path[seg], b = path[seg+1];
-    const segLen = dist(a,b) || 1, f = along/segLen;
-    const pos = [a[1] + (b[1]-a[1])*f, a[0] + (b[0]-a[0])*f];
-    car.setLatLng(pos);
-    map.panTo(pos, {animate:false});
-
-    // Rotate the puck to the direction of travel (heading-up feel without
-    // rotating the tiles, which Leaflet cannot do natively).
-    const brg = bearing(a,b);
-    const el = car.getElement() && car.getElement().querySelector('i');
-    if(el) el.style.transform = `rotate(${brg}deg)`;
-
-    // Current step + distance to the next maneuver.
-    let acc = 0, idx = 0;
-    for(let i=0;i<steps.length;i++){
-      if(travelled < acc + steps[i].distance){ idx = i; break; }
-      acc += steps[i].distance; idx = i;
-    }
-    const st = steps[idx];
-    const next = steps[idx+1];
-    const toTurn = Math.max(0, (acc + st.distance) - travelled);
-
-    document.getElementById('nav-arrow').textContent = arrowFor(next || st);
-    document.getElementById('nav-road').textContent =
-      (next && next.name) ? next.name : (st.name || manText(next || st));
-    document.getElementById('nav-to').textContent =
-      fmtDist(toTurn) + ' · ' + manText(next || st);
-    renderLanes(st);
-
-    // Speed: derived from the simulated pace, capped for realism.
-    const kmh = Math.round((mPerTick/(tick/1000)) * 3.6 / SPEED_UP * SPEED_UP);
-    const limit = speeds[Math.min(seg, speeds.length-1)] || null;
-    const sp = document.getElementById('nav-speed');
-    sp.innerHTML = kmh + '<small>km/h</small>';
-    const lim = document.getElementById('nav-limit');
-    lim.textContent = limit ? limit : '—';
-    sp.className = 'cur' + (limit && kmh > limit ? ' over' : '');
-
-    // Progress along the whole route.
-    document.getElementById('prog-i').style.width =
-      Math.min(100, (travelled/total)*100).toFixed(1) + '%';
-
-    // Label the road ahead, pinned near the next maneuver.
-    const ahead = next && next.name ? next.name : (st.name || '');
-    if(ahead && next && next.maneuver && next.maneuver.location){
-      const ll = [next.maneuver.location[1], next.maneuver.location[0]];
-      if(!roadLabel){
-        roadLabel = L.marker(ll, {interactive:false, icon: L.divIcon({
-          className:'', iconSize:[0,0], iconAnchor:[-12,10],
-          html:`<div class="roadlabel">${esc(ahead)}</div>`})}).addTo(map);
-      } else {
-        roadLabel.setLatLng(ll);
-        const el = roadLabel.getElement();
-        if(el){ const d = el.querySelector('.roadlabel');
-                if(d && d.textContent !== ahead) d.textContent = ahead; }
-      }
-    } else if(roadLabel){ map.removeLayer(roadLabel); roadLabel = null; }
-
-    const remain = total - travelled;
-    const secsLeft = remain / (total/rtInfo.duration);
-    const eta = new Date(Date.now() + secsLeft*1000);
-    document.getElementById('eta-time').textContent =
-      Math.round(secsLeft/60) + ' min';
-    document.getElementById('eta-rest').textContent =
-      fmtDist(remain) + ' · ' +
-      eta.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-
-    renderSteps(idx);
-  }, tick);
-}
-
-async function route(){
-  const c = pts.map(p => `${p.lng},${p.lat}`).join(';');
-  sect.textContent = 'Routing…';
-  try{
-    const j = await getJSON(`${OSRM}/route/v1/driving/${c}?overview=full&geometries=geojson&steps=true&annotations=speed`);
-    if(j.code !== 'Ok' || !j.routes.length){ sect.textContent = 'No route found.'; return; }
-    const rt = j.routes[0];
-    // A zero-length route makes every later figure NaN (distance/duration is
-    // 0/0), so stop here rather than rendering "NaN m · Invalid Date".
-    if(!(rt.distance > 0) || !(rt.duration > 0)){
-      sect.textContent = 'Start and destination are the same';
-      out.innerHTML = '<div class="muted">Pick two different points.</div>';
-      return;
-    }
-    if(line) map.removeLayer(line);
-    line = L.geoJSON({type:'Feature', geometry: rt.geometry},
-                     {style:{color:'#2b6cb0', weight:5, opacity:.8}}).addTo(map);
-    map.fitBounds(line.getBounds(), {padding:[40,40]});
-    const km = (rt.distance/1000).toFixed(1);
-    const min = Math.round(rt.duration/60);
-    path = rt.geometry.coordinates;
-    steps = (rt.legs || []).flatMap(l => l.steps || []);
-    // OSRM speed annotation is m/s per geometry segment — the closest thing
-    // to a speed limit available without maxspeed tags.
-    speeds = (rt.legs || []).flatMap(l => (l.annotation && l.annotation.speed) || [])
-                            .map(v => Math.round(v * 3.6 / 5) * 5);
-    rtInfo = {distance: rt.distance, duration: rt.duration};
-    renderSteps(-1);
-    // Live inside the header so renderSteps() — which rewrites `out` on every
-    // tick — cannot delete it mid-drive.
-    sect.innerHTML = `${km} km &middot; ${min} min ` +
-      `<span class="lnk" id="golive">➤ Navigate</span> ` +
-      `<span class="lnk" id="godrive" style="opacity:.7">▶ Preview</span>`;
-    document.getElementById('golive').onclick = startLiveNav;
-    document.getElementById('godrive').onclick = startDrive;
-    sheetUp();
-  }catch(e){ sect.textContent = 'Routing failed'; out.innerHTML =
-      `<div class="muted">${esc(e.message)}</div>`; }
-}
-
-map.on('click', e => {
-  if(pts.length >= 2) return;
-  pts.push(e.latlng);
-  const label = pts.length === 1 ? 'Start' : 'Destination';
-  const pin = L.marker(e.latlng).addTo(map)
-               .bindPopup(`<b>${label}</b>`).openPopup();
-  pins.push(pin);
-
-  // Route immediately — never behind reverse geocoding, which blocks for the
-  // proxy timeout whenever Nominatim is down and would strand the route.
-  if(pts.length === 2) route();
-
-  // Fill in the street name afterwards, best-effort.
-  reverse(e.latlng).then(name =>
-    pin.setPopupContent(`<b>${label}</b><br>${esc(name)}`)).catch(() => {});
-});
-
-document.getElementById('q').addEventListener('keydown', e => { if(e.key === 'Enter') search(); });
-document.getElementById('nav-x').onclick = stopDrive;
-
-// ── Category browse ─────────────────────────────────────────────────────────
-// Nominatim's amenity search over the current viewport, so chips behave like
-// the "Restaurants / Coffee" row in Google Maps.
 const CAT_COLOR = {
   restaurant:'#ef6c3b', cafe:'#ef6c3b', fuel:'#3b82f6', pharmacy:'#16a34a',
   hospital:'#16a34a', supermarket:'#f59e0b', mall:'#a855f7', mosque:'#14b8a6',
   atm:'#6366f1', park:'#22c55e'
 };
-let poiPins = [];
-function clearPois(){ poiPins.forEach(p => map.removeLayer(p)); poiPins = []; }
 
-// Remove every transient layer: the single search pin, route start/end pins,
-// the drawn route, and the drive overlay. Without this the pins from an
-// earlier search stay on the map with no way to dismiss them.
+let poiPins = [], activePopup = null;
+function clearPois(){ poiPins.forEach(p => p.remove()); poiPins = []; }
+
+// Remove every transient layer so pins cannot accumulate across actions.
 function clearMap(){
   stopDrive();
   clearPois();
-  if(marker){ map.removeLayer(marker); marker = null; }
-  pins.forEach(p => map.removeLayer(p)); pins = [];
+  if(marker){ marker.remove(); marker = null; }
+  if(activePopup){ activePopup.remove(); activePopup = null; }
+  pins.forEach(p => p.remove()); pins = [];
   pts = [];
-  if(line){ map.removeLayer(line); line = null; }
+  hideRoute();
   path = []; steps = []; rtInfo = null;
 }
 
-function poiIcon(cat, label){
-  const c = CAT_COLOR[cat] || '#7c8496';
-  const g = KIND[cat] || '📍';
-  return L.divIcon({className:'', iconSize:[0,0], iconAnchor:[13,13],
-    html:`<div class="poi"><b style="background:${c}">${g}</b>` +
-         `<span>${label.replace(/[<>&]/g,'')}</span></div>`});
-}
-
-async function browse(cat, btn){
-  document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
-  if(btn) btn.classList.add('on');
-  clearMap();
-  sect.textContent = 'Loading…';
-  sheetUp();
-  out.innerHTML = '<div class="muted">Searching nearby…</div>';
-  const b = map.getBounds();
-  const vb = [b.getWest(), b.getNorth(), b.getEast(), b.getSouth()].join(',');
-  try{
-    const hits = await getJSON(`${NOMINATIM}/search?q=${encodeURIComponent(cat)}`
-      + `&format=json&addressdetails=1&limit=25&viewbox=${vb}&bounded=1`);
-    clearPois();
-    if(!hits.length){
-      sect.textContent = 'Nothing found nearby';
-      out.innerHTML = '<div class="muted">No ' + esc(cat)
-        + ' mapped in this area. Try zooming out, or search in Arabic.</div>';
-      return;
-    }
-    sect.textContent = hits.length + ' ' + cat + ' nearby';
-    renderHits(hits, cat);
-    hits.forEach(h => {
-      const [primary] = splitName(h);
-      poiPins.push(L.marker([+h.lat, +h.lon], {icon: poiIcon(cat, primary)})
-                    .addTo(map).on('click', () => focusHit(h)));
-    });
-  }catch(e){
-    sect.textContent = 'Explore nearby';
-    out.innerHTML = `<div class="muted">${esc(e.message)}</div>`;
-  }
-}
-
 function focusHit(h){
+  const ll = [+h.lon, +h.lat];
   const [primary, rest] = splitName(h);
-  map.setView([+h.lat, +h.lon], 17);
-  if(marker) map.removeLayer(marker);
-  marker = L.marker([+h.lat, +h.lon]).addTo(map)
-            .bindPopup(`<b>${esc(primary)}</b><br>${esc(rest)}`).openPopup();
+  map.easeTo({center: ll, zoom: 17, duration: 600});
+  if(marker) marker.remove();
+  if(activePopup) activePopup.remove();
+  marker = makeMarker(ll, '', 'pin');
+  activePopup = popup(ll, `<b>${esc(primary)}</b><br>${esc(rest)}`);
   sheetDown();
 }
 
-// Shared renderer for chip browse and free-text search.
 function renderHits(hits, cat){
   out.innerHTML = '';
   hits.forEach(h => {
     const [primary, rest] = splitName(h);
     const icon = KIND[h.type] || KIND[cat] || KIND[h.class] || '📍';
-    const km = map.distance(map.getCenter(), [+h.lat, +h.lon]) / 1000;
+    const km = dist([map.getCenter().lng, map.getCenter().lat],
+                    [+h.lon, +h.lat]) / 1000;
     const d = document.createElement('div');
     d.className = 'hit';
     d.innerHTML =
@@ -933,64 +445,447 @@ function renderHits(hits, cat){
   });
 }
 
-// Route from the map centre (the "you are here" dot) to the chosen place.
-// Ask the browser where we are. Resolves to null rather than rejecting, so
-// callers can fall back without try/catch. Geolocation is only available on
-// HTTPS (or localhost) — on plain http:// the browser refuses silently.
+// ── Search ──────────────────────────────────────────────────────────────────
+async function search(){
+  const q = document.getElementById('q').value.trim();
+  if(!q) return;
+  clearMap();
+  sect.textContent = 'Searching…';
+  out.innerHTML = '<div class="muted">Searching…</div>';
+  try{
+    const b = map.getBounds();
+    const vb = [b.getWest(), b.getNorth(), b.getEast(), b.getSouth()].join(',');
+    let hits = await getJSON(`${NOMINATIM}/search?q=${encodeURIComponent(q)}`
+      + `&format=json&addressdetails=1&namedetails=1&limit=15`
+      + `&viewbox=${vb}&bounded=0`);
+
+    // OSM leaves most Saudi residential streets unnamed, so fall back to the
+    // Saudi National Address index for anything Nominatim cannot answer.
+    let viaAddr = false;
+    if(!hits.length){
+      try{
+        const alt = await getJSON(`/addr/search?q=${encodeURIComponent(q)}&limit=10`);
+        if(alt.length){ hits = alt; viaAddr = true; }
+      }catch(e){ /* best effort */ }
+    }
+    if(!hits.length){
+      sect.textContent = 'No results';
+      out.innerHTML = '<div class="muted">Nothing found. Try Arabic — most '
+                    + 'Saudi places are tagged in Arabic (e.g. مستشفى).</div>';
+      return;
+    }
+    sect.textContent = viaAddr ? hits.length + ' address matches'
+                               : hits.length + ' results';
+    renderHits(hits);
+  }catch(e){
+    sect.textContent = 'Search failed';
+    out.innerHTML = `<div class="muted">${esc(e.message)}</div>`;
+  }
+}
+
+async function browse(cat, btn){
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+  if(btn) btn.classList.add('on');
+  clearMap();
+  sect.textContent = 'Loading…';
+  sheetUp();
+  out.innerHTML = '<div class="muted">Searching nearby…</div>';
+  const b = map.getBounds();
+  const vb = [b.getWest(), b.getNorth(), b.getEast(), b.getSouth()].join(',');
+  try{
+    const hits = await getJSON(`${NOMINATIM}/search?q=${encodeURIComponent(cat)}`
+      + `&format=json&addressdetails=1&limit=25&viewbox=${vb}&bounded=1`);
+    if(!hits.length){
+      sect.textContent = 'Nothing found nearby';
+      out.innerHTML = '<div class="muted">No ' + esc(cat) + ' mapped here. '
+                    + 'Try zooming out, or search in Arabic.</div>';
+      return;
+    }
+    sect.textContent = hits.length + ' ' + cat + ' nearby';
+    renderHits(hits, cat);
+    hits.forEach(h => {
+      const [primary] = splitName(h);
+      const c = CAT_COLOR[cat] || '#7c8496';
+      const g = KIND[cat] || '📍';
+      const m = makeMarker([+h.lon, +h.lat],
+        `<div class="poi"><b style="background:${c}">${g}</b>` +
+        `<span>${esc(primary)}</span></div>`, 'poiwrap');
+      m.getElement().onclick = () => focusHit(h);
+      poiPins.push(m);
+    });
+  }catch(e){
+    sect.textContent = 'Explore nearby';
+    out.innerHTML = `<div class="muted">${esc(e.message)}</div>`;
+  }
+}
+
+async function reverse(lngLat){
+  try{
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), 4000);
+    const r = await fetch(`${NOMINATIM}/reverse?lat=${lngLat[1]}&lon=${lngLat[0]}&format=json`,
+                          {signal: ac.signal});
+    clearTimeout(t);
+    if(!r.ok) throw new Error('geocoder unavailable');
+    const j = await r.json();
+    return j.display_name || `${lngLat[1].toFixed(5)}, ${lngLat[0].toFixed(5)}`;
+  }catch(e){ return `${lngLat[1].toFixed(5)}, ${lngLat[0].toFixed(5)}`; }
+}
+
+// ── Navigation state ────────────────────────────────────────────────────────
+let car = null, drive = null, path = [], steps = [], rtInfo = null, speeds = [];
+let roadLabel = null, watchId = null, liveMode = false;
+let mePin = null, headingUp = true;
+
+const MAN = {
+  'depart':'Start', 'arrive':'Arrive', 'turn':'Turn', 'new name':'Continue',
+  'merge':'Merge', 'on ramp':'Take the ramp', 'off ramp':'Take the exit',
+  'fork':'Keep', 'end of road':'At the end of the road', 'continue':'Continue',
+  'roundabout':'Enter the roundabout', 'rotary':'Enter the rotary',
+  'exit roundabout':'Exit the roundabout', 'exit rotary':'Exit the rotary'
+};
+const ARROW = {
+  'left':'↰', 'slight left':'↖', 'sharp left':'↰',
+  'right':'↱', 'slight right':'↗', 'sharp right':'↱',
+  'straight':'↑', 'uturn':'↩'
+};
+function arrowFor(st){
+  const m = st.maneuver;
+  if(m.type === 'arrive') return '⚑';
+  if(m.type === 'depart') return '↑';
+  if(m.type.indexOf('roundabout') === 0 || m.type.indexOf('rotary') === 0) return '↻';
+  return ARROW[m.modifier] || '↑';
+}
+function manText(st){
+  const m = st.maneuver;
+  if(m.type === 'arrive') return 'Arrive at destination';
+  if(m.type === 'depart') return 'Head ' + (m.modifier || 'off');
+  return (MAN[m.type] || 'Continue') + (m.modifier ? ' ' + m.modifier : '');
+}
+
+function renderLanes(st){
+  const el = document.getElementById('lanes');
+  const ins = (st.intersections && st.intersections[0]) || null;
+  if(!ins || !ins.bearings || ins.bearings.length < 2){ el.innerHTML = ''; return; }
+  const outB = ins.bearings[ins.out !== undefined ? ins.out : 0];
+  const inB  = ins.bearings[ins.in  !== undefined ? ins.in  : 0];
+  el.innerHTML = ins.bearings.map(b => {
+    const rel = ((b - inB + 540) % 360) - 180;
+    const g = Math.abs(rel) < 25 ? '↑' : rel > 0 ? '↱' : '↰';
+    return `<div class="ln${b === outB ? ' on' : ''}">${g}</div>`;
+  }).join('');
+}
+
+function renderSteps(activeIdx){
+  out.innerHTML = '';
+  steps.forEach((st,i) => {
+    const d = document.createElement('div');
+    d.className = 'hit';
+    d.style.opacity = i < activeIdx ? '.45' : '1';
+    if(i === activeIdx) d.style.background = 'var(--sheet2)';
+    d.innerHTML = `<div class="ico">${arrowFor(st)}</div>` +
+      `<div style="min-width:0;flex:1"><div class="hit-main">${esc(manText(st))}</div>` +
+      `<div class="hit-sub">${esc(st.name || '')}</div></div>` +
+      `<div class="hit-meta">${fmtDist(st.distance)}</div>`;
+    out.appendChild(d);
+  });
+}
+
+function setMe(lngLat){
+  if(mePin) mePin.remove();
+  mePin = makeMarker(lngLat, '<div class="me"></div>', 'mewrap');
+}
+
+function hideStartMarkers(){
+  if(pins.length) pins[0].remove();
+  if(mePin){ mePin.remove(); mePin = null; }
+}
+
+function stopDrive(){
+  if(drive){ clearInterval(drive); drive = null; }
+  if(watchId !== null){ navigator.geolocation.clearWatch(watchId); watchId = null; }
+  liveMode = false;
+  if(car){ car.remove(); car = null; }
+  if(roadLabel){ roadLabel.remove(); roadLabel = null; }
+  const p = document.getElementById('prog-i');
+  if(p) p.style.width = '0%';
+  document.getElementById('nav').style.display = 'none';
+  document.body.classList.remove('navigating');
+  // Return the camera to a plain north-up overhead view.
+  map.easeTo({pitch: 0, bearing: 0, duration: 500});
+}
+
+// ── Camera ──────────────────────────────────────────────────────────────────
+// This is what raster tiles could not do: rotate to the direction of travel
+// and tilt into a 3D view, while MapLibre keeps every label upright.
+const NAV_PITCH = 55;
+function navCamera(lngLat, brg){
+  map.easeTo({
+    center: lngLat,
+    bearing: headingUp ? brg : 0,
+    pitch: headingUp ? NAV_PITCH : 0,
+    zoom: 17.5,
+    padding: {top: Math.round(window.innerHeight * 0.42), bottom: 0, left: 0, right: 0},
+    duration: 600,
+    essential: true
+  });
+}
+
+function updateRoadLabel(next, st){
+  const ahead = (next && next.name) ? next.name : (st.name || '');
+  if(ahead && next && next.maneuver && next.maneuver.location){
+    const ll = next.maneuver.location;
+    if(!roadLabel){
+      roadLabel = makeMarker(ll, `<div class="roadlabel">${esc(ahead)}</div>`, 'lblwrap');
+    } else {
+      roadLabel.setLngLat(ll);
+      const d = roadLabel.getElement().querySelector('.roadlabel');
+      if(d && d.textContent !== ahead) d.textContent = ahead;
+    }
+  } else if(roadLabel){ roadLabel.remove(); roadLabel = null; }
+}
+
+// Shared HUD update for both simulated and live navigation.
+function updateHud(travelled, seg, kmh){
+  const total = rtInfo.distance;
+  let acc = 0, idx = 0;
+  for(let i = 0; i < steps.length; i++){
+    if(travelled < acc + steps[i].distance){ idx = i; break; }
+    acc += steps[i].distance; idx = i;
+  }
+  const st = steps[idx], next = steps[idx+1];
+  const toTurn = Math.max(0, (acc + st.distance) - travelled);
+
+  document.getElementById('nav-arrow').textContent = arrowFor(next || st);
+  document.getElementById('nav-road').textContent =
+    (next && next.name) ? next.name : (st.name || manText(next || st));
+  document.getElementById('nav-to').textContent =
+    fmtDist(toTurn) + ' · ' + manText(next || st);
+  renderLanes(st);
+  updateRoadLabel(next, st);
+
+  const limit = speeds[Math.min(seg, speeds.length-1)] || null;
+  const sp = document.getElementById('nav-speed');
+  sp.innerHTML = kmh + '<small>km/h</small>';
+  document.getElementById('nav-limit').textContent = limit ? limit : '—';
+  sp.className = 'cur' + (limit && kmh > limit ? ' over' : '');
+
+  document.getElementById('prog-i').style.width =
+    Math.min(100, (travelled/total)*100).toFixed(1) + '%';
+
+  const remain = Math.max(0, total - travelled);
+  const secsLeft = remain / (total / rtInfo.duration);
+  const eta = new Date(Date.now() + secsLeft*1000);
+  document.getElementById('eta-time').textContent = Math.round(secsLeft/60) + ' min';
+  document.getElementById('eta-rest').textContent =
+    fmtDist(remain) + ' · ' + eta.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  renderSteps(idx);
+  return remain;
+}
+
+function arrived(){
+  document.getElementById('nav-arrow').textContent = '⚑';
+  document.getElementById('nav-road').textContent = 'Arrived';
+  document.getElementById('nav-to').textContent = '';
+  document.getElementById('lanes').innerHTML = '';
+  document.getElementById('prog-i').style.width = '100%';
+  document.getElementById('eta-rest').textContent = '0 m remaining';
+  if(roadLabel){ roadLabel.remove(); roadLabel = null; }
+  renderSteps(steps.length);
+}
+
+// ── Simulated drive (preview) ───────────────────────────────────────────────
+function startDrive(){
+  if(!path.length || !rtInfo || !(rtInfo.duration > 0) || !(rtInfo.distance > 0)) return;
+  stopDrive();
+  hideStartMarkers();
+  document.getElementById('nav').style.display = 'block';
+  document.body.classList.add('navigating');
+  car = makeMarker(path[0], '<i></i>', 'puck');
+
+  let seg = 0, along = 0, travelled = 0;
+  const total = rtInfo.distance, SPEED_UP = 8, tick = 100;
+  const mPerTick = (total / rtInfo.duration) * (tick/1000) * SPEED_UP;
+
+  drive = setInterval(() => {
+    let need = mPerTick;
+    while(need > 0 && seg < path.length-1){
+      const segLen = dist(path[seg], path[seg+1]);
+      const left = segLen - along;
+      if(need < left){ along += need; need = 0; }
+      else { need -= left; seg++; along = 0; }
+    }
+    travelled = Math.min(travelled + mPerTick, total);
+    if(seg >= path.length-1){
+      car.setLngLat(path[path.length-1]);
+      arrived();
+      clearInterval(drive); drive = null;
+      return;
+    }
+    const a = path[seg], b = path[seg+1];
+    const segLen = dist(a,b) || 1, f = along/segLen;
+    const pos = [a[0] + (b[0]-a[0])*f, a[1] + (b[1]-a[1])*f];
+    car.setLngLat(pos);
+    const brg = bearing(a,b);
+    navCamera(pos, brg);
+    const el = car.getElement().querySelector('i');
+    if(el) el.style.transform = headingUp ? 'rotate(0deg)' : `rotate(${brg}deg)`;
+    updateHud(travelled, seg, Math.round((total/rtInfo.duration)*3.6));
+  }, tick);
+}
+
+// ── Live GPS navigation ─────────────────────────────────────────────────────
+function projectOnSeg(p, a, b){
+  const t = Math.PI/180, R = 6371000;
+  const latRef = (a[1] + b[1]) / 2 * t;
+  const px = (p[0]-a[0])*t*Math.cos(latRef)*R, py = (p[1]-a[1])*t*R;
+  const bx = (b[0]-a[0])*t*Math.cos(latRef)*R, by = (b[1]-a[1])*t*R;
+  const len2 = bx*bx + by*by;
+  let u = len2 ? (px*bx + py*by)/len2 : 0;
+  u = Math.max(0, Math.min(1, u));
+  return {dist: Math.hypot(px - bx*u, py - by*u), along: u*Math.sqrt(len2)};
+}
+function snapToRoute(ll){
+  let best = null, acc = 0;
+  for(let i = 0; i < path.length - 1; i++){
+    const pr = projectOnSeg(ll, path[i], path[i+1]);
+    if(!best || pr.dist < best.off) best = {off: pr.dist, travelled: acc + pr.along, seg: i};
+    acc += dist(path[i], path[i+1]);
+  }
+  return best;
+}
+
 function locate(timeout){
   return new Promise(resolve => {
     if(!navigator.geolocation || !window.isSecureContext) return resolve(null);
     navigator.geolocation.getCurrentPosition(
-      p => resolve(L.latLng(p.coords.latitude, p.coords.longitude)),
+      p => resolve([p.coords.longitude, p.coords.latitude]),
       () => resolve(null),
       {enableHighAccuracy:true, timeout: timeout || 8000, maximumAge: 30000});
   });
 }
 
+function startLiveNav(){
+  if(!path.length || !rtInfo) return;
+  if(!navigator.geolocation || !window.isSecureContext){
+    sect.textContent = 'Live navigation needs HTTPS';
+    out.innerHTML = '<div class="muted">Browsers only stream GPS over a secure '
+                  + 'connection. Open <b>https://maps.homelab.lan</b>.</div>';
+    sheetUp();
+    return;
+  }
+  stopDrive();
+  hideStartMarkers();
+  liveMode = true;
+  document.getElementById('nav').style.display = 'block';
+  document.body.classList.add('navigating');
+  watchId = navigator.geolocation.watchPosition(onFix,
+    () => {
+      document.getElementById('nav-road').textContent = 'Waiting for GPS…';
+      document.getElementById('nav-to').textContent = 'No signal';
+    },
+    {enableHighAccuracy:true, maximumAge:1000, timeout:15000});
+}
+
+function onFix(p){
+  const ll = [p.coords.longitude, p.coords.latitude];
+  const snap = snapToRoute(ll);
+  if(!snap) return;
+  if(!car) car = makeMarker(ll, '<i></i>', 'puck');
+  else car.setLngLat(ll);
+
+  let brg = p.coords.heading;
+  if(brg == null || isNaN(brg)){
+    const i = Math.min(snap.seg, path.length - 2);
+    brg = bearing(path[i], path[i+1]);
+  }
+  navCamera(ll, brg);
+  const el = car.getElement().querySelector('i');
+  if(el) el.style.transform = headingUp ? 'rotate(0deg)' : `rotate(${brg}deg)`;
+
+  const kmh = (p.coords.speed != null && !isNaN(p.coords.speed))
+            ? Math.round(p.coords.speed * 3.6) : 0;
+  const remain = updateHud(Math.min(snap.travelled, rtInfo.distance), snap.seg, kmh);
+  if(snap.off > 40){
+    document.getElementById('nav-to').textContent =
+      'Off route · ' + document.getElementById('nav-to').textContent;
+  }
+  if(remain < 30) arrived();
+}
+
+// ── Routing ─────────────────────────────────────────────────────────────────
 function beginRoute(start, dest){
-  pins.forEach(p => map.removeLayer(p)); pins = [];
+  pins.forEach(p => p.remove()); pins = [];
   pts = [start, dest];
-  pins.push(L.marker(start).addTo(map).bindPopup('Start'));
-  pins.push(L.marker(dest).addTo(map).bindPopup('Destination'));
+  pins.push(makeMarker(start, '', 'pin'));
+  pins.push(makeMarker(dest, '', 'pin'));
   setMe(start);
   sheetUp();
   route();
 }
 
 async function routeTo(h){
-  const dest = L.latLng(+h.lat, +h.lon);
+  const dest = [+h.lon, +h.lat];
   sect.textContent = 'Finding your location…';
   out.innerHTML = '<div class="muted">Getting GPS position…</div>';
   sheetUp();
-
-  // Prefer a live GPS fix; fall back to a previously set position.
   let start = await locate();
-  if(!start && mePin) start = mePin.getLatLng();
-
+  if(!start && mePin){ const l = mePin.getLngLat(); start = [l.lng, l.lat]; }
   if(!start){
     sect.textContent = 'Where are you starting from?';
-    const why = window.isSecureContext
+    out.innerHTML = '<div class="muted">' + (window.isSecureContext
       ? 'Location is unavailable or was blocked.'
-      : 'This page is on http://, and browsers only allow GPS over https. '
-        + 'Open <b>https://maps.homelab.lan</b> to use your location.';
-    out.innerHTML = `<div class="muted">${why} Tap your starting point on the `
-                  + 'map, then choose Directions again.</div>';
+      : 'This page is on http://; browsers only allow GPS over https.')
+      + ' Tap your starting point on the map, then choose Directions again.</div>';
     return;
   }
-  if(start.distanceTo(dest) < 25){
+  if(dist(start, dest) < 25){
     sect.textContent = 'You are already there';
-    out.innerHTML = '<div class="muted">That destination is within 25 m of '
-                  + 'your position.</div>';
+    out.innerHTML = '<div class="muted">That destination is within 25 m.</div>';
     return;
   }
   beginRoute(start, dest);
 }
 
+async function route(){
+  const c = pts.map(p => `${p[0]},${p[1]}`).join(';');
+  sect.textContent = 'Routing…';
+  try{
+    const j = await getJSON(`${OSRM}/route/v1/driving/${c}`
+      + `?overview=full&geometries=geojson&steps=true&annotations=speed`);
+    if(j.code !== 'Ok' || !j.routes.length){ sect.textContent = 'No route found.'; return; }
+    const rt = j.routes[0];
+    if(!(rt.distance > 0) || !(rt.duration > 0)){
+      sect.textContent = 'Start and destination are the same';
+      out.innerHTML = '<div class="muted">Pick two different points.</div>';
+      return;
+    }
+    drawRoute(rt.geometry);
+    fitTo(rt.geometry.coordinates);
+    path = rt.geometry.coordinates;
+    steps = (rt.legs || []).flatMap(l => l.steps || []);
+    speeds = (rt.legs || []).flatMap(l => (l.annotation && l.annotation.speed) || [])
+                            .map(v => Math.round(v * 3.6 / 5) * 5);
+    rtInfo = {distance: rt.distance, duration: rt.duration};
+    renderSteps(-1);
+    const km = (rt.distance/1000).toFixed(1), min = Math.round(rt.duration/60);
+    sect.innerHTML = `${km} km &middot; ${min} min ` +
+      `<span class="lnk" id="golive">➤ Navigate</span> ` +
+      `<span class="lnk" id="godrive" style="opacity:.7">▶ Preview</span>`;
+    document.getElementById('golive').onclick = startLiveNav;
+    document.getElementById('godrive').onclick = startDrive;
+    sheetUp();
+  }catch(e){
+    sect.textContent = 'Routing failed';
+    out.innerHTML = `<div class="muted">${esc(e.message)}</div>`;
+  }
+}
+
+// ── Wiring ──────────────────────────────────────────────────────────────────
 document.querySelectorAll('.chip').forEach(btn => {
   btn.onclick = () => browse(btn.dataset.cat, btn);
 });
 
-// ── Search bar ──────────────────────────────────────────────────────────────
 const qEl = document.getElementById('q');
 qEl.addEventListener('keydown', e => { if(e.key === 'Enter'){ sheetUp(); search(); } });
 qEl.addEventListener('focus', sheetUp);
@@ -1000,67 +895,58 @@ document.getElementById('clearq').onclick = () => {
   sect.textContent = 'Explore nearby';
 };
 
-// ── Tools ───────────────────────────────────────────────────────────────────
 document.getElementById('t-zin').onclick  = () => map.zoomIn();
 document.getElementById('t-zout').onclick = () => map.zoomOut();
 document.getElementById('t-layers').onclick = () => {
-  if(liveMode){
-    // While navigating this switches between heading-up and north-up.
+  if(liveMode || drive){
+    // While navigating this toggles heading-up/3D against north-up/flat.
     headingUp = !headingUp;
-    document.body.classList.toggle('heading-up', headingUp);
-    if(!headingUp) document.getElementById('map').style.transform = '';
+    map.easeTo({bearing: headingUp ? map.getBearing() : 0,
+                pitch: headingUp ? NAV_PITCH : 0, duration: 400});
     return;
   }
-  document.body.classList.toggle('daylight');
+  // Otherwise tilt the overhead view in and out.
+  map.easeTo({pitch: map.getPitch() > 10 ? 0 : 50, duration: 500});
 };
 document.getElementById('t-me').onclick = async () => {
   const ll = await locate();
-  if(ll){ map.setView(ll, 17); setMe(ll); return; }
+  if(ll){ map.easeTo({center: ll, zoom: 17, duration: 600}); setMe(ll); return; }
   if(!window.isSecureContext){
     sect.textContent = 'Location needs HTTPS';
     out.innerHTML = '<div class="muted">Browsers only share GPS over a secure '
                   + 'connection. Open <b>https://maps.homelab.lan</b>.</div>';
     sheetUp();
   }
-  map.setView([21.54, 39.19], 15);
+  map.easeTo({center: [39.19, 21.54], zoom: 15});
 };
+document.getElementById('nav-x').onclick = stopDrive;
 
-// Blue "you are here" dot. Real geolocation needs a trusted HTTPS cert;
-// without it we simply show the map centre as the reference point.
-function setMe(ll){
-  if(mePin) map.removeLayer(mePin);
-  mePin = L.marker(ll, {icon: L.divIcon({className:'', html:'<div class="me"></div>',
-          iconSize:[16,16], iconAnchor:[8,8]}), interactive:false}).addTo(map);
-}
-setMe([21.54, 39.19]);
-
-// ── Quick actions ───────────────────────────────────────────────────────────
 function saved(k){ try { return JSON.parse(localStorage.getItem(k) || 'null'); }
                    catch(e){ return null; } }
-function setSaved(k, ll){ localStorage.setItem(k, JSON.stringify(ll)); }
 function quick(k, label){
   const v = saved(k);
-  if(v){ map.setView(v, 16); sheetDown(); }
+  if(v){ map.easeTo({center: v, zoom: 16}); sheetDown(); }
   else if(confirm(`Save the current map centre as ${label}?`)){
-    const c = map.getCenter(); setSaved(k, [c.lat, c.lng]);
+    const c = map.getCenter();
+    localStorage.setItem(k, JSON.stringify([c.lng, c.lat]));
   }
 }
 document.getElementById('qh').onclick = () => quick('home', 'Home');
 document.getElementById('qw').onclick = () => quick('work', 'Work');
 document.getElementById('qs').onclick = () => {
-  out.innerHTML = '';
-  sect.textContent = 'Saved places';
-  const rows = [['home','🏠 Home'],['work','💼 Work']]
-    .filter(([k]) => saved(k));
-  if(!rows.length){ out.innerHTML =
-    '<div class="muted">Nothing saved yet — tap Home or Work to save the current spot.</div>';
-    return; }
-  rows.forEach(([k,label]) => {
-    const d=document.createElement('div'); d.className='hit';
-    d.innerHTML=`<div class="ico">📍</div><div><div class="hit-main">${label}</div></div>`;
-    d.onclick=()=>{ map.setView(saved(k),16); sheetDown(); };
-    out.appendChild(d);
-  });
+  out.innerHTML = ''; sect.textContent = 'Saved places';
+  const rows = [['home','🏠 Home'],['work','💼 Work']].filter(([k]) => saved(k));
+  if(!rows.length){
+    out.innerHTML = '<div class="muted">Nothing saved yet — tap Home or Work '
+                  + 'to save the current spot.</div>';
+  } else {
+    rows.forEach(([k,label]) => {
+      const d = document.createElement('div'); d.className = 'hit';
+      d.innerHTML = `<div class="ico">📍</div><div><div class="hit-main">${label}</div></div>`;
+      d.onclick = () => { map.easeTo({center: saved(k), zoom: 16}); sheetDown(); };
+      out.appendChild(d);
+    });
+  }
   sheetUp();
 };
 document.getElementById('qr').onclick = () => {
@@ -1070,19 +956,23 @@ document.getElementById('qr').onclick = () => {
   sheetUp();
 };
 
-// Map clicks still build a route, as before.
-map.on('click', async e => {
+// Tap the map to build a route by hand.
+map.on('click', e => {
   if(pts.length >= 2) return;
-  pts.push(e.latlng);
+  const ll = [e.lngLat.lng, e.lngLat.lat];
+  pts.push(ll);
   const label = pts.length === 1 ? 'Start' : 'Destination';
-  const pin = L.marker(e.latlng).addTo(map).bindPopup(`${label}: loading…`).openPopup();
-  pins.push(pin);
-  pin.setPopupContent(`<b>${label}</b><br>` + esc(await reverse(e.latlng)));
+  pins.push(makeMarker(ll, '', 'pin'));
+  const pu = popup(ll, `<b>${label}</b>`);
   if(pts.length === 2) route();
+  reverse(ll).then(name => pu.setHTML(`<b>${label}</b><br>${esc(name)}`))
+             .catch(() => {});
 });
 
-sheetDown();
+map.on('load', () => {
+  setMe([39.19, 21.54]);
+  sheetDown();
+});
 </script>
-
 </body>
 </html>

@@ -11,12 +11,32 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  name: vector-tiles-glyphs
+binaryData:
+  # Noto Sans glyph ranges, Arabic included. Vendored so labels render with
+  # no internet access, the same as the rest of this stack.
+{{- range $path, $_ := .Files.Glob "files/glyphs/*.pbf" }}
+  {{ base $path }}: {{ $.Files.Get $path | b64enc }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
   name: vector-tiles-nginx
 data:
   default.conf: |
     server {
       listen 8080;
       root /data;
+
+      # MapLibre requests /glyphs/{fontstack}/{range}.pbf; the fontstack
+      # segment varies, so map any stack onto the one vendored family.
+      location ~ ^/glyphs/[^/]+/(.+)$ {
+        alias /glyphs/$1;
+        add_header Access-Control-Allow-Origin *;
+        default_type application/x-protobuf;
+      }
+
       # PMTiles is read with HTTP range requests; nginx serves them natively.
       location / {
         add_header Access-Control-Allow-Origin *;

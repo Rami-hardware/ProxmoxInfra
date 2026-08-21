@@ -8,16 +8,29 @@ metadata:
 data:
   index.html: |
 {{ .Files.Get "files/index.html" | indent 4 }}
-  leaflet.css: |
-{{ .Files.Get "files/leaflet.css" | indent 4 }}
+  style-dark.json: |
+{{ .Files.Get "files/style-dark.json" | indent 4 }}
   nginx.conf: |
     server {
       listen 8080;
       root /usr/share/nginx/html;
       index index.html;
 
+      # Pre-compressed vendor bundles.
+      gzip_static on;
       location /vendor/ {
         alias /usr/share/nginx/html/vendor/;
+        add_header Cache-Control "public, max-age=604800";
+      }
+
+      # Vector tiles and font glyphs come from the vector-tiles service.
+      location /tiles/ {
+        proxy_pass http://vector-tiles:{{ .Values.ui.tilesServicePort }}/;
+        proxy_set_header Host $host;
+      }
+      location /glyphs/ {
+        proxy_pass http://vector-tiles:{{ .Values.ui.tilesServicePort }}/glyphs/;
+        proxy_set_header Host $host;
       }
 
       # Everything is proxied same-origin, so the page works over whatever
@@ -54,12 +67,10 @@ metadata:
   labels:
     app: openstreetmap-ui
 binaryData:
-  leaflet.js: {{ .Files.Get "files/leaflet.js" | b64enc }}
-  # Leaflet builds marker URLs relative to its own CSS, so these must be
-  # served alongside it or every pin 404s and renders as a broken image.
-  marker-icon.png: {{ .Files.Get "files/images/marker-icon.png" | b64enc }}
-  marker-icon-2x.png: {{ .Files.Get "files/images/marker-icon-2x.png" | b64enc }}
-  marker-shadow.png: {{ .Files.Get "files/images/marker-shadow.png" | b64enc }}
-  layers.png: {{ .Files.Get "files/images/layers.png" | b64enc }}
-  layers-2x.png: {{ .Files.Get "files/images/layers-2x.png" | b64enc }}
+  # Shipped gzipped: raw they exceed the 1MB ConfigMap limit. nginx serves
+  # them with gzip_static.
+  maplibre-gl.js.gz: {{ .Files.Get "files/maplibre-gl.js.gz" | b64enc }}
+  maplibre-gl.css.gz: {{ .Files.Get "files/maplibre-gl.css.gz" | b64enc }}
+  mapbox-gl-rtl-text.js.gz: {{ .Files.Get "files/mapbox-gl-rtl-text.js.gz" | b64enc }}
+  pmtiles.js.gz: {{ .Files.Get "files/pmtiles.js.gz" | b64enc }}
 {{- end }}

@@ -63,6 +63,7 @@ ui:
   nominatimServicePort: 8080
   osrmServicePort: 5000
   addressServicePort: 8080
+  tilesServicePort: 8080
 
 # Clip the GCC extract down to Saudi Arabia only (OSM relation 307584).
 # Geofabrik publishes no standalone Saudi file, so we download GCC States
