@@ -147,10 +147,19 @@
   body.navigating .leaflet-tile-pane {
     filter: invert(1) hue-rotate(180deg) brightness(.82) contrast(1.12) saturate(.7);
   }
-  .puck { width:0;height:0; }
-  .puck i { display:block; width:0;height:0; border-left:11px solid transparent;
-            border-right:11px solid transparent; border-bottom:26px solid #22c55e;
-            transform-origin:50% 70%; filter:drop-shadow(0 2px 4px rgba(0,0,0,.6)); }
+  /* Position puck: a single green chevron with a soft halo, like the
+     reference app. Nothing else marks the driver while navigating. */
+  .puck { width:0; height:0; }
+  .puck i { position:relative; display:block; width:34px; height:34px;
+            margin:-17px 0 0 -17px; transform-origin:50% 50%; }
+  .puck i::before { content:''; position:absolute; inset:0; border-radius:50%;
+                    background:rgba(34,197,94,.22); }
+  .puck i::after { content:''; position:absolute; left:50%; top:50%;
+                   width:0; height:0; margin:-13px 0 0 -10px;
+                   border-left:10px solid transparent;
+                   border-right:10px solid transparent;
+                   border-bottom:26px solid #22c55e;
+                   filter:drop-shadow(0 2px 5px rgba(0,0,0,.7)); }
   #drive { display:none; padding:10px 16px; border-bottom:1px solid var(--border); }
   #drive .row { display:flex; gap:8px; }
   #drive button { margin-top:0; }
@@ -383,7 +392,7 @@ async function reverse(ll){
 // derived from OSRM's own duration estimate, so the drive takes roughly the
 // time the route claims, and surface the matching turn instruction as we go.
 const puckIcon = L.divIcon({className:'puck', html:'<i></i>',
-                            iconSize:[22,26], iconAnchor:[11,18]});
+                            iconSize:[0,0], iconAnchor:[0,0]});
 let car = null, drive = null, path = [], steps = [], rtInfo = null, speeds = [];
 let roadLabel = null;
 
@@ -513,6 +522,13 @@ function snapToRoute(ll){
   return best;
 }
 
+// While navigating the puck is the only position marker: the start pin and
+// the blue "me" dot would otherwise stack on top of it.
+function hideStartMarkers(){
+  if(pins.length){ map.removeLayer(pins[0]); }
+  if(mePin){ map.removeLayer(mePin); mePin = null; }
+}
+
 function startLiveNav(){
   if(!path.length || !rtInfo) return;
   if(!navigator.geolocation || !window.isSecureContext){
@@ -525,6 +541,7 @@ function startLiveNav(){
   }
   stopDrive();
   liveMode = true;
+  hideStartMarkers();
   document.getElementById('nav').style.display = 'block';
   document.body.classList.add('navigating');
   map.setZoom(17);
@@ -612,6 +629,7 @@ function onFix(p){
 function startDrive(){
   if(!path.length || !rtInfo || !(rtInfo.duration > 0) || !(rtInfo.distance > 0)) return;
   stopDrive();
+  hideStartMarkers();
   const nav = document.getElementById('nav');
   nav.style.display = 'block';
   document.body.classList.add('navigating');
