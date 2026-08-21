@@ -1,0 +1,28 @@
+{{- if .Values.clipToRegion }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vector-tiles-poly
+data:
+  region.poly: |
+{{ .Files.Get "files/region.poly" | indent 4 }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vector-tiles-nginx
+data:
+  default.conf: |
+    server {
+      listen 8080;
+      root /data;
+      # PMTiles is read with HTTP range requests; nginx serves them natively.
+      location / {
+        add_header Access-Control-Allow-Origin *;
+        add_header Access-Control-Allow-Headers "Range";
+        add_header Access-Control-Expose-Headers "Content-Length,Content-Range";
+        types { }
+        default_type application/octet-stream;
+      }
+    }
