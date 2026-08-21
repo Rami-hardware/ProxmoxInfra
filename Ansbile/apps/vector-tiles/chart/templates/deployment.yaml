@@ -69,6 +69,10 @@ spec:
         - name: build
           image: {{ .Values.builderImage }}
           args:
+            # --download fetches the base data planetiler needs (lake
+            # centerlines, water polygons, Natural Earth). Without it the run
+            # aborts immediately; the files are cached on the PVC afterwards.
+            - "--download"
             - "--osm-path=/data/region.osm.pbf"
             - "--output=/data/tiles.pmtiles"
             - "--tmpdir=/data/tmp"
