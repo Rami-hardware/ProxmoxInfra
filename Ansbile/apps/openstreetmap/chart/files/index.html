@@ -92,44 +92,60 @@
   .me { width:16px; height:16px; border-radius:50%; background:#1a73e8;
         border:3px solid #fff; box-shadow:0 0 0 4px rgba(26,115,232,.35); }
 
-  /* ── Waze/Google-style navigation overlay ─────────────────────────────── */
-  #nav { display:none; position:absolute; inset:0; z-index:1000; pointer-events:none;
+  /* ── Navigation overlay (Waze/Google style) ───────────────────────────── */
+  #nav { display:none; position:absolute; inset:0; z-index:1200; pointer-events:none;
          font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
-  #nav .top { pointer-events:auto; margin:10px; border-radius:14px; overflow:hidden;
-              background:#12151c; color:#fff; box-shadow:0 6px 24px rgba(0,0,0,.45); }
-  #lanes { display:flex; gap:0; padding:10px 8px 6px; justify-content:center;
-           border-bottom:1px solid #262b36; }
-  #lanes .ln { flex:1; text-align:center; font-size:22px; color:#5d6577;
-               border-right:1px solid #262b36; }
-  #lanes .ln:last-child { border-right:0; }
-  #lanes .ln.on { color:#22c55e; }
-  #banner { display:flex; gap:14px; align-items:center; padding:14px 16px; }
-  #banner .arrow { font-size:34px; line-height:1; }
+  /* While navigating the browse UI must get out of the way entirely. */
+  body.navigating #sheet, body.navigating #chips { display:none; }
+  body.navigating #tools { top:auto; bottom:110px; transform:none; }
+
+  #nav .top { pointer-events:auto; margin:10px 10px 0; border-radius:18px;
+              overflow:hidden; background:#11151d; color:#fff;
+              box-shadow:0 8px 30px rgba(0,0,0,.55); }
+  #lanes { display:flex; padding:12px 10px 8px; justify-content:center; gap:2px; }
+  #lanes .ln { flex:1; max-width:64px; text-align:center; font-size:26px;
+               line-height:1; color:#4b5261; }
+  #lanes .ln.on { color:#fff; }
+  #banner { display:flex; gap:16px; align-items:center; padding:4px 18px 16px; }
+  #banner .arrow { font-size:40px; line-height:1; color:#fff; flex:none; }
   #banner .txt { flex:1; min-width:0; }
-  #banner .road { font-size:19px; font-weight:700; white-space:nowrap;
-                  overflow:hidden; text-overflow:ellipsis; }
-  #banner .to { font-size:15px; opacity:.75; margin-top:2px; }
-  #speed { position:absolute; left:16px; bottom:92px; pointer-events:auto;
-           display:flex; flex-direction:column; align-items:center; gap:6px; }
-  .limit { width:56px; height:56px; border-radius:50%; background:#fff; color:#111;
-           border:5px solid #e11d48; display:flex; align-items:center;
-           justify-content:center; font-weight:800; font-size:19px;
-           box-shadow:0 4px 14px rgba(0,0,0,.4); }
-  .cur { background:#12151c; color:#fff; border-radius:10px; padding:4px 9px;
-         font-size:12px; font-weight:700; box-shadow:0 4px 14px rgba(0,0,0,.4); }
+  #banner .road { font-size:21px; font-weight:700; white-space:nowrap;
+                  overflow:hidden; text-overflow:ellipsis; letter-spacing:-.2px; }
+  #banner .to { font-size:17px; opacity:.7; margin-top:3px; font-weight:500; }
+  /* Thin progress bar along the bottom of the banner card. */
+  #prog { height:4px; background:#232936; }
+  #prog i { display:block; height:100%; width:0; background:#3b82f6;
+            transition:width .3s linear; }
+
+  /* Street label pinned to the road ahead, like the reference. */
+  .roadlabel { background:#1a73e8; color:#fff; font-size:12.5px; font-weight:700;
+               padding:6px 10px; border-radius:9px; white-space:nowrap;
+               box-shadow:0 3px 10px rgba(0,0,0,.5); max-width:170px;
+               overflow:hidden; text-overflow:ellipsis; }
+
+  #speed { position:absolute; left:14px; bottom:104px; pointer-events:auto;
+           display:flex; flex-direction:column; align-items:center; gap:7px; }
+  .limit { width:58px; height:58px; border-radius:50%; background:#fff; color:#111;
+           border:6px solid #e11d48; display:flex; align-items:center;
+           justify-content:center; font-weight:800; font-size:20px;
+           box-shadow:0 5px 16px rgba(0,0,0,.5); }
+  .cur { background:#11151d; color:#fff; border-radius:11px; padding:5px 10px;
+         font-size:12.5px; font-weight:800; box-shadow:0 4px 14px rgba(0,0,0,.45);
+         text-align:center; line-height:1.2; }
+  .cur small { display:block; font-size:9.5px; font-weight:600; opacity:.65; }
   .cur.over { background:#e11d48; }
-  #eta { position:absolute; left:50%; transform:translateX(-50%); bottom:16px;
-         pointer-events:auto; display:flex; align-items:center; gap:14px;
-         background:#12151c; color:#fff; border-radius:16px; padding:10px 16px;
-         box-shadow:0 6px 24px rgba(0,0,0,.45); white-space:nowrap; }
-  #eta .big { color:#22c55e; font-weight:700; font-size:17px; }
-  #eta .sub { font-size:13px; opacity:.8; }
-  #eta .x { background:#e11d48; border:0; color:#fff; width:34px; height:34px;
-            border-radius:50%; font-size:16px; cursor:pointer; margin:0; }
-  /* The tile server renders the standard light carto style; filter it to a
-     dark night theme while navigating, like the reference app. */
+
+  #eta { position:absolute; left:50%; transform:translateX(-50%); bottom:18px;
+         pointer-events:auto; display:flex; align-items:center; gap:16px;
+         background:#11151d; color:#fff; border-radius:20px; padding:11px 12px 11px 20px;
+         box-shadow:0 8px 30px rgba(0,0,0,.55); white-space:nowrap; }
+  #eta .big { color:#22c55e; font-weight:700; font-size:18px; }
+  #eta .sub { font-size:13.5px; opacity:.75; margin-top:1px; }
+  #eta .x { background:#e11d48; border:0; color:#fff; width:38px; height:38px;
+            border-radius:50%; font-size:17px; cursor:pointer; margin:0; flex:none; }
+
   body.navigating .leaflet-tile-pane {
-    filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(1.15) saturate(.75);
+    filter: invert(1) hue-rotate(180deg) brightness(.82) contrast(1.12) saturate(.7);
   }
   .puck { width:0;height:0; }
   .puck i { display:block; width:0;height:0; border-left:11px solid transparent;
@@ -161,11 +177,12 @@
           <div class="road" id="nav-road"></div>
           <div class="to"  id="nav-to"></div>
         </div>
+        <div id="prog"><i id="prog-i"></i></div>
       </div>
     </div>
     <div id="speed">
       <div class="limit" id="nav-limit">—</div>
-      <div class="cur" id="nav-speed">0 km/h</div>
+      <div class="cur" id="nav-speed">0<small>km/h</small></div>
     </div>
     <div id="eta">
       <div>
@@ -373,6 +390,7 @@ async function reverse(ll){
 const puckIcon = L.divIcon({className:'puck', html:'<i></i>',
                             iconSize:[22,26], iconAnchor:[11,18]});
 let car = null, drive = null, path = [], steps = [], rtInfo = null, speeds = [];
+let roadLabel = null;
 
 const MAN = {
   'depart':'Start', 'arrive':'Arrive', 'turn':'Turn', 'new name':'Continue',
@@ -455,6 +473,8 @@ function renderSteps(activeIdx){
 function stopDrive(){
   if(drive){ clearInterval(drive); drive = null; }
   if(car){ map.removeLayer(car); car = null; }
+  if(roadLabel){ map.removeLayer(roadLabel); roadLabel = null; }
+  document.getElementById('prog-i').style.width = '0%';
   document.getElementById('nav').style.display = 'none';
   document.body.classList.remove('navigating');
 }
@@ -493,6 +513,8 @@ function startDrive(){
       document.getElementById('nav-to').textContent = '';
       document.getElementById('lanes').innerHTML = '';
       document.getElementById('eta-rest').textContent = '0 m remaining';
+      document.getElementById('prog-i').style.width = '100%';
+      if(roadLabel){ map.removeLayer(roadLabel); roadLabel = null; }
       renderSteps(steps.length);
       clearInterval(drive); drive = null;
       return;
@@ -531,10 +553,30 @@ function startDrive(){
     const kmh = Math.round((mPerTick/(tick/1000)) * 3.6 / SPEED_UP * SPEED_UP);
     const limit = speeds[Math.min(seg, speeds.length-1)] || null;
     const sp = document.getElementById('nav-speed');
-    sp.textContent = kmh + ' km/h';
+    sp.innerHTML = kmh + '<small>km/h</small>';
     const lim = document.getElementById('nav-limit');
     lim.textContent = limit ? limit : '—';
     sp.className = 'cur' + (limit && kmh > limit ? ' over' : '');
+
+    // Progress along the whole route.
+    document.getElementById('prog-i').style.width =
+      Math.min(100, (travelled/total)*100).toFixed(1) + '%';
+
+    // Label the road ahead, pinned near the next maneuver.
+    const ahead = next && next.name ? next.name : (st.name || '');
+    if(ahead && next && next.maneuver && next.maneuver.location){
+      const ll = [next.maneuver.location[1], next.maneuver.location[0]];
+      if(!roadLabel){
+        roadLabel = L.marker(ll, {interactive:false, icon: L.divIcon({
+          className:'', iconSize:[0,0], iconAnchor:[-12,10],
+          html:`<div class="roadlabel">${esc(ahead)}</div>`})}).addTo(map);
+      } else {
+        roadLabel.setLatLng(ll);
+        const el = roadLabel.getElement();
+        if(el){ const d = el.querySelector('.roadlabel');
+                if(d && d.textContent !== ahead) d.textContent = ahead; }
+      }
+    } else if(roadLabel){ map.removeLayer(roadLabel); roadLabel = null; }
 
     const remain = total - travelled;
     const secsLeft = remain / (total/rtInfo.duration);
