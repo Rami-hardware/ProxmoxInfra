@@ -47,8 +47,10 @@ class DBPool:
 pool = DBPool(DB)
 
 def search(q, limit=10):
+    STOP = {"district", "street", "st", "road", "rd", "al", "as", "ash",
+            "saudi", "arabia", "ksa", "unit", "floor", "bldg", "building"}
     toks = [norm(t) for t in tokens(q)]
-    toks = [t for t in toks if len(t) > 1]
+    toks = [t for t in toks if len(t) > 1 and t.lower() not in STOP]
     if not toks:
         return []
     sql = ("SELECT a.num,a.ar,a.en,a.dist,a.city,a.region,a.zip,a.lat,a.lon "
@@ -68,15 +70,55 @@ def search(q, limit=10):
     try:
         rows = run(c, toks)
         if not rows:
-            # Prefer the distinctive parts: longest words plus any building
-            # number, dropping one term at a time from the least useful end.
-            ranked = sorted(set(toks), key=lambda t: (t.isdigit(), len(t)),
-                            reverse=True)
-            for keep in range(min(4, len(ranked)), 0, -1):
-                rows = run(c, ranked[:keep])
+            # The street name identifies the place; the numbers do not. A
+            # pasted address carries several numbers (SANA code, additional
+            # number, postcode) that collide with unrelated streets, so try
+            # word terms first and only then add numbers back.
+            words = [t for t in dict.fromkeys(toks) if not t.isdigit()]
+            nums = [t for t in dict.fromkeys(toks) if t.isdigit()]
+            words.sort(key=len, reverse=True)
+
+            # Try the most specific combinations first: the full street name
+            # together with a number, then the street alone, then numbers.
+            attempts = []
+            if words:
+                for n in nums:
+                    attempts.append(words + [n])
+                attempts.append(words)
+                for keep in range(len(words) - 1, 0, -1):
+                    for n in nums:
+                        attempts.append(words[:keep] + [n])
+                    attempts.append(words[:keep])
+            for n in nums:
+                attempts.append([n])
+
+            for terms in attempts:
+                rows = run(c, terms)
                 if rows:
                     break
-        return [dict(r) for r in rows]
+
+        rows = [dict(r) for r in rows]
+        if len(rows) > 1:
+            # Several rows can satisfy a loosened query. Rank by how much of
+            # the original address each one actually accounts for, so the row
+            # matching the postcode and building number comes first.
+            want = set(toks)
+
+            def score(r):
+                have = set()
+                for f in ("num", "ar", "en", "city", "dist", "zip"):
+                    for w in norm(str(r.get(f) or "")).split():
+                        have.add(w)
+                hit = len(want & have)
+                # Postcode and house number are the strongest signals.
+                if str(r.get("zip") or "") in want:
+                    hit += 3
+                if str(r.get("num") or "") in want:
+                    hit += 2
+                return -hit
+
+            rows.sort(key=score)
+        return rows
     finally:
         c.close()
 
