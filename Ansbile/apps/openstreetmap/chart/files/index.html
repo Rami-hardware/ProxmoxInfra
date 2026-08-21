@@ -148,14 +148,20 @@
      the way Google and Waze orient the view. Leaflet cannot rotate tiles
      natively, so the transform is applied to the container instead and the
      puck stays visually vertical. */
-  body.heading-up #map .leaflet-map-pane {
+  /* Rotate the map element itself. Leaflet owns the transform on
+     .leaflet-map-pane and rewrites it on every pan, so rotating that pane is
+     immediately undone — the wrapper is the only stable place to do this. */
+  body.heading-up #map {
     transition: transform .45s ease-out;
     transform-origin: 50% 50%;
   }
-  /* Rotating a rectangle leaves empty corners, so grow the map beyond the
-     viewport while heading-up is active and clip at the container. */
-  body.heading-up #map { overflow:hidden; }
-  body.heading-up #map .leaflet-pane > .leaflet-tile-container { will-change:transform; }
+  /* A rotated rectangle leaves empty corners, so oversize the element and
+     clip at the body. 1.5x covers rotation at any angle. */
+  body.heading-up #map {
+    width:150%; height:150%; left:-25%; top:-25%;
+  }
+  body.heading-up { overflow:hidden; }
+  /* #nav and #tools are siblings of #map, so the rotation never reaches them. */
   /* Counter-rotate labels so text is never upside down. */
   body.heading-up .poi span, body.heading-up .roadlabel { transform:none; }
 
@@ -192,29 +198,30 @@
 </head>
 <body>
 <div id="map">
-  <div id="nav">
-    <div class="top">
-      <div id="lanes"></div>
-      <div id="banner">
-        <div class="arrow" id="nav-arrow">↑</div>
-        <div class="txt">
-          <div class="road" id="nav-road"></div>
-          <div class="to"  id="nav-to"></div>
-        </div>
-        <div id="prog"><i id="prog-i"></i></div>
+</div>
+
+<div id="nav">
+  <div class="top">
+    <div id="lanes"></div>
+    <div id="banner">
+      <div class="arrow" id="nav-arrow">↑</div>
+      <div class="txt">
+        <div class="road" id="nav-road"></div>
+        <div class="to"  id="nav-to"></div>
       </div>
+      <div id="prog"><i id="prog-i"></i></div>
     </div>
-    <div id="speed">
-      <div class="limit" id="nav-limit">—</div>
-      <div class="cur" id="nav-speed">0<small>km/h</small></div>
+  </div>
+  <div id="speed">
+    <div class="limit" id="nav-limit">—</div>
+    <div class="cur" id="nav-speed">0<small>km/h</small></div>
+  </div>
+  <div id="eta">
+    <div>
+      <div class="big" id="eta-time"></div>
+      <div class="sub" id="eta-rest"></div>
     </div>
-    <div id="eta">
-      <div>
-        <div class="big" id="eta-time"></div>
-        <div class="sub" id="eta-rest"></div>
-      </div>
-      <button class="x" id="nav-x" title="End navigation">✕</button>
-    </div>
+    <button class="x" id="nav-x" title="End navigation">✕</button>
   </div>
 </div>
 
@@ -494,8 +501,7 @@ function stopDrive(){
   if(watchId !== null){ navigator.geolocation.clearWatch(watchId); watchId = null; }
   liveMode = false;
   document.body.classList.remove('heading-up');
-  const pane = document.querySelector('#map .leaflet-map-pane');
-  if(pane) pane.style.transform = pane.style.transform.replace(/ ?rotate\([^)]*\)/, '');
+  document.getElementById('map').style.transform = '';
   if(car){ map.removeLayer(car); car = null; }
   if(roadLabel){ map.removeLayer(roadLabel); roadLabel = null; }
   document.getElementById('prog-i').style.width = '0%';
@@ -601,9 +607,7 @@ function onFix(p){
   if(headingUp){
     // The map turns, so the puck itself stays pointing straight ahead.
     if(el) el.style.transform = 'rotate(0deg)';
-    const pane = document.querySelector('#map .leaflet-map-pane');
-    if(pane) pane.style.transform =
-      pane.style.transform.replace(/ ?rotate\([^)]*\)/, '') + ` rotate(${-brg}deg)`;
+    document.getElementById('map').style.transform = `rotate(${-brg}deg)`;
   } else if(el){
     el.style.transform = `rotate(${brg}deg)`;
   }
@@ -1004,11 +1008,7 @@ document.getElementById('t-layers').onclick = () => {
     // While navigating this switches between heading-up and north-up.
     headingUp = !headingUp;
     document.body.classList.toggle('heading-up', headingUp);
-    if(!headingUp){
-      const pane = document.querySelector('#map .leaflet-map-pane');
-      if(pane) pane.style.transform =
-        pane.style.transform.replace(/ ?rotate\([^)]*\)/, '');
-    }
+    if(!headingUp) document.getElementById('map').style.transform = '';
     return;
   }
   document.body.classList.toggle('daylight');
