@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: saudi-address
+  labels:
+    app: saudi-address
+spec:
+  replicas: {{ .Values.replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: saudi-address
+  template:
+    metadata:
+      labels:
+        app: saudi-address
+      annotations:
+        checksum/code: {{ .Files.Get "files/server.py" | sha256sum | trunc 16 }}
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: {{ .Values.targetNode }}
+      initContainers:
+        # Builds the SQLite index once; self-skips on every later start.
+        - name: build
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ["python3", "/code/build_db.py"]
+          env:
+            - name: ADDR_SRC
+              value: "{{ .Values.addrSrc }}"
+            - name: ADDR_DB
+              value: /data/sa_addr.sqlite
+          volumeMounts:
+            - {name: data, mountPath: /data}
+            - {name: code, mountPath: /code}
+          resources:
+            requests:
+              memory: {{ .Values.buildResources.requests.memory }}
+              cpu: {{ .Values.buildResources.requests.cpu }}
+            limits:
+              memory: {{ .Values.buildResources.limits.memory }}
+              cpu: {{ .Values.buildResources.limits.cpu }}
+      containers:
+        - name: server
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ["python3", "/code/server.py"]
+          env:
+            - name: ADDR_DB
+              value: /data/sa_addr.sqlite
+            - name: PORT
+              value: "8080"
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet: {path: /health, port: 8080}
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /health, port: 8080}
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          volumeMounts:
+            - {name: data, mountPath: /data}
+            - {name: code, mountPath: /code}
+          resources:
+            requests:
+              memory: {{ .Values.resources.requests.memory }}
+              cpu: {{ .Values.resources.requests.cpu }}
+            limits:
+              memory: {{ .Values.resources.limits.memory }}
+              cpu: {{ .Values.resources.limits.cpu }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: saudi-address-data
+        - name: code
+          configMap:
+            name: saudi-address-code

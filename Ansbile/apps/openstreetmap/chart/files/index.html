@@ -291,13 +291,26 @@ async function search(){
     const url = `${NOMINATIM}/search?q=${encodeURIComponent(q)}`
               + `&format=json&addressdetails=1&namedetails=1&limit=15`
               + `&viewbox=${vb}&bounded=0`;
-    const hits = await getJSON(url);
+    let hits = await getJSON(url);
+
+    // OSM leaves most Saudi residential streets unnamed, so anything Nominatim
+    // cannot answer is retried against the Saudi National Address index. That
+    // is what makes a pasted Google-style address resolve to a building.
+    let viaAddr = false;
+    if(!hits.length){
+      try{
+        const alt = await getJSON(`/addr/search?q=${encodeURIComponent(q)}&limit=10`);
+        if(alt.length){ hits = alt; viaAddr = true; }
+      }catch(e){ /* fallback is best-effort */ }
+    }
+
     if(!hits.length){
       out.innerHTML = '<div class="hit muted">No results. Try Arabic — most '
                     + 'Saudi places are tagged in Arabic (e.g. مستشفى instead '
                     + 'of hospital).</div>';
       return;
     }
+    if(viaAddr) sect.textContent = hits.length + ' address matches';
     out.innerHTML = '';
     clearSearchPins();
     hits.forEach(h => {

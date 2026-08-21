@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: saudi-address-code
+data:
+  server.py: |
+{{ .Files.Get "files/server.py" | indent 4 }}
+  build_db.py: |
+{{ .Files.Get "files/build_db.py" | indent 4 }}

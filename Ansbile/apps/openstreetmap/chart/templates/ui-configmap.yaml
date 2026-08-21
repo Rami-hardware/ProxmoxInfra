@@ -37,6 +37,14 @@ data:
         proxy_pass http://osrm:{{ .Values.ui.osrmServicePort }}/route/;
         proxy_set_header Host $host;
       }
+
+      # Saudi National Address fallback: OSM has no names for most Saudi
+      # residential streets, so searches that Nominatim cannot answer are
+      # retried against the OpenAddresses index.
+      location /addr/ {
+        proxy_pass http://saudi-address:{{ .Values.ui.addressServicePort }}/;
+        proxy_set_header Host $host;
+      }
     }
 ---
 apiVersion: v1
