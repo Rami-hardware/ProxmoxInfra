@@ -128,6 +128,10 @@ metadata:
   namespace: {{ ns }}
   annotations:
     cert-manager.io/cluster-issuer: homelab-ca-issuer
+    # Without an explicit common name cert-manager issues a cert with an empty
+    # subject; Chrome then refuses to treat the origin as secure even though
+    # the SAN matches, which blocks geolocation and other secure-context APIs.
+    cert-manager.io/common-name: "{{ svc.name }}.homelab.lan"
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
 {% if svc.backend_protocol | default(false) %}
     nginx.ingress.kubernetes.io/backend-protocol: "{{ svc.backend_protocol }}"
