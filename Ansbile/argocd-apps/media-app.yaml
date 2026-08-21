@@ -15,8 +15,7 @@ metadata:
       flaresolverr=ghcr.io/flaresolverr/flaresolverr:latest,
       scraparr=ghcr.io/thecfu/scraparr:latest,
       sonarr=linuxserver/sonarr:latest,
-      tracearr=ghcr.io/connorgallopo/tracearr:latest,
-      stash=stashapp/stash:latest
+      tracearr=ghcr.io/connorgallopo/tracearr:latest
     argocd-image-updater.argoproj.io/overseerr.update-strategy: digest
     argocd-image-updater.argoproj.io/jellyfin.update-strategy: digest
     argocd-image-updater.argoproj.io/bazarr.update-strategy: digest
@@ -27,7 +26,6 @@ metadata:
     argocd-image-updater.argoproj.io/scraparr.update-strategy: digest
     argocd-image-updater.argoproj.io/sonarr.update-strategy: digest
     argocd-image-updater.argoproj.io/tracearr.update-strategy: digest
-    argocd-image-updater.argoproj.io/stash.update-strategy: digest
     argocd-image-updater.argoproj.io/write-back-method: git:secret:argocd/git-creds
     argocd-image-updater.argoproj.io/git-branch: main
 spec:

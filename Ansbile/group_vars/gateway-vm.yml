@@ -92,12 +92,6 @@ nginx_services_local:
     port: 5055
     namespace: media
 
-  - name: stash
-    ip: 192.168.10.201
-    port: 30325
-    namespace: media
-    auth: false
-
   - name: radarr
     ip: 192.168.10.201
     port: 7878
