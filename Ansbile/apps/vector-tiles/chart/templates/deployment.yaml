@@ -58,7 +58,16 @@ spec:
               for r in 0-255 256-511 1536-1791 1792-2047 8192-8447 65024-65279; do
                 curl -fsSL -o "/data/glyphs/$r.pbf"                   "https://demotiles.maplibre.org/font/Noto%20Sans%20Regular/$r.pbf"
               done
-              ls -la /data/glyphs
+              # MapLibre bundles live here too: 280KB of gzipped JS blows past
+              # the 256KB cap on kubectl's last-applied annotation, so a
+              # ConfigMap cannot hold them.
+              mkdir -p /data/vendor
+              cd /data/vendor
+              for u in "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" "https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.2.3/mapbox-gl-rtl-text.js" "https://unpkg.com/pmtiles@4.1.0/dist/pmtiles.js"; do
+                f=$(basename "$u")
+                [ -s "$f" ] || curl -fsSL -o "$f" "$u"
+              done
+              ls -la /data/glyphs /data/vendor
           volumeMounts:
             - {name: data, mountPath: /data}
           resources:

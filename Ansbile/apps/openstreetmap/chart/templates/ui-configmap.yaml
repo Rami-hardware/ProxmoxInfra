@@ -16,11 +16,11 @@ data:
       root /usr/share/nginx/html;
       index index.html;
 
-      # Pre-compressed vendor bundles.
-      gzip_static on;
+      # MapLibre bundles are served from the vector-tiles PVC: they are too
+      # large for a ConfigMap (256KB annotation cap).
       location /vendor/ {
-        alias /usr/share/nginx/html/vendor/;
-        add_header Cache-Control "public, max-age=604800";
+        proxy_pass http://vector-tiles:{{ .Values.ui.tilesServicePort }}/vendor/;
+        proxy_set_header Host $host;
       }
 
       # Vector tiles and font glyphs come from the vector-tiles service.
@@ -59,18 +59,4 @@ data:
         proxy_set_header Host $host;
       }
     }
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: openstreetmap-ui-js
-  labels:
-    app: openstreetmap-ui
-binaryData:
-  # Shipped gzipped: raw they exceed the 1MB ConfigMap limit. nginx serves
-  # them with gzip_static.
-  maplibre-gl.js.gz: {{ .Files.Get "files/maplibre-gl.js.gz" | b64enc }}
-  maplibre-gl.css.gz: {{ .Files.Get "files/maplibre-gl.css.gz" | b64enc }}
-  mapbox-gl-rtl-text.js.gz: {{ .Files.Get "files/mapbox-gl-rtl-text.js.gz" | b64enc }}
-  pmtiles.js.gz: {{ .Files.Get "files/pmtiles.js.gz" | b64enc }}
 {{- end }}
