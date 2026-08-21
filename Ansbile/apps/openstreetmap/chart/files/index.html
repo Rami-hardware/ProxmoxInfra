@@ -354,19 +354,8 @@ async function search(){
                   .bindPopup(`<b>${esc(primary)}</b><br>${esc(rest)}`).openPopup();
       };
       d.onclick = ev => {
-        if(ev.target.dataset.act === 'route'){
-          // Use it as the destination: keep any existing start point.
-          const dest = L.latLng(+h.lat, +h.lon);
-          if(pts.length >= 2){ pts = [pts[0]]; pins.slice(1).forEach(p=>map.removeLayer(p)); pins = pins.slice(0,1); }
-          if(pts.length === 0){
-            alert('Click your starting point on the map first, then choose "Route here".');
-            return;
-          }
-          pts.push(dest);
-          pins.push(L.marker(dest).addTo(map).bindPopup('Destination: ' + esc(primary)));
-          route();
-          return;
-        }
+        // Same path as every other result: routeTo() gets a GPS fix itself.
+        if(ev.target.dataset.act === 'route'){ routeTo(h); return; }
         go();
       };
       out.appendChild(d);
@@ -739,26 +728,56 @@ function renderHits(hits, cat){
 }
 
 // Route from the map centre (the "you are here" dot) to the chosen place.
-function routeTo(h){
-  const dest = L.latLng(+h.lat, +h.lon);
-  // The start is the saved "me" position, never map.getCenter() — clicking a
-  // result recentres the map onto the destination, which would make start and
-  // end identical and produce a zero-length route.
-  const start = mePin ? mePin.getLatLng() : null;
-  if(!start || start.distanceTo(dest) < 25){
-    sect.textContent = 'Set a starting point';
-    out.innerHTML = '<div class="muted">Tap the map where you want to start, '
-                  + 'then choose Directions again. (Or use ➤ to centre on your '
-                  + 'location first.)</div>';
-    sheetUp();
-    return;
-  }
+// Ask the browser where we are. Resolves to null rather than rejecting, so
+// callers can fall back without try/catch. Geolocation is only available on
+// HTTPS (or localhost) — on plain http:// the browser refuses silently.
+function locate(timeout){
+  return new Promise(resolve => {
+    if(!navigator.geolocation || !window.isSecureContext) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      p => resolve(L.latLng(p.coords.latitude, p.coords.longitude)),
+      () => resolve(null),
+      {enableHighAccuracy:true, timeout: timeout || 8000, maximumAge: 30000});
+  });
+}
+
+function beginRoute(start, dest){
   pins.forEach(p => map.removeLayer(p)); pins = [];
   pts = [start, dest];
   pins.push(L.marker(start).addTo(map).bindPopup('Start'));
   pins.push(L.marker(dest).addTo(map).bindPopup('Destination'));
+  setMe(start);
   sheetUp();
   route();
+}
+
+async function routeTo(h){
+  const dest = L.latLng(+h.lat, +h.lon);
+  sect.textContent = 'Finding your location…';
+  out.innerHTML = '<div class="muted">Getting GPS position…</div>';
+  sheetUp();
+
+  // Prefer a live GPS fix; fall back to a previously set position.
+  let start = await locate();
+  if(!start && mePin) start = mePin.getLatLng();
+
+  if(!start){
+    sect.textContent = 'Where are you starting from?';
+    const why = window.isSecureContext
+      ? 'Location is unavailable or was blocked.'
+      : 'This page is on http://, and browsers only allow GPS over https. '
+        + 'Open <b>https://maps.homelab.lan</b> to use your location.';
+    out.innerHTML = `<div class="muted">${why} Tap your starting point on the `
+                  + 'map, then choose Directions again.</div>';
+    return;
+  }
+  if(start.distanceTo(dest) < 25){
+    sect.textContent = 'You are already there';
+    out.innerHTML = '<div class="muted">That destination is within 25 m of '
+                  + 'your position.</div>';
+    return;
+  }
+  beginRoute(start, dest);
 }
 
 document.querySelectorAll('.chip').forEach(btn => {
@@ -780,12 +799,16 @@ document.getElementById('t-zin').onclick  = () => map.zoomIn();
 document.getElementById('t-zout').onclick = () => map.zoomOut();
 document.getElementById('t-layers').onclick = () =>
   document.body.classList.toggle('daylight');
-document.getElementById('t-me').onclick = () => {
-  if(!navigator.geolocation){ map.setView([21.54,39.19], 15); return; }
-  navigator.geolocation.getCurrentPosition(
-    p => { const ll=[p.coords.latitude,p.coords.longitude];
-           map.setView(ll,16); setMe(ll); },
-    () => map.setView([21.54,39.19], 15));
+document.getElementById('t-me').onclick = async () => {
+  const ll = await locate();
+  if(ll){ map.setView(ll, 17); setMe(ll); return; }
+  if(!window.isSecureContext){
+    sect.textContent = 'Location needs HTTPS';
+    out.innerHTML = '<div class="muted">Browsers only share GPS over a secure '
+                  + 'connection. Open <b>https://maps.homelab.lan</b>.</div>';
+    sheetUp();
+  }
+  map.setView([21.54, 39.19], 15);
 };
 
 // Blue "you are here" dot. Real geolocation needs a trusted HTTPS cert;
