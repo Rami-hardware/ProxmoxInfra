@@ -44,6 +44,26 @@ spec:
             requests: {memory: "256Mi", cpu: "200m"}
             limits:   {memory: "5Gi",   cpu: "2"}
 {{- end }}
+        # Font glyphs live on the PVC, not in a ConfigMap: 448KB of binary
+        # blows past the 256KB cap on kubectl's last-applied annotation.
+        - name: glyphs
+          image: {{ .Values.osmiumImage }}
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              mkdir -p /data/glyphs
+              [ -s /data/glyphs/0-255.pbf ] && { echo "glyphs present"; exit 0; }
+              for r in 0-255 256-511 1536-1791 1792-2047 8192-8447 65024-65279; do
+                curl -fsSL -o "/data/glyphs/$r.pbf"                   "https://demotiles.maplibre.org/font/Noto%20Sans%20Regular/$r.pbf"
+              done
+              ls -la /data/glyphs
+          volumeMounts:
+            - {name: data, mountPath: /data}
+          resources:
+            requests: {memory: "64Mi", cpu: "50m"}
+            limits:   {memory: "256Mi", cpu: "500m"}
         # Build the PMTiles archive. Planetiler caches ~1.4GB of global base
         # data under /data/sources, so later rebuilds skip that download.
         - name: build
@@ -80,7 +100,6 @@ spec:
             - name: conf
               mountPath: /etc/nginx/conf.d/default.conf
               subPath: default.conf
-            - {name: glyphs, mountPath: /glyphs, readOnly: true}
           resources:
             requests:
               memory: {{ .Values.resources.requests.memory }}
@@ -95,9 +114,6 @@ spec:
         - name: conf
           configMap:
             name: vector-tiles-nginx
-        - name: glyphs
-          configMap:
-            name: vector-tiles-glyphs
 {{- if .Values.clipToRegion }}
         - name: poly
           configMap:
