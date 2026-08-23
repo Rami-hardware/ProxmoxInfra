@@ -15,7 +15,8 @@ metadata:
       flaresolverr=ghcr.io/flaresolverr/flaresolverr:latest,
       scraparr=ghcr.io/thecfu/scraparr:latest,
       sonarr=linuxserver/sonarr:latest,
-      tracearr=ghcr.io/connorgallopo/tracearr:latest
+      tracearr=ghcr.io/connorgallopo/tracearr:latest,
+      tdarr=ghcr.io/haveagitgat/tdarr:latest
     argocd-image-updater.argoproj.io/overseerr.update-strategy: digest
     argocd-image-updater.argoproj.io/jellyfin.update-strategy: digest
     argocd-image-updater.argoproj.io/bazarr.update-strategy: digest
@@ -26,6 +27,7 @@ metadata:
     argocd-image-updater.argoproj.io/scraparr.update-strategy: digest
     argocd-image-updater.argoproj.io/sonarr.update-strategy: digest
     argocd-image-updater.argoproj.io/tracearr.update-strategy: digest
+    argocd-image-updater.argoproj.io/tdarr.update-strategy: digest
     argocd-image-updater.argoproj.io/write-back-method: git:secret:argocd/git-creds
     argocd-image-updater.argoproj.io/git-branch: main
 spec:
