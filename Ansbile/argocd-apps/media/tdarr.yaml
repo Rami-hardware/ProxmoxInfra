@@ -116,9 +116,9 @@ spec:
         - name: config
           persistentVolumeClaim:
             claimName: tdarr-config-pvc
-        - name: tv
+        - name: media
           hostPath:
-            path: /mnt/media/tv
+            path: /mnt/media
         - name: cache
           hostPath:
             path: /opt/tdarr/cache
