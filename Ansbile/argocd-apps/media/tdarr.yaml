@@ -99,8 +99,8 @@ spec:
             - name: config
               mountPath: /app/logs
               subPath: logs
-            - name: tv
-              mountPath: /media/tv
+            - name: media
+              mountPath: /media
             - name: cache
               mountPath: /temp
             - name: dri
