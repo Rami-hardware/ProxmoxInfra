@@ -15,7 +15,6 @@ resources:
   - tracearr.yaml
   - tracearr-timescale.yaml
   - tracearr-redis.yaml
-  - tdarr.yaml
 
 # argocd-image-updater rewrites entries here (newTag/digest) when it detects
 # a new image on the registry side — this is the write-back target.
@@ -39,6 +38,4 @@ images:
   - name: linuxserver/sonarr
     newTag: latest
   - name: ghcr.io/connorgallopo/tracearr
-    newTag: latest
-  - name: ghcr.io/haveagitgat/tdarr
     newTag: latest
