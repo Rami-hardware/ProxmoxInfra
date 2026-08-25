@@ -2,7 +2,7 @@ kustomize:
   images:
   - sctx/overseerr@sha256:6197516c9d7b58ccf113455e32aafb94df5d91995fe50e8c2cae6ba6c7c7b7de
   - jellyfin/jellyfin@sha256:aefb67e6a7ff1debdd154a78a7bbb780fd0c873d8639210a7f6a2016ad2b35db
-  - linuxserver/bazarr@sha256:ac284d3fda9ee7da8b15197dc51f0d7a2a1da98549bee99a3d924d3e94a5e7ed
+  - linuxserver/bazarr@sha256:3a820372f19fcb2981ea19fe4b5382934d67414afaba974bce831ddda0a64a02
   - linuxserver/radarr@sha256:119aaa4a4f7349bcd2a136c5373a0d7925b5479915c7dfe0c0ad352db2a6d438
   - linuxserver/prowlarr@sha256:1295cff29d10b486c0d8324d1559a552140a5932bf8b3d87e398654414f63f92
   - linuxserver/qbittorrent@sha256:304b19cf94bf4fda534e0b086cab9c5f1a9e139a8180c05c0ad7d2ba1526fa99
