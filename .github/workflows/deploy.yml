@@ -85,7 +85,10 @@ jobs:
       #   terraform import 'module.proxmox_vms["NAME"].proxmox_virtual_environment_vm.vm' pve/VMID
 
       # Clean up stale state entries from past renames/typos. Without this,
-      # Terraform tries to destroy + recreate VMs that just got renamed in code.
+      # Terraform reads the old key as "deleted" and the new one as "new" —
+      # i.e. destroy + recreate a live VM. Forgetting the stale entries makes
+      # the rename a no-op instead. `|| true` keeps the step green once an
+      # entry is already gone, which is the steady state.
       - name: Cleanup stale Terraform state entries
         working-directory: Terraform
         env:
@@ -97,6 +100,15 @@ jobs:
             terraform state rm "module.proxmox_vms[\"$stale\"].proxmox_virtual_environment_vm.vm" 2>/dev/null || true
           done
 
+      # Detects drift between code and the live Proxmox server. Uses
+      # -detailed-exitcode, which splits the normal 0/1 into three states:
+      #   0 = no changes      -> skip apply
+      #   1 = plan errored    -> fail the job
+      #   2 = changes pending -> run apply
+      # `set +e` is required because a bare exit 2 would otherwise trip the
+      # shell's implicit -e and kill the step before the code is inspected.
+      # (This is also why terraform_wrapper is disabled in the setup step —
+      # the wrapper rewrites exit codes and would collapse 2 into 0.)
       - name: Terraform plan (compare code vs server)
         id: plan
         working-directory: Terraform
@@ -120,6 +132,14 @@ jobs:
             echo "No changes — skipping apply."
           fi
 
+      # Safety gate: this pipeline may never destroy or recreate a VM, since
+      # that wipes the disks of a running homelab service. Greps the rendered
+      # plan for Terraform's destroy/replace phrasing and hard-fails instead.
+      #
+      # A replace usually means benign drift the provider reports as
+      # force-new (CPU flags, hostpci ordering, disk attributes) rather than a
+      # genuine intent to rebuild — the fix is an ignore_changes entry in the
+      # module, not relaxing this check.
       - name: Fail if any VM would be destroyed
         if: steps.plan.outputs.has_changes == 'true'
         working-directory: Terraform
@@ -133,6 +153,29 @@ jobs:
           fi
           echo "No destroys detected — safe to proceed."
 
+      # Applies the changes the plan step detected. Only runs when plan exited
+      # with code 2 (has_changes), so a no-op commit never touches Proxmox.
+      #
+      # -auto-approve   : non-interactive; the human gate is the "Fail if any VM
+      #                   would be destroyed" step above, not a TTY prompt.
+      # -parallelism=1  : the bpg Proxmox provider is not concurrency-safe — it
+      #                   races on the Proxmox API task lock and intermittently
+      #                   fails a clone/resize when several VMs apply at once.
+      #
+      # NOTE: this deliberately does NOT apply `tfplan` from the plan step. It
+      # re-plans against live state, so the plan output reviewed above is not
+      # guaranteed to be what gets applied.
+      #
+      # The -target flags scope the apply to the VM instances only, keeping
+      # unrelated drift out of an infra deploy.
+      #
+      # WARNING: this -target list is out of sync with the actual VM keys.
+      # var.vms (Terraform/terraform.tfvars) defines: gateway, media,
+      # monitoring, github. The "security" target below matches no key, and
+      # "github" is never targeted — so the git-k3s VM is silently skipped even
+      # when the plan says it changed. A -target that matches nothing is only a
+      # warning, not an error, so this fails silently. See the cleanup step
+      # above: "monitoring" also lived in state as the stale key "monitor".
       - name: Terraform apply
         if: steps.plan.outputs.has_changes == 'true'
         working-directory: Terraform
