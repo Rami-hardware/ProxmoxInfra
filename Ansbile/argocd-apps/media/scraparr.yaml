@@ -1,5 +1,12 @@
 ---
 apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: scraparr
+  namespace: media
+automountServiceAccountToken: false
+---
+apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: scraparr-config-pv
@@ -47,6 +54,7 @@ spec:
       labels:
         app: scraparr
     spec:
+      serviceAccountName: scraparr
       nodeSelector:
         kubernetes.io/hostname: media-server
       containers:

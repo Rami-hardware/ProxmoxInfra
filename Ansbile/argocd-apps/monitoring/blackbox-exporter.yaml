@@ -1,5 +1,12 @@
 ---
 apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: blackbox-exporter
+  namespace: monitoring
+automountServiceAccountToken: false
+---
+apiVersion: v1
 kind: ConfigMap
 metadata:
   name: blackbox-exporter-config
@@ -71,6 +78,7 @@ spec:
       labels:
         app: blackbox-exporter
     spec:
+      serviceAccountName: blackbox-exporter
       nodeSelector:
         kubernetes.io/hostname: monitoring-server
       # The *.homelab.lan and *.darkestserver.com names resolve via AdGuard on

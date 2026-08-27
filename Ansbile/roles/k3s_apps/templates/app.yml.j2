@@ -18,6 +18,18 @@ metadata:
     istio-injection: enabled
 {% endif %}
 {% endif %}
+---
+# Every app gets its own ServiceAccount instead of sharing the namespace
+# "default" SA. Without this a compromised app inherits whatever the default
+# SA can do, and its token is mounted into the pod for free. The token is not
+# mounted unless the app actually talks to the Kubernetes API
+# (service_account_mount_token: true).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ item.service_account | default(item.name) }}
+  namespace: {{ item.namespace }}
+automountServiceAccountToken: {{ item.service_account_mount_token | default(false) | lower }}
 {% if not (item.skip_pv | default(false)) %}
 ---
 apiVersion: v1
@@ -103,9 +115,7 @@ spec:
 {% if item.host_pid | default(false) %}
       hostPID: true
 {% endif %}
-{% if item.service_account is defined %}
-      serviceAccountName: {{ item.service_account }}
-{% endif %}
+      serviceAccountName: {{ item.service_account | default(item.name) }}
 {% if not (item.enable_service_links | default(true)) %}
       enableServiceLinks: false
 {% endif %}

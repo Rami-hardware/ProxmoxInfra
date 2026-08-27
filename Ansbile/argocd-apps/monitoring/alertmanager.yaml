@@ -1,5 +1,12 @@
 ---
 apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alertmanager
+  namespace: monitoring
+automountServiceAccountToken: false
+---
+apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: alertmanager-config-pv
@@ -47,6 +54,7 @@ spec:
       labels:
         app: alertmanager
     spec:
+      serviceAccountName: alertmanager
       nodeSelector:
         kubernetes.io/hostname: monitoring-server
       containers:

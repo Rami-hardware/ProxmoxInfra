@@ -1,5 +1,12 @@
 ---
 apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: overseerr
+  namespace: media
+automountServiceAccountToken: false
+---
+apiVersion: v1
 kind: Namespace
 metadata:
   name: media
@@ -54,6 +61,7 @@ spec:
       labels:
         app: overseerr
     spec:
+      serviceAccountName: overseerr
       dnsPolicy: None
       dnsConfig:
         nameservers:

@@ -1,4 +1,11 @@
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: speedtest-exporter
+  namespace: monitoring
+automountServiceAccountToken: false
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -19,6 +26,7 @@ spec:
       labels:
         app: speedtest-exporter
     spec:
+      serviceAccountName: speedtest-exporter
       dnsPolicy: None
       dnsConfig:
         nameservers:

@@ -1,5 +1,12 @@
 ---
 apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: loki
+  namespace: monitoring
+automountServiceAccountToken: false
+---
+apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: loki-config-pv
@@ -47,6 +54,7 @@ spec:
       labels:
         app: loki
     spec:
+      serviceAccountName: loki
       nodeSelector:
         kubernetes.io/hostname: monitoring-server
       containers:

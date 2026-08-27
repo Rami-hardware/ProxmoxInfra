@@ -1,4 +1,11 @@
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: qbittorrent-exporter
+  namespace: monitoring
+automountServiceAccountToken: false
+---
 # CHANGE ME: placeholder credentials committed to git so the initial deploy
 # resolves. The exporter CrashLoopBackOffs without this Secret, since the env
 # refs below are required (no `optional: true`).
@@ -36,6 +43,7 @@ spec:
       labels:
         app: qbittorrent-exporter
     spec:
+      serviceAccountName: qbittorrent-exporter
       nodeSelector:
         kubernetes.io/hostname: media-server
       containers:

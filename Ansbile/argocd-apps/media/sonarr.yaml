@@ -1,5 +1,12 @@
 ---
 apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sonarr
+  namespace: media
+automountServiceAccountToken: false
+---
+apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: sonarr-config-pv
@@ -47,6 +54,7 @@ spec:
       labels:
         app: sonarr
     spec:
+      serviceAccountName: sonarr
       dnsPolicy: None
       dnsConfig:
         nameservers:

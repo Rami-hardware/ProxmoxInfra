@@ -1,5 +1,12 @@
 ---
 apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: qbittorrent
+  namespace: media
+automountServiceAccountToken: false
+---
+apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: qbittorrent-config-pv
@@ -50,6 +57,7 @@ spec:
         traffic.sidecar.istio.io/excludeInboundPorts: "6881"
         traffic.sidecar.istio.io/excludeOutboundPorts: "6881"
     spec:
+      serviceAccountName: qbittorrent
       nodeSelector:
         kubernetes.io/hostname: media-server
       containers:

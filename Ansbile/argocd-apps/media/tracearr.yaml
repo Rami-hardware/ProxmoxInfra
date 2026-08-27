@@ -1,5 +1,12 @@
 ---
 apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tracearr
+  namespace: media
+automountServiceAccountToken: false
+---
+apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: tracearr-backup-pv
@@ -60,6 +67,7 @@ spec:
       labels:
         app: tracearr
     spec:
+      serviceAccountName: tracearr
       nodeSelector:
         kubernetes.io/hostname: media-server
       containers:

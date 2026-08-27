@@ -1,5 +1,12 @@
 ---
 apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: adguard-home
+  namespace: network
+automountServiceAccountToken: false
+---
+apiVersion: v1
 kind: Namespace
 metadata:
   name: network
@@ -23,6 +30,7 @@ spec:
       labels:
         app: adguard-home
     spec:
+      serviceAccountName: adguard-home
       hostNetwork: true
       dnsPolicy: None
       dnsConfig:

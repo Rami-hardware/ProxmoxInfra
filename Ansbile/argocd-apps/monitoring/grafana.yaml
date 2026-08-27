@@ -1,5 +1,12 @@
 ---
 apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: grafana
+  namespace: monitoring
+automountServiceAccountToken: false
+---
+apiVersion: v1
 kind: Namespace
 metadata:
   name: monitoring
@@ -52,6 +59,7 @@ spec:
       labels:
         app: grafana
     spec:
+      serviceAccountName: grafana
       dnsPolicy: None
       dnsConfig:
         nameservers:
