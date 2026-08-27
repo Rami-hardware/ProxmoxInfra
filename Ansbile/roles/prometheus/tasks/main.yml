@@ -14,17 +14,4 @@
     dest: "{{ prometheus_config_file }}"
     mode: '0644'
     validate: "sh -c 'command -v promtool >/dev/null 2>&1 && promtool check config %s || true'"
-  register: prometheus_config
-
-# --web.enable-lifecycle is set on the deployment, so a POST to /-/reload picks
-# up the new file without restarting the pod (and without losing WAL state).
-- name: Reload Prometheus
-  ansible.builtin.uri:
-    url: "http://{{ hostvars['monitoring-server']['ansible_host'] }}:9090/-/reload"
-    method: POST
-    status_code: [200, 405]
-  when: prometheus_config.changed
-  retries: 3
-  delay: 5
-  register: prometheus_reload
-  until: prometheus_reload is succeeded
+  notify: Reload Prometheus

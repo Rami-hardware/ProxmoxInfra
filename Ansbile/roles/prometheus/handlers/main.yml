@@ -1,0 +1,12 @@
+---
+# --web.enable-lifecycle is set on the deployment, so a POST to /-/reload picks
+# up the new config without restarting the pod (and without losing WAL state).
+- name: Reload Prometheus
+  ansible.builtin.uri:
+    url: "http://{{ hostvars['monitoring-server']['ansible_host'] }}:9090/-/reload"
+    method: POST
+    status_code: [200, 405]
+  retries: 3
+  delay: 5
+  register: prometheus_reload
+  until: prometheus_reload is succeeded
