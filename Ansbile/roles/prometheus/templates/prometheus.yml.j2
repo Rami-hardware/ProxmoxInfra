@@ -1,0 +1,55 @@
+# Managed by Ansible (roles/prometheus) — do not edit on the host.
+# Jobs come from prometheus_scrape_jobs in group_vars/monitoring-vm.yml.
+global:
+  scrape_interval: {{ prometheus_scrape_interval }}
+  evaluation_interval: {{ prometheus_scrape_interval }}
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - "{{ hostvars['monitoring-server']['ansible_host'] }}:9093"
+
+scrape_configs:
+{% for job in prometheus_scrape_jobs %}
+  - job_name: {{ job.name }}
+{% if job.metrics_path is defined %}
+    metrics_path: {{ job.metrics_path }}
+{% endif %}
+{% if job.scheme is defined %}
+    scheme: {{ job.scheme }}
+{% endif %}
+{% if job.scrape_interval is defined %}
+    scrape_interval: {{ job.scrape_interval }}
+{% endif %}
+{% if job.scrape_timeout is defined %}
+    scrape_timeout: {{ job.scrape_timeout }}
+{% endif %}
+{% if job.params is defined %}
+    params:
+{{ job.params | to_nice_yaml(indent=2) | indent(6, true) }}
+{% endif %}
+{% if job.kubernetes_sd_configs is defined %}
+    kubernetes_sd_configs:
+{{ job.kubernetes_sd_configs | to_nice_yaml(indent=2) | indent(6, true) }}
+{% endif %}
+{% if job.targets is defined %}
+    static_configs:
+      - targets:
+{% for target in job.targets %}
+          - "{{ target }}"
+{% endfor %}
+{% if job.labels is defined %}
+        labels:
+{{ job.labels | to_nice_yaml(indent=2) | indent(10, true) }}
+{% endif %}
+{% endif %}
+{% if job.relabel_configs is defined %}
+    relabel_configs:
+{{ job.relabel_configs | to_nice_yaml(indent=2) | indent(6, true) }}
+{% endif %}
+{% if job.metric_relabel_configs is defined %}
+    metric_relabel_configs:
+{{ job.metric_relabel_configs | to_nice_yaml(indent=2) | indent(6, true) }}
+{% endif %}
+{% endfor %}

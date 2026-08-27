@@ -3,6 +3,7 @@
   hosts: monitoring-server
   become: true
   roles:
+    - prometheus
     - loki
     - alertmanager
     - grafana

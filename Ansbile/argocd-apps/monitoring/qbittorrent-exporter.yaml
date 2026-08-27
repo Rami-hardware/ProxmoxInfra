@@ -1,4 +1,21 @@
 ---
+# CHANGE ME: placeholder credentials committed to git so the initial deploy
+# resolves. The exporter CrashLoopBackOffs without this Secret, since the env
+# refs below are required (no `optional: true`).
+#
+# These were previously hardcoded in the Deployment and are in git history, so
+# treat the real qBittorrent password as compromised and rotate it. Replace the
+# values here (or overwrite the live Secret out-of-band) before relying on this.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: qbittorrent-exporter-secret
+  namespace: monitoring
+type: Opaque
+stringData:
+  username: change-me-username
+  password: change-me-password
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -32,9 +49,15 @@ spec:
             - name: QBITTORRENT_PORT
               value: "8080"
             - name: QBITTORRENT_USERNAME
-              value: "admin"
+              valueFrom:
+                secretKeyRef:
+                  name: qbittorrent-exporter-secret
+                  key: username
             - name: QBITTORRENT_PASSWORD
-              value: "admin@123"
+              valueFrom:
+                secretKeyRef:
+                  name: qbittorrent-exporter-secret
+                  key: password
           resources:
             requests:
               memory: "32Mi"
