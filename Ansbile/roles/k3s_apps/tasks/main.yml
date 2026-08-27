@@ -725,3 +725,48 @@
     - gateway-server
   loop_control:
     loop_var: k3s_node
+
+# ── Calico (policy-only) ─────────────────────────────────────────────────────
+# Networking stays with k3s's built-in flannel; Calico is installed purely as
+# the NetworkPolicy engine, so there is no k3s restart and no pod-network
+# outage.
+#
+# This deliberately does NOT use the tigera-operator Helm chart: the operator's
+# Installation CRD has no policy-only mode (cni.type only accepts
+# Calico/GKE/AmazonVPC/AzureVNET, all of which install a dataplane) and it
+# would fight flannel. The upstream calico-policy-only manifest is the
+# supported path — it sets CALICO_NETWORKING_BACKEND=none and
+# CALICO_MANAGE_CNI=false, so it never touches flannel's CNI config.
+#
+# canal.yaml is NOT usable here either: it ships its own flannel daemonset
+# pinned to 10.244.0.0/16, which collides with k3s's flannel and pod CIDR.
+- name: Download Calico policy-only manifest
+  ansible.builtin.get_url:
+    url: "https://raw.githubusercontent.com/projectcalico/calico/{{ k3s_apps_calico_version }}/manifests/calico-policy-only.yaml"
+    dest: "{{ k3s_apps_manifest_dir }}/calico-policy-only.yml"
+    mode: '0644'
+
+- name: Apply Calico policy-only manifest
+  ansible.builtin.command:
+    cmd: k3s kubectl apply --server-side --force-conflicts -f {{ k3s_apps_manifest_dir }}/calico-policy-only.yml
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+
+- name: Wait for calico-node to be ready
+  ansible.builtin.command:
+    cmd: >
+      k3s kubectl rollout status daemonset/calico-node
+      -n kube-system --timeout=300s
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: false
+
+- name: Wait for calico-kube-controllers to be ready
+  ansible.builtin.command:
+    cmd: >
+      k3s kubectl rollout status deployment/calico-kube-controllers
+      -n kube-system --timeout=300s
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: false
