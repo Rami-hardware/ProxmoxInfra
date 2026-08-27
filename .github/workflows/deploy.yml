@@ -132,14 +132,6 @@ jobs:
             echo "No changes — skipping apply."
           fi
 
-      # Safety gate: this pipeline may never destroy or recreate a VM, since
-      # that wipes the disks of a running homelab service. Greps the rendered
-      # plan for Terraform's destroy/replace phrasing and hard-fails instead.
-      #
-      # A replace usually means benign drift the provider reports as
-      # force-new (CPU flags, hostpci ordering, disk attributes) rather than a
-      # genuine intent to rebuild — the fix is an ignore_changes entry in the
-      # module, not relaxing this check.
       - name: Fail if any VM would be destroyed
         if: steps.plan.outputs.has_changes == 'true'
         working-directory: Terraform
@@ -153,42 +145,19 @@ jobs:
           fi
           echo "No destroys detected — safe to proceed."
 
-      # Applies the changes the plan step detected. Only runs when plan exited
-      # with code 2 (has_changes), so a no-op commit never touches Proxmox.
-      #
-      # -auto-approve   : non-interactive; the human gate is the "Fail if any VM
-      #                   would be destroyed" step above, not a TTY prompt.
-      # -parallelism=1  : the bpg Proxmox provider is not concurrency-safe — it
-      #                   races on the Proxmox API task lock and intermittently
-      #                   fails a clone/resize when several VMs apply at once.
-      #
-      # NOTE: this deliberately does NOT apply `tfplan` from the plan step. It
-      # re-plans against live state, so the plan output reviewed above is not
-      # guaranteed to be what gets applied.
-      #
-      # The -target flags scope the apply to the VM instances only, keeping
-      # unrelated drift out of an infra deploy.
-      #
-      # WARNING: this -target list is out of sync with the actual VM keys.
-      # var.vms (Terraform/terraform.tfvars) defines: gateway, media,
-      # monitoring, github. The "security" target below matches no key, and
-      # "github" is never targeted — so the git-k3s VM is silently skipped even
-      # when the plan says it changed. A -target that matches nothing is only a
-      # warning, not an error, so this fails silently. See the cleanup step
-      # above: "monitoring" also lived in state as the stale key "monitor".
-      - name: Terraform apply
-        if: steps.plan.outputs.has_changes == 'true'
-        working-directory: Terraform
-        env:
-          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-          TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
-          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-        run: |
-          terraform apply -auto-approve -parallelism=1 \
-            -target='module.proxmox_vms["gateway"]' \
-            -target='module.proxmox_vms["media"]' \
-            -target='module.proxmox_vms["monitoring"]' \
-            -target='module.proxmox_vms["security"]'
+      #- name: Terraform apply
+      #  if: steps.plan.outputs.has_changes == 'true'
+      #  working-directory: Terraform
+      #  env:
+      #    TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
+      #    TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
+      #    TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+     #  run: |
+      #    terraform apply -auto-approve -parallelism=1 \
+      #      -target='module.proxmox_vms["gateway"]' \
+      #      -target='module.proxmox_vms["media"]' \
+      #      -target='module.proxmox_vms["monitoring"]' \
+      #      -target='module.proxmox_vms["security"]'
 
       # ── Ansible ──────────────────────────────────────────────────────────────
       - name: Install system dependencies
