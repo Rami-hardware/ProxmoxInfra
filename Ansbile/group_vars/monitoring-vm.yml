@@ -310,6 +310,67 @@ prometheus_scrape_jobs:
         target_label: instance
         replacement: "git-k3s-server"
 
+  # ── Blackbox: website availability ──────────────────────────────────────────
+  # Blackbox probes are scraped indirectly: Prometheus sends the target URL to
+  # the exporter as a ?target= query param, so the static target list holds the
+  # URLs and the relabel chain rewrites __address__ to the exporter itself.
+  #   __param_target  → the URL blackbox should probe
+  #   instance        → the URL, so dashboards/alerts label by site
+  #   __address__     → the blackbox exporter (where the scrape actually goes)
+  - name: blackbox-public
+    metrics_path: /probe
+    params:
+      module: [http_2xx_public]
+    targets:
+      - "https://jellyfin.darkestserver.com"
+      - "https://overseerr.darkestserver.com"
+      - "https://adguard.darkestserver.com"
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: "{{ hostvars['monitoring-server']['ansible_host'] }}:9115"
+      - target_label: scope
+        replacement: public
+
+  - name: blackbox-local
+    metrics_path: /probe
+    params:
+      module: [http_2xx_local]
+    targets:
+      - "https://jellyfin.homelab.lan"
+      - "https://overseerr.homelab.lan"
+      - "https://radarr.homelab.lan"
+      - "https://sonarr.homelab.lan"
+      - "https://prowlarr.homelab.lan"
+      - "https://bazarr.homelab.lan"
+      - "https://qbittorrent.homelab.lan"
+      - "https://adguard.homelab.lan"
+      - "https://grafana.homelab.lan"
+      - "https://alertmanager.homelab.lan"
+      - "https://prometheus.homelab.lan"
+      - "https://server.homelab.lan"
+      - "https://tempo.homelab.lan"
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: "{{ hostvars['monitoring-server']['ansible_host'] }}:9115"
+      - target_label: scope
+        replacement: local
+
+  # The exporter's own health/operational metrics (probe durations, config
+  # reload status) — distinct from the probe results above.
+  - name: blackbox-exporter
+    targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:9115"]
+    relabel_configs:
+      - target_label: instance
+        replacement: monitoring-server
+
 # ── Loki ──────────────────────────────────────────────────────────────────────
 loki_config_dir: /opt/docker/loki
 loki_http_port: 3100
