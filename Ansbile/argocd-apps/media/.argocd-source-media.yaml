@@ -3,7 +3,7 @@ kustomize:
   - sctx/overseerr@sha256:6197516c9d7b58ccf113455e32aafb94df5d91995fe50e8c2cae6ba6c7c7b7de
   - jellyfin/jellyfin@sha256:aefb67e6a7ff1debdd154a78a7bbb780fd0c873d8639210a7f6a2016ad2b35db
   - linuxserver/bazarr@sha256:a20fb11a440d704a9d61c283aa26462aad33dc63223b173f8d8c77d33e8e9d59
-  - linuxserver/radarr@sha256:119aaa4a4f7349bcd2a136c5373a0d7925b5479915c7dfe0c0ad352db2a6d438
+  - linuxserver/radarr@sha256:95ba0801df4d9d1d79d0d9a3849f656542497dab061d91b87ad4f53a71aff3ef
   - linuxserver/prowlarr@sha256:91844fa2c927ad6ede5630127183cc7868b175f6223e83e6a5da1fffea2aa782
   - linuxserver/qbittorrent@sha256:8d48fa8c619caadfb103f04efea8747e2a2762d6c7551690919cffb987e61cee
   - ghcr.io/flaresolverr/flaresolverr@sha256:139dfee1c6f89249c8d665d1333a42e8ec74ec0a86bc6bb1c8461e10d3a66a47
