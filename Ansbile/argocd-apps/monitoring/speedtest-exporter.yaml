@@ -25,6 +25,15 @@ spec:
     metadata:
       labels:
         app: speedtest-exporter
+      annotations:
+        # The Ookla CLI talks to speedtest.net over TLS and negotiates its own
+        # connections to the test servers. Routing that through the Istio
+        # sidecar makes Ookla reject the request with HTTP 403 (config fetch
+        # fails -> speedtest_up 0), and it would skew the measurement anyway:
+        # the numbers would include Envoy's proxying overhead, not the raw ISP
+        # link. Excluding all outbound CIDRs bypasses sidecar capture for
+        # egress while inbound /metrics scraping still goes through the mesh.
+        traffic.sidecar.istio.io/excludeOutboundIPRanges: "0.0.0.0/0"
     spec:
       serviceAccountName: speedtest-exporter
       dnsPolicy: None
