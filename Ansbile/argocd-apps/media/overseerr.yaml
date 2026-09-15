@@ -62,6 +62,17 @@ spec:
         app: overseerr
     spec:
       serviceAccountName: overseerr
+      # Seerr (unlike Overseerr) runs as the non-root "node" user, UID 1000.
+      # /opt/overseer was root-owned under Overseerr, so it is chowned to 1000
+      # on the host; fsGroup keeps new files group-writable for that user.
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      # The Seerr image ships no init process (upstream tells Docker users to
+      # pass --init). shareProcessNamespace gives the pod a real PID 1 that
+      # reaps zombies, which is the Kubernetes equivalent.
+      shareProcessNamespace: true
       dnsPolicy: None
       dnsConfig:
         nameservers:
@@ -76,7 +87,7 @@ spec:
         kubernetes.io/hostname: media-server
       containers:
         - name: overseerr
-          image: sctx/overseerr:latest
+          image: ghcr.io/seerr-team/seerr:latest
           ports:
             - containerPort: 5055
           env:
@@ -85,6 +96,21 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /app/config
+          # Endpoint taken from the upstream Seerr healthcheck. The initial
+          # start is slow because the Overseerr->Seerr schema migration runs
+          # on first boot, hence the generous failureThreshold on startup.
+          startupProbe:
+            httpGet:
+              path: /api/v1/settings/public
+              port: 5055
+            periodSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /api/v1/settings/public
+              port: 5055
+            periodSeconds: 15
+            timeoutSeconds: 3
           resources:
             requests:
               memory: "128Mi"

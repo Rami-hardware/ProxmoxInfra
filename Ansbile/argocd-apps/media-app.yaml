@@ -6,7 +6,7 @@ metadata:
   namespace: argocd
   annotations:
     argocd-image-updater.argoproj.io/image-list: >-
-      overseerr=sctx/overseerr:latest,
+      overseerr=ghcr.io/seerr-team/seerr:latest,
       jellyfin=jellyfin/jellyfin:latest,
       bazarr=linuxserver/bazarr:latest,
       radarr=linuxserver/radarr:latest,
