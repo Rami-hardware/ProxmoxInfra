@@ -33,9 +33,11 @@ radarr:
   api_version: "v3"
 {% endif %}
 
-{% if (overseerr_api_key | default('')) | length > 0 %}
+{% if (seerr_api_key | default('')) | length > 0 %}
+# "overseerr" is scraparr's own schema key, not our service name — scraparr has
+# no "seerr" key, so this must stay as-is even though the app is now Seerr.
 overseerr:
-  url: "{{ scraparr_overseerr.url }}"
-  api_key: "{{ overseerr_api_key }}"
+  url: "{{ scraparr_seerr.url }}"
+  api_key: "{{ seerr_api_key }}"
   api_version: "v1"
 {% endif %}

@@ -13,5 +13,5 @@ scraparr_prowlarr:
 scraparr_radarr:
   url: "http://192.168.10.201:7878"
 
-scraparr_overseerr:
+scraparr_seerr:
   url: "http://192.168.10.201:5055"

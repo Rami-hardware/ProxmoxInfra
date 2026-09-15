@@ -58,7 +58,7 @@ k3s kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data
 | Radarr       | <https://radarr.homelab.lan>      | 7878 | Movie automation                              |
 | Sonarr       | <https://sonarr.homelab.lan>      | 8989 | TV automation                                 |
 | Bazarr       | <https://bazarr.homelab.lan>      | 6767 | Subtitle automation (GPU-accelerated ffmpeg)  |
-| Overseerr    | <https://overseerr.homelab.lan>   | 5055 | Media request management                      |
+| Seerr        | <https://seerr.homelab.lan>       | 5055 | Media request management                      |
 | qBittorrent  | <https://qbittorrent.homelab.lan> | 8080 | Torrent client — BT port 6881 TCP/UDP         |
 | Prowlarr     | <https://prowlarr.homelab.lan>    | 9696 | Indexer management                            |
 | FlareSolverr | —                                 | 8191 | Cloudflare bypass (stateless, Chromium-based) |
@@ -273,7 +273,7 @@ App-level changes (editing anything under `Ansbile/argocd-apps/`) don't need a C
 | Alerting       | Alertmanager                                                              |
 | Reverse Proxy  | Nginx (gateway) + ingress-nginx (K3s)                                     |
 | DNS            | AdGuard Home                                                              |
-| Media          | Jellyfin, Radarr, Sonarr, Bazarr, Overseerr, qBittorrent, Prowlarr        |
+| Media          | Jellyfin, Radarr, Sonarr, Bazarr, Seerr, qBittorrent, Prowlarr        |
 
 ---
 

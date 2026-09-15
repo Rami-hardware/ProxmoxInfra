@@ -28,7 +28,7 @@
       bazarr: "{{ bazarr_api_key | length }}"
       prowlarr: "{{ prowlarr_api_key | length }}"
       radarr: "{{ radarr_api_key | length }}"
-      overseerr: "{{ overseerr_api_key | length }}"
+      seerr: "{{ seerr_api_key | length }}"
 
 - name: Deploy Scraparr YAML config
   ansible.builtin.template:

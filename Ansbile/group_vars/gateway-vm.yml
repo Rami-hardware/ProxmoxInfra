@@ -64,7 +64,7 @@ nginx_services:
       - /web
     cache_ttl: "7d"
 
-  - name: overseerr
+  - name: seerr
     ip: 192.168.10.201
     port: 5055
     namespace: media
@@ -87,7 +87,7 @@ nginx_services_local:
       - /web
     cache_ttl: "7d"
 
-  - name: overseerr
+  - name: seerr
     ip: 192.168.10.201
     port: 5055
     namespace: media

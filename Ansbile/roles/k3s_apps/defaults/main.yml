@@ -38,7 +38,9 @@ k3s_apps_argocd_managed_names:
   - loki
   - alertmanager
   - speedtest-exporter
+  # Pre-ArgoCD filename; the stale manifest on disk is still overseerr.yml.
   - overseerr
+  - seerr
   - jellyfin
   - bazarr
   - radarr
@@ -55,7 +57,7 @@ k3s_apps_argocd_managed_names:
 # Each dict must have:
 #   name         - used as Deployment name, Namespace, and manifest filename
 #   namespace    - Kubernetes namespace
-#   image        - full image reference (e.g. sctx/overseerr:latest)
+#   image        - full image reference (e.g. ghcr.io/seerr-team/seerr:latest)
 #   port         - container port
 #   node_port    - NodePort to expose on the host (30000-32767)
 #   target_node  - inventory hostname of the K3s worker to schedule on

@@ -323,7 +323,7 @@ prometheus_scrape_jobs:
       module: [http_2xx_public]
     targets:
       - "https://jellyfin.darkestserver.com"
-      - "https://overseerr.darkestserver.com"
+      - "https://seerr.darkestserver.com"
       - "https://adguard.darkestserver.com"
     relabel_configs:
       - source_labels: [__address__]
@@ -341,7 +341,7 @@ prometheus_scrape_jobs:
       module: [http_2xx_local]
     targets:
       - "https://jellyfin.homelab.lan"
-      - "https://overseerr.homelab.lan"
+      - "https://seerr.homelab.lan"
       - "https://radarr.homelab.lan"
       - "https://sonarr.homelab.lan"
       - "https://prowlarr.homelab.lan"

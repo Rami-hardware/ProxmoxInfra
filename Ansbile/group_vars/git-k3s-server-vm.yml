@@ -2,7 +2,7 @@
 prometheus_retention_time: 30d
 
 k3s_apps_list:
-  # overseerr, jellyfin, bazarr, radarr, prowlarr, qbittorrent, flaresolverr,
+  # seerr, jellyfin, bazarr, radarr, prowlarr, qbittorrent, flaresolverr,
   # scraparr, sonarr are now managed by ArgoCD — see Ansbile/argocd-apps/media/
   # grafana, prometheus, loki, alertmanager, speedtest-exporter,
   # intel-gpu-exporter, qbittorrent-exporter are now managed by ArgoCD — see

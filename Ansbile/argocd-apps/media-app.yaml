@@ -6,7 +6,7 @@ metadata:
   namespace: argocd
   annotations:
     argocd-image-updater.argoproj.io/image-list: >-
-      overseerr=ghcr.io/seerr-team/seerr:latest,
+      seerr=ghcr.io/seerr-team/seerr:latest,
       jellyfin=jellyfin/jellyfin:latest,
       bazarr=linuxserver/bazarr:latest,
       radarr=linuxserver/radarr:latest,
@@ -16,7 +16,7 @@ metadata:
       scraparr=ghcr.io/thecfu/scraparr:latest,
       sonarr=linuxserver/sonarr:latest,
       tracearr=ghcr.io/connorgallopo/tracearr:latest
-    argocd-image-updater.argoproj.io/overseerr.update-strategy: digest
+    argocd-image-updater.argoproj.io/seerr.update-strategy: digest
     argocd-image-updater.argoproj.io/jellyfin.update-strategy: digest
     argocd-image-updater.argoproj.io/bazarr.update-strategy: digest
     argocd-image-updater.argoproj.io/radarr.update-strategy: digest
