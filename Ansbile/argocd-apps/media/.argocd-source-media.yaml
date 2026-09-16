@@ -3,7 +3,7 @@ kustomize:
   - ghcr.io/seerr-team/seerr@sha256:f4768de5f616248d723e05891f3345a1402123775d03bf0890dbfedc0831bda1
   - jellyfin/jellyfin@sha256:78d3ea1207d1322471fcac39a614f004f2ccf7e878f95ab2977d752f07e4dd7e
   - linuxserver/bazarr@sha256:d24bd0048c759a468970989e9df11a6b96a7628d556d00f923e60a35ba59237b
-  - linuxserver/radarr@sha256:fe051413dfd91b383ba04910552e83fb0306895fefee275c48dafe7bb90807dc
+  - linuxserver/radarr@sha256:c960f2b52ec6542dbe6707c5a21e696a7c74fd8b17997454f4d10a55dacee133
   - linuxserver/prowlarr@sha256:aaa16ba7d66e413db6d0358d3b6c68d833578ba7f176f24a51807181e7637fce
   - linuxserver/qbittorrent@sha256:2be038f3421f60f62e8e4bf201f66f385b68e4fbc9ed3ab79051069ea22e2650
   - ghcr.io/flaresolverr/flaresolverr@sha256:c80ae007ce2ccdcd217a12426e4f039ef763ff90738c808d38810c3e59323767
