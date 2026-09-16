@@ -10,6 +10,9 @@ alerting:
         - targets:
             - "{{ hostvars['monitoring-server']['ansible_host'] }}:9093"
 
+rule_files:
+  - prometheus-rules.yml
+
 scrape_configs:
 {% for job in prometheus_scrape_jobs %}
   - job_name: {{ job.name }}

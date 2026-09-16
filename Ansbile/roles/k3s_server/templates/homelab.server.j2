@@ -1,0 +1,4 @@
+{{ k3s_server_internal_domain }}:53 {
+    forward . {{ hostvars['gateway-server']['ansible_host'] }}
+    cache 30
+}

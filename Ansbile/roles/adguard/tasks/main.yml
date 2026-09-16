@@ -1,3 +1,73 @@
+---
+# ── Binary + service management ───────────────────────────────────────────────
+# AdGuard is the whole network's DNS (and the k3s pod-DNS upstream), so it runs
+# as a managed systemd service pinned to {{ adguard_version }} — not an
+# unpinned container. The binary previously existed only as a running process
+# (deleted from disk, no unit file); this block makes installs/upgrades
+# declarative and survives reboots.
+- name: Check AdGuardHome binary
+  ansible.builtin.stat:
+    path: "{{ adguard_install_dir }}/AdGuardHome"
+  register: adguard_binary
+
+- name: Get installed AdGuardHome version
+  ansible.builtin.command:
+    cmd: "{{ adguard_install_dir }}/AdGuardHome --version"
+  register: adguard_binary_version
+  changed_when: false
+  failed_when: false
+  when: adguard_binary.stat.exists
+
+- name: Download and install AdGuardHome binary
+  when: >
+    not adguard_binary.stat.exists
+    or adguard_version not in (adguard_binary_version.stdout | default(''))
+  block:
+    - name: Download AdGuardHome release tarball
+      ansible.builtin.get_url:
+        url: "{{ adguard_download_base }}/{{ adguard_version }}/AdGuardHome_linux_amd64.tar.gz"
+        dest: /tmp/AdGuardHome_linux_amd64.tar.gz
+        mode: '0644'
+
+    - name: Extract AdGuardHome tarball
+      ansible.builtin.unarchive:
+        src: /tmp/AdGuardHome_linux_amd64.tar.gz
+        dest: /tmp
+        remote_src: true
+
+    - name: Install AdGuardHome binary
+      ansible.builtin.copy:
+        src: /tmp/AdGuardHome_linux_amd64/AdGuardHome
+        dest: "{{ adguard_install_dir }}/AdGuardHome"
+        owner: root
+        group: root
+        mode: '0755'
+        remote_src: true
+      notify: Restart AdGuardHome
+
+    - name: Clean up download artifacts
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/AdGuardHome_linux_amd64.tar.gz
+        - /tmp/AdGuardHome_linux_amd64
+
+- name: Install AdGuardHome systemd unit
+  ansible.builtin.template:
+    src: AdGuardHome.service.j2
+    dest: /etc/systemd/system/AdGuardHome.service
+    mode: '0644'
+  notify: Restart AdGuardHome
+
+- name: Enable AdGuardHome service
+  ansible.builtin.systemd:
+    name: AdGuardHome
+    state: started
+    enabled: true
+    daemon_reload: true
+
+# ── Resolver + config fix-ups (existing behaviour) ────────────────────────────
 - name: Stop systemd-resolved service
   ansible.builtin.systemd:
     name: systemd-resolved
@@ -28,7 +98,7 @@
     path: "{{ adguard_config_path }}"
     regexp: '^(\s*)address:.*'
     replace: '\1address: 0.0.0.0:{{ adguard_ui_port }}'
-  notify: Reload adguardhome container
+  notify: Restart AdGuardHome
 
 - name: Fix AdGuard config directory permissions
   ansible.builtin.file:

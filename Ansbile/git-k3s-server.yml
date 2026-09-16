@@ -5,5 +5,10 @@
   vars_files:
     - group_vars/vault.yml
   roles:
+    # Docker daemon on the k3s control plane node — Floci's container-backed
+    # services (Lambda, RDS, ECS, ...) and its web console sidecar manage
+    # containers through the host socket.
+    - docker_setup
+    - dns
     - k3s_server
     - k3s_apps

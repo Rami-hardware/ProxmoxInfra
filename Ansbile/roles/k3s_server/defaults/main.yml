@@ -1,1 +1,9 @@
 k3s_server_version: "v1.34.3+k3s3"
+
+# Public resolver used as secondary upstream (policy sequential) so pods keep
+# resolving public names when AdGuard on the gateway is rebooting/down.
+k3s_server_public_dns_fallback: "8.8.8.8"
+
+# Internal zone delegated to AdGuard via a coredns-custom server block —
+# AdGuard is authoritative for it; public resolvers return NXDOMAIN.
+k3s_server_internal_domain: homelab.lan

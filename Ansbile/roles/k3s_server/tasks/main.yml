@@ -11,8 +11,10 @@
     dest: /etc/rancher/k3s/resolv.conf
     content: |
       nameserver {{ hostvars['gateway-server']['ansible_host'] }}
-      nameserver 8.8.8.8
+      nameserver {{ k3s_server_public_dns_fallback }}
     mode: '0644'
+  register: k3s_server_resolv_conf_result
+  notify: Restart k3s
 
 - name: Write K3s server config
   ansible.builtin.copy:
@@ -82,24 +84,90 @@
   delay: 5
   changed_when: false
 
-- name: Patch CoreDNS to forward external DNS to 8.8.8.8 directly
+# AdGuard (gateway) is authoritative for *.homelab.lan — forwarding to public
+# resolvers would make every internal hostname NXDOMAIN for pods.
+- name: Wait for CoreDNS configmap to exist
+  ansible.builtin.command:
+    cmd: k3s kubectl get configmap coredns -n kube-system
+  register: k3s_server_coredns_cm_check
+  until: k3s_server_coredns_cm_check.rc == 0
+  retries: 24
+  delay: 5
+  changed_when: false
+
+- name: Stage CoreDNS internal zone override
+  ansible.builtin.template:
+    src: homelab.server.j2
+    dest: /etc/rancher/k3s/coredns-custom/homelab.server
+    mode: '0644'
+  register: k3s_server_coredns_zone_stage
+
+# *.override files can't hold a second forward plugin (duplicate plugin in the
+# default server block), and *.server blocks are never touched by k3s addon
+# reconciliation — so the internal zone lives in coredns-custom and survives
+# k3s re-applying the coredns configmap on upgrades.
+# NOTE: this manages the whole coredns-custom data map — add more zone files to
+# the template dir and this task, not by hand.
+- name: Apply CoreDNS internal zone configmap
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      k3s kubectl create configmap coredns-custom -n kube-system \
+        --from-file=homelab.server=/etc/rancher/k3s/coredns-custom/homelab.server \
+        --dry-run=client -o yaml | k3s kubectl apply -f -
+    executable: /bin/bash
+  register: k3s_server_coredns_custom_result
+  changed_when: >
+    'configured' in k3s_server_coredns_custom_result.stdout
+    or 'created' in k3s_server_coredns_custom_result.stdout
+
+# policy sequential: prefer AdGuard, only fall back to public DNS on transport
+# failure. The default random policy would send ~50% of homelab.lan queries to
+# public resolvers (NXDOMAIN) if both upstreams were listed.
+- name: Patch CoreDNS to forward non-cluster DNS to AdGuard on the gateway
   ansible.builtin.shell:
     cmd: |
       set -o pipefail
       k3s kubectl get configmap coredns -n kube-system -o yaml | \
-        sed 's|forward . /etc/resolv.conf|forward . 8.8.8.8 8.8.4.4|g' | \
+        sed 's|forward . /etc/resolv.conf|forward . {{ hostvars['gateway-server']['ansible_host'] }} {{ k3s_server_public_dns_fallback }} {\n    policy sequential\n}|g' | \
         k3s kubectl apply -f -
     executable: /bin/bash
   register: k3s_server_coredns_patch_result
+  retries: 12
+  delay: 5
+  until: k3s_server_coredns_patch_result.rc == 0
   changed_when: "'configured' in k3s_server_coredns_patch_result.stdout"
 
-- name: Restart CoreDNS to pick up new resolv.conf
+# k3s addon reconciliation can reset the configmap (upgrade, manifest change)
+# and the sed above would then no-op silently — assert the desired state.
+- name: Verify CoreDNS forward targets gateway with public fallback
+  ansible.builtin.command:
+    cmd: k3s kubectl get configmap coredns -n kube-system -o jsonpath='{.data.Corefile}'
+  register: k3s_server_coredns_forward_verify
+  changed_when: false
+  failed_when: >
+    'forward . ' ~ hostvars['gateway-server']['ansible_host']
+    ~ ' ' ~ k3s_server_public_dns_fallback not in k3s_server_coredns_forward_verify.stdout
+
+- name: Verify CoreDNS internal zone is loaded
+  ansible.builtin.command:
+    cmd: k3s kubectl get configmap coredns-custom -n kube-system -o jsonpath='{.data.homelab\.server}'
+  register: k3s_server_coredns_zone_verify
+  changed_when: false
+  failed_when: >
+    k3s_server_internal_domain ~ ':53' not in k3s_server_coredns_zone_verify.stdout
+
+- name: Restart CoreDNS to apply new forward config
   ansible.builtin.command:
     cmd: k3s kubectl rollout restart deployment/coredns -n kube-system
   changed_when: true
   when: >
     (k3s_server_config_result is defined and k3s_server_config_result.changed)
+    or (k3s_server_resolv_conf_result is defined and k3s_server_resolv_conf_result.changed)
+    or (k3s_server_coredns_zone_stage is defined and k3s_server_coredns_zone_stage.changed)
     or ('configured' in k3s_server_coredns_patch_result.stdout)
+    or ('configured' in k3s_server_coredns_custom_result.stdout)
+    or ('created' in k3s_server_coredns_custom_result.stdout)
 
 - name: Wait for CoreDNS to be ready
   ansible.builtin.command:

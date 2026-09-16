@@ -1,7 +1,7 @@
-- name: Reload adguardhome container
-  community.docker.docker_container:
-    name: adguardhome
-    state: started
-    restart: true
-    network_mode: host
-    restart_policy: unless-stopped
+---
+# Binary installs and unit changes must bounce the service; the in-memory
+# process keeps serving DNS from a deleted binary otherwise.
+- name: Restart AdGuardHome
+  ansible.builtin.systemd:
+    name: AdGuardHome
+    state: restarted

@@ -35,9 +35,17 @@ services:
 {% endif %}
 {% if 'adguardhome' in docker_apps_enabled %}
   adguardhome:
-    image: adguard/adguardhome
+    # Pinned + healthchecked; on gateway-server AdGuard runs as a systemd
+    # service via the `adguard` role instead — do not enable both (port 53).
+    image: adguard/adguardhome:v0.107.79
     container_name: adguardhome
     network_mode: host
+    healthcheck:
+      test: ["CMD-SHELL", "nslookup -timeout=3 -retry=0 homelab.lan 127.0.0.1 >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     logging:
       driver: loki
       options:

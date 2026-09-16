@@ -15,3 +15,10 @@
     mode: '0644'
     validate: "sh -c 'command -v promtool >/dev/null 2>&1 && promtool check config %s || true'"
   notify: Reload Prometheus
+
+- name: Template Prometheus alert rules
+  ansible.builtin.template:
+    src: prometheus-rules.yml.j2
+    dest: "{{ prometheus_rules_file }}"
+    mode: '0644'
+  notify: Reload Prometheus

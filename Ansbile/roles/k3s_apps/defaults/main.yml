@@ -16,6 +16,7 @@ k3s_apps_istio_injected_namespaces:
   - media
   - monitoring
   - network
+  - dev
 
 # Manifest names to exclude from the "delete removed apps" cleanup —
 # these are managed outside k3s_apps_list (DaemonSets, RBAC, or Helm releases).

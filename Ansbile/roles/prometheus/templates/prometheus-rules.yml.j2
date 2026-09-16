@@ -1,0 +1,55 @@
+# Managed by Ansible (roles/prometheus) — do not edit on the host.
+# Rendered next to prometheus.yml so the pod's /etc/prometheus mount picks it
+# up, and reloaded via POST /-/reload (handler).
+groups:
+  # AdGuard DNS itself — the one true liveness check for the whole pod DNS
+  # chain (pods → CoreDNS → AdGuard). Probed directly at :53 by the blackbox
+  # dns module; NOERROR-ratio alerts are unreliable because AdGuard answers
+  # unknown homelab.lan names with NOERROR/NODATA, not NXDOMAIN.
+  - name: dns
+    rules:
+      - alert: AdGuardDNSDown
+        expr: probe_success{job="blackbox-dns"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AdGuard DNS not answering on {{ $labels.instance }}"
+          description: "Blackbox DNS probe failed for 2m — all pod DNS for *.homelab.lan and public names via CoreDNS is degraded."
+
+      - alert: CoreDNSForwardHealthBroken
+        expr: increase(coredns_forward_healthcheck_broken_total[10m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CoreDNS marks upstreams broken ({{ $labels.instance }})"
+          description: "CoreDNS forward health checks are failing against its upstreams — expect SERVFAILs or fallback traffic."
+
+  # Blackbox HTTP probes — scope label distinguishes local/public targets.
+  - name: availability
+    rules:
+      - alert: LocalServiceDown
+        expr: probe_success{scope="local"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Local probe failed: {{ $labels.instance }}"
+
+      - alert: PublicSiteDown
+        expr: probe_success{scope="public"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Public probe failed: {{ $labels.instance }}"
+
+      - alert: CoreDNSDown
+        expr: up{job="coredns"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "CoreDNS metrics endpoint down ({{ $labels.instance }})"
+          description: "Prometheus cannot scrape CoreDNS — the pod may be restarting, breaking all cluster DNS."

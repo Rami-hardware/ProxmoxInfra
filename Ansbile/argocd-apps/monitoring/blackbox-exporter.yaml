@@ -52,6 +52,22 @@ data:
           preferred_ip_protocol: ip4
           ip_protocol_fallback: false
 
+      # DNS liveness for AdGuard — queries an authoritative *.homelab.lan
+      # name directly at :53, proving the whole pod DNS chain end to end.
+      # (AdGuard answers unknown homelab.lan names NOERROR/NODATA, so probing
+      # for NXDOMAIN would be meaningless.)
+      dns_homelab:
+        prober: dns
+        timeout: 5s
+        dns:
+          query_name: "jellyfin.homelab.lan"
+          query_type: "A"
+          valid_rcodes: [NOERROR]
+          validate_answer_rrs:
+            fail_if_not_matches_regexp:
+              - "jellyfin\\.homelab\\.lan\\..*\\s+IN\\s+A\\s+192\\.168\\.10\\.210$"
+          preferred_ip_protocol: ip4
+
       icmp:
         prober: icmp
         timeout: 5s
@@ -81,8 +97,8 @@ spec:
       serviceAccountName: blackbox-exporter
       nodeSelector:
         kubernetes.io/hostname: monitoring-server
-      # The *.homelab.lan and *.darkestserver.com names resolve via AdGuard on
-      # the gateway, not via CoreDNS, so probe DNS has to go there first —
+      # CoreDNS forwards *.homelab.lan to AdGuard on the gateway, and
+      # AdGuard answers fastest when probed directly, so both are listed —
       # otherwise every local probe fails to resolve.
       dnsPolicy: None
       dnsConfig:

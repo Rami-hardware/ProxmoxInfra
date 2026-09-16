@@ -1,5 +1,4 @@
 docker_apps_enabled:
-  - adguardhome
   - promtail
   - node-exporter
   - crowdsec
@@ -16,9 +15,10 @@ service_tcp_ports:
   - 53
   - 9080
 
-adguardhome_volume_config_dir: "adguard_config:/opt/adguardhome/conf"
-adguardhome_volume_work_dir: "adguard_work:/opt/adguardhome/work"
-
+# NOTE: AdGuardHome does NOT run as a docker container here — it is a pinned
+# systemd service managed by the `adguard` role (binary at /opt/adguardhome).
+# It was removed from docker_apps_enabled: a host-network container would
+# fight the service for port 53.
 adguard_config_path: "/opt/adguardhome/conf/AdGuardHome.yaml"
 adguard_conf_dir: "/opt/adguardhome/conf"
 adguard_work_dir: "/opt/adguardhome/work"

@@ -1,0 +1,22 @@
+[Unit]
+Description=AdGuard Home DNS server
+Documentation=https://github.com/AdGuardTeam/AdGuardHome
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart={{ adguard_install_dir }}/AdGuardHome --no-check-update -c {{ adguard_config_path }} -w {{ adguard_work_dir }}
+Restart=always
+RestartSec=5
+LimitNOFILE=16384
+
+# Hardening — AdGuardHome needs to bind :53 and read its own dirs only.
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths={{ adguard_install_dir }}
+
+[Install]
+WantedBy=multi-user.target

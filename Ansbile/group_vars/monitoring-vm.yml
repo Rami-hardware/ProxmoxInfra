@@ -2,6 +2,7 @@
 # ── Prometheus ────────────────────────────────────────────────────────────────
 prometheus_config_dir: /opt/docker/prometheus
 prometheus_config_file: "{{ prometheus_config_dir }}/prometheus.yml"
+prometheus_rules_file: "{{ prometheus_config_dir }}/prometheus-rules.yml"
 prometheus_scrape_interval: 15s
 
 prometheus_scrape_jobs:
@@ -365,6 +366,24 @@ prometheus_scrape_jobs:
         replacement: "{{ hostvars['monitoring-server']['ansible_host'] }}:9115"
       - target_label: scope
         replacement: local
+
+  # DNS-level liveness for AdGuard — the only check that proves the pod DNS
+  # chain (pods → CoreDNS → AdGuard) actually answers queries. The target is
+  # the DNS server itself; query_name lives in the blackbox dns module.
+  - name: blackbox-dns
+    metrics_path: /probe
+    params:
+      module: [dns_homelab]
+    targets: ["{{ hostvars['gateway-server']['ansible_host'] }}"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: "{{ hostvars['monitoring-server']['ansible_host'] }}:9115"
+      - target_label: scope
+        replacement: dns
 
   # The exporter's own health/operational metrics (probe durations, config
   # reload status) — distinct from the probe results above.

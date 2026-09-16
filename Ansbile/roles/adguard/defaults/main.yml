@@ -1,0 +1,6 @@
+---
+# Version of AdGuardHome to install. Upgrade = bump here; the role reinstalls
+# the binary and restarts the service.
+adguard_version: "v0.107.79"
+adguard_install_dir: /opt/adguardhome
+adguard_download_base: https://github.com/AdGuardTeam/AdGuardHome/releases/download
