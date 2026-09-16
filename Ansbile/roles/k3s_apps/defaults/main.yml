@@ -52,7 +52,6 @@ k3s_apps_argocd_managed_names:
   - intel-gpu-exporter
   - qbittorrent-exporter
   - adguard-home
-  - homarr
 
 # k3s_apps is a list of app dicts defined in group_vars/github-vm.yml.
 # Each dict must have:
@@ -68,3 +67,17 @@ k3s_apps_argocd_managed_names:
 #   memory_request / memory_limit
 #   cpu_request  / cpu_limit
 k3s_apps_list: []
+
+# ── Homarr ────────────────────────────────────────────────────────────────────
+# Installed from the upstream Helm chart (homarr-labs/homarr), not from a
+# manifest in argocd-apps/. Pinned so a chart release cannot change the
+# deployment on an unrelated playbook run.
+k3s_apps_homarr_chart_version: "8.29.1"
+k3s_apps_homarr_namespace: media
+k3s_apps_homarr_node: media-server
+k3s_apps_homarr_node_port: 7575
+k3s_apps_homarr_hostname: homarr.homelab.lan
+k3s_apps_homarr_timezone: "Asia/Riyadh"
+k3s_apps_homarr_storage_size: 1Gi
+# Holds db-encryption-key, generated on the node on first run. Never in git.
+k3s_apps_homarr_encryption_secret: homarr-db-encryption

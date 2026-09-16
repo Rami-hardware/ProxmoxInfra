@@ -1,0 +1,56 @@
+---
+# Values for the upstream homarr-labs/homarr chart.
+# Managed by roles/k3s_apps — edit the k3s_apps_homarr_* vars, not this file.
+
+# SQLite on a local volume, so only one pod may hold the DB open at a time.
+replicaCount: 1
+strategyType: Recreate
+
+database:
+  type: sqlite
+  migrationEnabled: true
+
+env:
+  TZ: "{{ k3s_apps_homarr_timezone }}"
+  # Homarr builds absolute auth callback URLs from this, so it must match the
+  # hostname the local ingress serves.
+  BASE_URL: "https://{{ k3s_apps_homarr_hostname }}"
+
+# The chart reads SECRET_ENCRYPTION_KEY only from an existing Secret, which is
+# why the key is generated on the node and never committed.
+envSecrets:
+  dbEncryption:
+    existingSecret: "{{ k3s_apps_homarr_encryption_secret }}"
+    key: db-encryption-key
+
+persistence:
+  homarrDatabase:
+    enabled: true
+    name: homarr-database
+    mountPath: /appdata
+    size: "{{ k3s_apps_homarr_storage_size }}"
+    accessMode: ReadWriteOnce
+    storageClassName: local-path
+
+# NodePort, matching the other media services: the gateway's nginx ingress
+# reaches this node directly at {{ k3s_apps_homarr_node_port }}.
+service:
+  enabled: true
+  type: NodePort
+  ports:
+    app:
+      port: 7575
+      targetPort: http
+      protocol: TCP
+      nodePort: {{ k3s_apps_homarr_node_port }}
+
+nodeSelector:
+  kubernetes.io/hostname: "{{ k3s_apps_homarr_node }}"
+
+resources:
+  requests:
+    memory: "192Mi"
+    cpu: "50m"
+  limits:
+    memory: "768Mi"
+    cpu: "500m"

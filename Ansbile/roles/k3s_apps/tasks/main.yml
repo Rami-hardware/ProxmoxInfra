@@ -57,6 +57,17 @@
   changed_when: "'already exists' not in k3s_apps_helm_repo_argo.stdout"
   failed_when: k3s_apps_helm_repo_argo.rc != 0 and 'already exists' not in k3s_apps_helm_repo_argo.stdout
 
+- name: Add homarr Helm repo
+  ansible.builtin.command:
+    cmd: helm repo add homarr-labs https://homarr-labs.github.io/charts/
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  register: k3s_apps_helm_repo_homarr
+  changed_when: "'already exists' not in k3s_apps_helm_repo_homarr.stdout"
+  failed_when: k3s_apps_helm_repo_homarr.rc != 0 and 'already exists' not in k3s_apps_helm_repo_homarr.stdout
+
 - name: Ensure Helm repositories file is world-readable
   ansible.builtin.file:
     path: /etc/helm/repositories.yaml
@@ -770,3 +781,76 @@
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   changed_when: false
+
+# ── Homarr ────────────────────────────────────────────────────────────────────
+# Installed from the upstream Helm chart rather than a hand-written manifest.
+# The chart only accepts SECRET_ENCRYPTION_KEY through an existing Secret, so
+# the key is generated once on the node and never stored in git.
+- name: Create Homarr namespace
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      k3s kubectl create namespace {{ k3s_apps_homarr_namespace }} \
+        --dry-run=client -o yaml | k3s kubectl apply -f -
+    executable: /bin/bash
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+
+# Generated on the node with openssl and kept out of the repo. The lookup of
+# the existing Secret runs first so a re-run never rotates the key — rotating
+# it would make every stored integration credential undecryptable.
+- name: Check for existing Homarr encryption key
+  ansible.builtin.command:
+    cmd: >
+      k3s kubectl get secret {{ k3s_apps_homarr_encryption_secret }}
+      -n {{ k3s_apps_homarr_namespace }} -o jsonpath={.data.db-encryption-key}
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: k3s_apps_homarr_existing_key
+  failed_when: false
+  changed_when: false
+
+- name: Generate Homarr encryption key
+  ansible.builtin.command:
+    cmd: openssl rand -hex 32
+  register: k3s_apps_homarr_new_key
+  when: k3s_apps_homarr_existing_key.rc != 0
+  changed_when: true
+  no_log: true
+
+- name: Create Homarr encryption key secret
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      k3s kubectl create secret generic {{ k3s_apps_homarr_encryption_secret }} \
+        --from-literal=db-encryption-key='{{ k3s_apps_homarr_new_key.stdout }}' \
+        --namespace={{ k3s_apps_homarr_namespace }} \
+        --dry-run=client -o yaml | k3s kubectl apply -f -
+    executable: /bin/bash
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  when: k3s_apps_homarr_existing_key.rc != 0
+  changed_when: true
+  no_log: true
+
+- name: Template Homarr Helm values
+  ansible.builtin.template:
+    src: homarr-values.yml.j2
+    dest: /tmp/homarr-values.yml
+    mode: '0600'
+
+- name: Install Homarr via Helm
+  ansible.builtin.command:
+    cmd: >
+      helm upgrade --install homarr homarr-labs/homarr
+      --namespace {{ k3s_apps_homarr_namespace }}
+      --version {{ k3s_apps_homarr_chart_version }}
+      --values /tmp/homarr-values.yml
+      --wait
+      --timeout 5m
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  changed_when: true
