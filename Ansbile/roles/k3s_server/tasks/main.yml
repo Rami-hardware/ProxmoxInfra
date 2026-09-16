@@ -128,8 +128,10 @@
   ansible.builtin.shell:
     cmd: |
       set -o pipefail
+      GW_IP={{ hostvars['gateway-server']['ansible_host'] }}
+      FWD="forward . ${GW_IP} {{ k3s_server_public_dns_fallback }} {\n    policy sequential\n    }"
       k3s kubectl get configmap coredns -n kube-system -o yaml | \
-        sed 's|forward . /etc/resolv.conf|forward . {{ hostvars['gateway-server']['ansible_host'] }} {{ k3s_server_public_dns_fallback }} {\n    policy sequential\n}|g' | \
+        sed "s|forward . /etc/resolv.conf|${FWD}|g" | \
         k3s kubectl apply -f -
     executable: /bin/bash
   register: k3s_server_coredns_patch_result

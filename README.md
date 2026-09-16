@@ -16,7 +16,7 @@ A fully automated homelab running on Proxmox, provisioned with Terraform, config
 
 | VM                | IP            | Cores | RAM  | Role                                      |
 | :---------------- | :------------ | :---- | :--- | :---------------------------------------- |
-| gateway-server    | 192.168.10.200 | 1     | 2 GB | Reverse proxy, DNS                        |
+| gateway-server    | 192.168.10.200 | 1     | 2 GB | DNS (AdGuard Home, systemd), CrowdSec     |
 | media-server      | 192.168.10.201 | 3     | 8 GB | Media stack — K3s worker                  |
 | monitoring-server | 192.168.10.203 | 1     | 2 GB | Observability stack — K3s worker          |
 | git-k3s-server    | 192.168.10.204 | 4     | 8 GB | GitHub Actions runner + K3s control plane |
@@ -28,11 +28,11 @@ A fully automated homelab running on Proxmox, provisioned with Terraform, config
 App deployment is split across two mechanisms:
 
 - **Ansible** bootstraps the cluster itself — K3s, Helm repos, cert-manager, ingress-nginx, Istio, ArgoCD, ArgoCD Image Updater, and cluster-wide DaemonSets (node-exporter, Promtail, kube-state-metrics).
-- **ArgoCD** owns app deployment from here on. Four `Application` resources (`media`, `monitoring`, `network`, `dev`) auto-sync from `Ansbile/argocd-apps/<name>/` on the `development` branch — editing an app means editing its YAML under `argocd-apps/`, committing, and pushing; ArgoCD picks it up automatically (self-heal + prune enabled, no manual `kubectl apply` needed).
+- **ArgoCD** owns app deployment from here on. Four `Application` resources (`media`, `monitoring`, `network`, `dev`) auto-sync from `Ansbile/argocd-apps/<name>/` on the `main` branch — editing an app means editing its YAML under `argocd-apps/`, committing, and pushing; ArgoCD picks it up automatically (self-heal + prune enabled, no manual `kubectl apply` needed).
 
 ### ArgoCD Image Updater
 
-Tracks the `:latest` (or `:rolling`) tag digest for every app image on a 2-minute poll. When upstream pushes a new image, Image Updater writes a `.argocd-source-<app>.yaml` override into the app's `argocd-apps/` directory and pushes the commit directly to `development` over SSH (deploy key with write access) — ArgoCD then syncs the change automatically. Fully hands-off container updates, no Watchtower needed.
+Tracks the `:latest` (or `:rolling`) tag digest for every app image on a 2-minute poll. When upstream pushes a new image, Image Updater writes a `.argocd-source-<app>.yaml` override into the app's `argocd-apps/` directory and pushes the commit directly to `main` over SSH (deploy key with write access) — ArgoCD then syncs the change automatically. Fully hands-off container updates, no Watchtower needed.
 
 - Pinned to Image Updater **v0.12.2** (last annotation-based release before the v1.x CRD rewrite)
 - Each `Application`'s image list + `digest` update strategy is set via `argocd-image-updater.argoproj.io/*` annotations
@@ -76,7 +76,7 @@ k3s kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data
 | qBittorrent Exporter | —                                  | 17871 | qBittorrent metrics for Prometheus |
 | Intel GPU Exporter   | —                                  | 8082  | Arc GPU utilization metrics        |
 
-`adguard-exporter` remains Ansible-managed (`k3s_apps_list`) rather than ArgoCD, since it needs real secret handling (AdGuard credentials) that hasn't been wired into git write-back yet.
+AdGuard Home runs on the gateway itself as a **pinned systemd service** (`adguard` role, binary at `/opt/adguardhome`, DNS on :53, UI on 8081) — it is the network's authoritative DNS and the K3s pod-DNS upstream. The `adguard-home` pod in the `network` namespace (hostNetwork) serves the proxied UI; it was removed from `k3s_apps_list`/`docker_apps_enabled` — the exporter was dropped (stuck `ImagePullBackOff`) and DNS liveness is now covered by the `blackbox-dns` probe + `AdGuardDNSDown` alert instead.
 
 ### Network (192.168.10.200) — K3s worker, namespace: `network` — ArgoCD-managed
 
@@ -84,7 +84,7 @@ k3s kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data
 | :------ | :---------------------------- | :--- | :------------------------------ |
 | AdGuard | <https://adguard.homelab.lan> | 8081 | DNS + ad blocking (hostNetwork) |
 
-Gateway also runs: **Nginx** (reverse proxy + TLS, routes to K3s NodePorts).
+Gateway also runs: **AdGuard Home** (systemd service — DNS :53, UI :8081; see the `adguard` role). TLS termination for `*.homelab.lan` / `*.darkestserver.com` happens in-cluster (ingress-nginx + the certs/ingress resources the `nginx_config` role deploys into K3s), not via a gateway nginx container.
 
 ### Dev (192.168.10.204) — K3s control plane, namespace: `dev` — ArgoCD-managed
 
@@ -216,7 +216,7 @@ notify job
 └── Posts pipeline result to Discord
 ```
 
-App-level changes (editing anything under `Ansbile/argocd-apps/`) don't need a CI run to take effect — ArgoCD polls `development` on its own and syncs automatically. CI only needs to run for infra/bootstrap changes.
+App-level changes (editing anything under `Ansbile/argocd-apps/`) don't need a CI run to take effect — ArgoCD polls `main` on its own and syncs automatically. CI only needs to run for infra/bootstrap changes.
 
 ---
 

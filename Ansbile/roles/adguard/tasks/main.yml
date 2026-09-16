@@ -37,7 +37,7 @@
 
     - name: Install AdGuardHome binary
       ansible.builtin.copy:
-        src: /tmp/AdGuardHome_linux_amd64/AdGuardHome
+        src: /tmp/AdGuardHome/AdGuardHome
         dest: "{{ adguard_install_dir }}/AdGuardHome"
         owner: root
         group: root
@@ -51,7 +51,7 @@
         state: absent
       loop:
         - /tmp/AdGuardHome_linux_amd64.tar.gz
-        - /tmp/AdGuardHome_linux_amd64
+        - /tmp/AdGuardHome
 
 - name: Install AdGuardHome systemd unit
   ansible.builtin.template:
