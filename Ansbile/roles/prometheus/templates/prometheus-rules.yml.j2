@@ -1,6 +1,9 @@
 # Managed by Ansible (roles/prometheus) — do not edit on the host.
 # Rendered next to prometheus.yml so the pod's /etc/prometheus mount picks it
 # up, and reloaded via POST /-/reload (handler).
+# The body is Prometheus/Go-template syntax ($labels, $value) — Jinja must not
+# touch it, hence the raw block.
+{% raw %}
 groups:
   # AdGuard DNS itself — the one true liveness check for the whole pod DNS
   # chain (pods → CoreDNS → AdGuard). Probed directly at :53 by the blackbox
@@ -53,3 +56,4 @@ groups:
         annotations:
           summary: "CoreDNS metrics endpoint down ({{ $labels.instance }})"
           description: "Prometheus cannot scrape CoreDNS — the pod may be restarting, breaking all cluster DNS."
+{% endraw %}
