@@ -19,9 +19,12 @@
   when: adguard_binary.stat.exists
 
 - name: Download and install AdGuardHome binary
+  # Skipped in check mode: get_url is a no-op there, so unarchive would fail
+  # on the missing tarball and break the CI dry run.
   when: >
-    not adguard_binary.stat.exists
-    or adguard_version not in (adguard_binary_version.stdout | default(''))
+    (not adguard_binary.stat.exists
+    or adguard_version not in (adguard_binary_version.stdout | default('')))
+    and not ansible_check_mode
   block:
     - name: Download AdGuardHome release tarball
       ansible.builtin.get_url:
