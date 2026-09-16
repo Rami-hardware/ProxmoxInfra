@@ -355,6 +355,7 @@ prometheus_scrape_jobs:
       - "https://tempo.homelab.lan"
       - "https://argocd.homelab.lan"
       - "https://tracearr.homelab.lan"
+      - "https://homarr.homelab.lan"
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target

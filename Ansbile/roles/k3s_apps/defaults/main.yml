@@ -52,6 +52,7 @@ k3s_apps_argocd_managed_names:
   - intel-gpu-exporter
   - qbittorrent-exporter
   - adguard-home
+  - homarr
 
 # k3s_apps is a list of app dicts defined in group_vars/github-vm.yml.
 # Each dict must have:
