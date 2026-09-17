@@ -28,7 +28,7 @@ A fully automated homelab running on Proxmox, provisioned with Terraform, config
 App deployment is split across two mechanisms:
 
 - **Ansible** bootstraps the cluster itself — K3s, Helm repos, cert-manager, ingress-nginx, Istio, ArgoCD, ArgoCD Image Updater, and cluster-wide DaemonSets (node-exporter, Promtail, kube-state-metrics).
-- **ArgoCD** owns app deployment from here on. Four `Application` resources (`media`, `monitoring`, `network`, `dev`) auto-sync from `Ansbile/argocd-apps/<name>/` on the `main` branch — editing an app means editing its YAML under `argocd-apps/`, committing, and pushing; ArgoCD picks it up automatically (self-heal + prune enabled, no manual `kubectl apply` needed).
+- **ArgoCD** owns app deployment from here on. Three `Application` resources (`media`, `monitoring`, `network`) auto-sync from `Ansbile/argocd-apps/<name>/` on the `main` branch — editing an app means editing its YAML under `argocd-apps/`, committing, and pushing; ArgoCD picks it up automatically (self-heal + prune enabled, no manual `kubectl apply` needed).
 
 ### ArgoCD Image Updater
 
@@ -86,21 +86,15 @@ AdGuard Home runs on the gateway itself as a **pinned systemd service** (`adguar
 
 Gateway also runs: **AdGuard Home** (systemd service — DNS :53, UI :8081; see the `adguard` role). TLS termination for `*.homelab.lan` / `*.darkestserver.com` happens in-cluster (ingress-nginx + the certs/ingress resources the `nginx_config` role deploys into K3s), not via a gateway nginx container.
 
-### Dev (192.168.10.204) — K3s control plane, namespace: `dev` — ArgoCD-managed
-
-| App   | URL                          | Port | Notes                                                                    |
-| :---- | :--------------------------- | :--- | :----------------------------------------------------------------------- |
-| Floci | <http://floci.homelab.lan:4566> | 4566 | AWS emulator (LocalStack alternative); hybrid persistence; Docker-backed services via host daemon; web console at `/_floci/ui` |
-
 ### Git / K3s (192.168.10.204)
 
 - **K3s control plane** — Kubernetes API server
-- **Docker** — host daemon backing Floci's container-backed services (Lambda, RDS, ECS, ...)
+- **Docker** — host daemon used by the CI runner for image builds
 - **GitHub Actions self-hosted runner** — executes CI/CD pipeline
 - **ArgoCD + ArgoCD Image Updater** — GitOps sync + auto image updates
 - **cert-manager** — TLS via internal CA (`homelab-ca-issuer`)
 - **ingress-nginx** — Kubernetes ingress controller (Helm-managed, LoadBalancer at `192.168.10.210`)
-- **Istio** (`istio-base` + `istiod`) — service mesh, sidecar injection on `media`, `monitoring`, `network`, `dev` namespaces, traces to Tempo
+- **Istio** (`istio-base` + `istiod`) — service mesh, sidecar injection on `media`, `monitoring`, `network` namespaces, traces to Tempo
 - **kube-state-metrics** — Kubernetes object metadata exported to Prometheus
 
 ### Cluster-wide DaemonSets
