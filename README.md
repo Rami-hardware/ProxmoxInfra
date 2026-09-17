@@ -90,7 +90,7 @@ Gateway also runs: **AdGuard Home** (systemd service — DNS :53, UI :8081; see 
 
 | App   | URL                          | Port | Notes                                                                    |
 | :---- | :--------------------------- | :--- | :----------------------------------------------------------------------- |
-| Floci | <http://192.168.10.204:4566> | 4566 | AWS emulator (LocalStack alternative); hybrid persistence; Docker-backed services via host daemon; web console at `/_floci/ui` |
+| Floci | <http://floci.homelab.lan:4566> | 4566 | AWS emulator (LocalStack alternative); hybrid persistence; Docker-backed services via host daemon; web console at `/_floci/ui` |
 
 ### Git / K3s (192.168.10.204)
 
