@@ -2,6 +2,10 @@
 
 Guidance for AI coding agents working in this repo.
 
+## Standing Permissions
+
+- **Always commit and push** changes that belong in the repo after completing a task — the owner has granted standing approval ("always push"). Don't ask first; just do it and say what was pushed.
+
 ## Repo Overview
 
 Homelab infra: Proxmox VMs provisioned with Terraform, configured with Ansible, apps deployed via GitOps (ArgoCD + Image Updater) on K3s. Branches: `main` / `staging` / `development` — CI runs on push to any of them.
