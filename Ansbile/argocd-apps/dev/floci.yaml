@@ -62,6 +62,10 @@ spec:
         app: floci
     spec:
       serviceAccountName: floci
+      # Must stay off: the service is named "floci", so k8s would inject
+      # FLOCI_PORT=tcp://<clusterip>:4566 into the env and the image would
+      # try to parse that as its integer listen port and crash.
+      enableServiceLinks: false
       dnsPolicy: None
       dnsConfig:
         nameservers:
@@ -74,6 +78,18 @@ spec:
           - "cluster.local"
       nodeSelector:
         kubernetes.io/hostname: git-k3s-server
+      # The image's entrypoint runs (or drops) to uid 1001, and the kubelet
+      # creates the hostPath dir root-owned — without this Floci refuses to
+      # start because it cannot persist state to /data.
+      initContainers:
+        - name: init-data
+          image: busybox:1.37
+          command: ["sh", "-c", "chown -R 1001:1001 /data"]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: data
+              mountPath: /data
       containers:
         - name: floci
           image: floci/floci:latest
