@@ -115,6 +115,11 @@ spec:
               value: "floci.homelab.lan"
             - name: FLOCI_BASE_URL
               value: "http://floci.homelab.lan:4566"
+            # Floci otherwise derives the console endpoint from the Docker
+            # host (bridge IP) — unreachable inside a pod, so the UI page
+            # polls "Starting Floci UI…" forever.
+            - name: FLOCI_SERVICES_UI_ENDPOINT
+              value: "http://floci.homelab.lan:4566"
           volumeMounts:
             - name: data
               mountPath: /data
