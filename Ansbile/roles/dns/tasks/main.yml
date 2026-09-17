@@ -3,20 +3,13 @@
   block:
 
     - name: Configure systemd-resolved DNS
-      ansible.builtin.blockinfile:
-        path: /etc/systemd/resolved.conf
-        marker: "# {mark} ANSIBLE MANAGED DNS"
-        block: |
-          [Resolve]
-          # AdGuard is the ONLY global resolver: it is authoritative for
-          # *.homelab.lan and forwards public names upstream (Quad9 DoH with
-          # plain-UDP fallbacks). Public resolvers must NOT be listed beside
-          # it — systemd-resolved accepts their NXDOMAIN for internal names
-          # as a valid answer without failing over to AdGuard.
-          DNS={{ hostvars['gateway-server']['ansible_host'] }}
-          FallbackDNS=1.1.1.1 8.8.8.8
-          Domains=~homelab.lan
-          DNSStubListener=yes
+      # Full-file template, not blockinfile: the stock file ships its own
+      # [Resolve] section and resolved unions duplicate DNS= lists, so any
+      # unmanaged leftovers silently break internal-name resolution.
+      ansible.builtin.template:
+        src: resolved.conf.j2
+        dest: /etc/systemd/resolved.conf
+        mode: "0644"
         backup: true
 
     - name: Restart systemd-resolved

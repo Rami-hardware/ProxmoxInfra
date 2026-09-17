@@ -1,0 +1,13 @@
+# {{ ansible_managed }}
+# AdGuard is the ONLY global resolver: it is authoritative for
+# *.homelab.lan and forwards public names upstream (Quad9 DoH with
+# plain-UDP fallbacks). Public resolvers must NOT be listed beside it —
+# systemd-resolved accepts their NXDOMAIN for internal names as a valid
+# answer without failing over to AdGuard. This file is fully managed by
+# Ansible; a stale unmanaged [Resolve] section here would union its
+# DNS= entries back into the pool and break internal names again.
+[Resolve]
+DNS={{ hostvars['gateway-server']['ansible_host'] }}
+FallbackDNS=1.1.1.1 8.8.8.8
+Domains=~homelab.lan
+DNSStubListener=yes
