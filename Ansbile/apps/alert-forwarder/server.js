@@ -124,6 +124,39 @@ app.get('/notes', (req, res) => {
   res.json(Object.fromEntries([...fixNotes].map(([fingerprint, entry]) => [fingerprint, entry.notes])));
 });
 
+// /report posts a standalone investigation message to Discord. Used by the alert-fixer
+// for alerts that already resolved (their resolve webhook carried no fix notes).
+app.post('/report', async (req, res) => {
+  const text = typeof req.body?.text === 'string' ? req.body.text.trim() : '';
+  if (!text) {
+    return res.status(400).send('Expected JSON body: {"text": "<markdown report>"}');
+  }
+
+  const chunks = [];
+  let current = '';
+  for (const para of text.split(/\n\n+/)) {
+    if ((current + '\n\n' + para).length > 1900) {
+      chunks.push(current);
+      current = para;
+    } else {
+      current = current ? current + '\n\n' + para : para;
+    }
+  }
+  if (current) chunks.push(current);
+
+  res.status(200).send(`Accepted report, forwarding ${chunks.length} chunk(s)`);
+
+  let sent = 0;
+  for (const chunk of chunks) {
+    try {
+      await sendToDiscord(chunk);
+      sent++;
+    } catch (error) { /* logged in sendToDiscord */ }
+    await sleep(1200);
+  }
+  console.log(`Report forwarding complete: ${sent}/${chunks.length} sent`);
+});
+
 app.get('/healthz', (req, res) => {
   res.status(200).send('ok');
 });
