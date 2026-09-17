@@ -109,10 +109,10 @@ spec:
             - name: FLOCI_STORAGE_PERSISTENT_PATH
               value: "/data"
             # Returned URLs (SQS QueueUrl, S3 pre-signed, ...) use the DNS name
-            # (AdGuard rewrite -> node) so LAN clients, pods (CoreDNS forwards
-            # *.homelab.lan), and the host-docker sidecars all resolve it.
+            # (AdGuard rewrite -> node). Floci appends its port itself — no
+            # :4566 here, or URLs come out with a doubled port.
             - name: FLOCI_HOSTNAME
-              value: "floci.homelab.lan:4566"
+              value: "floci.homelab.lan"
             - name: FLOCI_BASE_URL
               value: "http://floci.homelab.lan:4566"
           volumeMounts:
