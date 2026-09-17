@@ -309,6 +309,18 @@
 # on namespace labels. Multiple app manifests each declaring the same Namespace
 # object via server-side apply can lose ownership of the labels field to
 # whichever applier ran last without it — a direct label call always wins.
+# Newly added namespaces (e.g. dev) don't exist until ArgoCD's first sync
+# creates them from the app manifest, so create any missing ones first.
+- name: Ensure managed namespaces exist
+  ansible.builtin.command:
+    cmd: "k3s kubectl create namespace {{ item }}"
+  register: k3s_apps_ns_create_result
+  loop: "{{ k3s_apps_istio_injected_namespaces | default([]) }}"
+  changed_when: k3s_apps_ns_create_result.rc == 0
+  failed_when: >-
+    k3s_apps_ns_create_result.rc != 0
+    and 'AlreadyExists' not in k3s_apps_ns_create_result.stderr
+
 - name: Ensure Istio injection label on managed namespaces
   ansible.builtin.command:
     cmd: "k3s kubectl label namespace {{ item }} istio-injection=enabled --overwrite"
