@@ -13,6 +13,10 @@ spec:
     metadata:
       labels:
         app: alert-forwarder
+      annotations:
+        # Force a pod rollout on every helm upgrade — with the mutable `latest` tag
+        # an unchanged manifest would otherwise keep the old image running forever.
+        rollme: {{ randAlphaNum 6 | quote }}
     spec:
       nodeSelector:
         kubernetes.io/hostname: {{ .Values.targetNode }}
