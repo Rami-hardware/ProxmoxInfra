@@ -1,7 +1,7 @@
 image:
   repository: ghcr.io/rami-hardware/alert-forwarder
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 replicas: 1
 

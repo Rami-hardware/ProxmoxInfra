@@ -19,6 +19,19 @@ if (!/^https:\/\/discord\.com\/api\/webhooks\//.test(DISCORD_WEBHOOK_URL)) {
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+// Fix notes let the alert-fixer agent attach a root-cause/fix report to an alert
+// (keyed by its Alertmanager fingerprint). When that alert resolves, the resolved
+// Discord message carries the report instead of the static alert description.
+const fixNotes = new Map(); // fingerprint -> { notes, createdAt }
+const FIX_NOTES_TTL_MS = 24 * 60 * 60 * 1000;
+
+function sweepFixNotes() {
+  const now = Date.now();
+  for (const [fingerprint, entry] of fixNotes) {
+    if (now - entry.createdAt > FIX_NOTES_TTL_MS) fixNotes.delete(fingerprint);
+  }
+}
+
 // Send one chunk to Discord, respecting Discord's rate limit (429 + retry_after)
 async function sendToDiscord(chunk, attempt = 1) {
   try {
@@ -53,7 +66,9 @@ app.post('/alertmanager', async (req, res) => {
     const summary = alert.annotations?.summary || alert.labels?.alertname || 'No summary';
     const status = alert.status || 'unknown';
     const description = alert.annotations?.description || '';
-    return `**Alert:** ${summary}\nStatus: ${status}\n${description}`;
+    const note = status === 'resolved' ? fixNotes.get(alert.fingerprint) : undefined;
+    const body = note ? note.notes : description;
+    return `**Alert:** ${summary}\nStatus: ${status}\n${body}`;
   });
 
   // Chunk messages to stay under Discord's 2000 char limit per message
@@ -91,6 +106,22 @@ app.post('/alertmanager', async (req, res) => {
 
 app.get('/alertmanager', (req, res) => {
   res.send('Alertmanager webhook server is running');
+});
+
+app.post('/notes', (req, res) => {
+  const { fingerprint, notes } = req.body || {};
+  if (!fingerprint || typeof fingerprint !== 'string' || typeof notes !== 'string' || !notes.trim()) {
+    return res.status(400).send('Expected JSON body: {"fingerprint": "<alert fingerprint>", "notes": "<markdown report>"}');
+  }
+  sweepFixNotes();
+  fixNotes.set(fingerprint, { notes: notes.trim(), createdAt: Date.now() });
+  console.log(`Stored fix notes for fingerprint ${fingerprint} (map size: ${fixNotes.size})`);
+  res.status(200).send('ok');
+});
+
+app.get('/notes', (req, res) => {
+  sweepFixNotes();
+  res.json(Object.fromEntries([...fixNotes].map(([fingerprint, entry]) => [fingerprint, entry.notes])));
 });
 
 app.get('/healthz', (req, res) => {
