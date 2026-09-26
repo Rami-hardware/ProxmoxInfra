@@ -227,7 +227,7 @@ App-level changes (editing anything under `Ansbile/argocd-apps/`) don't need a C
 | `qbittorrent`                   | qbittorrent-exporter               | Torrent download/upload/ratio metrics                                              |
 | `scraparr`                      | Scraparr on media-server           | Arr app queue/health metrics                                                       |
 | `intel-gpu`                     | intel-gpu-exporter on media-server | Arc GPU utilization                                                                |
-| `speedtest`                     | speedtest-exporter                 | ISP bandwidth, ping, jitter (10m interval)                                         |
+| `speedtest`                     | speedtest-exporter                 | ISP bandwidth, ping, jitter (1h interval — 10m caused WAN bufferbloat that tripped the blackbox-public alerts) |
 | `ingress-nginx`                 | ingress-nginx controller           | Request rate, latency, 5xx rate per service                                        |
 | `zfs`                           | zfs-exporter on Proxmox host       | Pool health, IO, capacity                                                          |
 | `smartctl_exporter`             | smartctl_exporter on Proxmox host  | Disk S.M.A.R.T. health (reallocated sectors, temperature, wear)                    |
@@ -254,6 +254,7 @@ App-level changes (editing anything under `Ansbile/argocd-apps/`) don't need a C
 
 - Prometheus and Loki datasources auto-provisioned from `/etc/grafana/provisioning/datasources/`
 - Alerts routed via Alertmanager → webhook to notification server
+- Blackbox alert rules (probe down, HTTP error status, slow response, redirects, DNS latency, cert expiry) are repo-managed in `Ansbile/roles/prometheus/templates/prometheus-rules.yml.j2` — the former Grafana-UI copies were consolidated there; add or change blackbox alerts in the repo rules, not the Grafana UI
 
 ---
 

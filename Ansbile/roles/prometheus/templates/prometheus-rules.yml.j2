@@ -21,13 +21,19 @@ groups:
           description: "Blackbox DNS probe failed for 2m — all pod DNS for *.homelab.lan and public names via CoreDNS is degraded."
 
       - alert: CoreDNSForwardHealthBroken
-        expr: increase(coredns_forward_healthcheck_broken_total[10m]) > 0
+        # Threshold, not >0: probes run every 0.5s, so a real outage climbs
+        # ~2-4 breaks/s, while a planned AdGuard restart (gateway playbook,
+        # ~2.5s of downtime) adds only ~4-6. >25 = ignore deploy-window blips
+        # (DNS fails over to the fallback upstream anyway) and still page
+        # within ~10s of sustained upstream breakage. Sustained AdGuard-down
+        # is separately covered by AdGuardDNSDown above.
+        expr: increase(coredns_forward_healthcheck_broken_total[10m]) > 25
         for: 0m
         labels:
           severity: warning
         annotations:
           summary: "CoreDNS marks upstreams broken ({{ $labels.instance }})"
-          description: "CoreDNS forward health checks are failing against its upstreams — expect SERVFAILs or fallback traffic."
+          description: "CoreDNS health checks are failing against its upstreams at a sustained rate (>25 breaks in 10m) — expect SERVFAILs or fallback traffic."
 
   # Blackbox HTTP probes — scope label distinguishes local/public targets.
   - name: availability
@@ -47,6 +53,57 @@ groups:
           severity: warning
         annotations:
           summary: "Public probe failed: {{ $labels.instance }}"
+
+      # The rules below replace the blackbox alert set that used to live only in
+      # Grafana's UI (unversioned; its HTTP-status rule reached Discord with an
+      # unrendered title template). Ported 1:1 except SiteHTTPStatusError waits
+      # 2m instead of Grafana's 1m, to ride out ingress blips during ArgoCD
+      # rollouts. Thresholds that Grafana kept in its evaluator are part of the
+      # expr here, and $value/humanizeDuration replace Grafana's $values.A.
+      - alert: SiteHTTPStatusError
+        expr: probe_http_status_code{scope=~"local|public"} >= 400
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} returned HTTP {{ humanize $value }} (scope: {{ $labels.scope }})"
+          description: "Fires when a monitored site responds but with an HTTP error status (4xx/5xx). The service may be running but misconfigured, crashing internally, or behind a broken ingress rule."
+
+      - alert: SiteRespondingSlowly
+        expr: probe_duration_seconds > 3 and probe_success == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} is responding slowly ({{ humanize $value }}s, scope: {{ $labels.scope }})"
+          description: "HTTP response time exceeded 3s while the probe still succeeded. Could indicate backend load, network issues, or a struggling pod."
+
+      - alert: ExcessiveRedirects
+        expr: probe_http_redirects > 3
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} followed {{ humanize $value }} redirects (possible redirect loop)"
+          description: "A monitored site's HTTP request follows more redirects than expected. Often a misconfigured ingress rule, broken HTTP-to-HTTPS redirect, or a service advertising the wrong external URL."
+
+      - alert: SlowDNSResolution
+        expr: probe_dns_lookup_time_seconds > 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} DNS lookup took {{ humanize $value }}s (scope: {{ $labels.scope }})"
+          description: "DNS resolution for a monitored site took longer than 1s. Check AdGuard Home performance, upstream DNS fallback behavior, or resolver load."
+
+      - alert: CertExpiringSoon
+        expr: probe_ssl_earliest_cert_expiry - time() < 7 * 24 * 3600
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} TLS certificate expires in {{ humanizeDuration $value }}"
+          description: "blackbox_exporter detects a TLS certificate nearing expiry on a monitored site. Check cert-manager status and renewal for this domain."
 
       - alert: CoreDNSDown
         expr: up{job="coredns"} == 0
