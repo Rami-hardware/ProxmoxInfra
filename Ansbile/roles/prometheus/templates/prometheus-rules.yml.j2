@@ -45,6 +45,7 @@ groups:
           severity: warning
         annotations:
           summary: "Local probe failed: {{ $labels.instance }}"
+          description: "A locally-monitored site has failed its HTTP health check for 2m. Check whether the pod/service is running and whether ingress-nginx is routing the host correctly."
 
       - alert: PublicSiteDown
         expr: probe_success{scope="public"} == 0
@@ -53,6 +54,7 @@ groups:
           severity: warning
         annotations:
           summary: "Public probe failed: {{ $labels.instance }}"
+          description: "A public site has failed its HTTP health check for 5m. Check the service and ingress first, then the public DNS/Cloudflare path."
 
       # The rules below replace the blackbox alert set that used to live only in
       # Grafana's UI (unversioned; its HTTP-status rule reached Discord with an
@@ -225,7 +227,7 @@ groups:
           severity: warning
         annotations:
           summary: "CoreDNS Corefile reload failed"
-          description: "A configuration reload attempt failed — CoreDNS is still running the previous config. Check the coredns-custom or coredns ConfigMap for a syntax error."
+          description: "A configuration reload attempt failed — CoreDNS is still running the previous config. Check the CoreDNS Corefile (k3s coredns manifest/ConfigMap) for a syntax error."
 
       - alert: CoreDNSPanics
         expr: (increase(coredns_panics_total[15m])) > 0
@@ -311,14 +313,14 @@ groups:
           summary: "{{ $labels.pod }} stuck in {{ $labels.reason }}"
           description: "Pod container is stuck waiting on {{ $labels.reason }}. For ImagePullBackOff check registry access/credentials; for CrashLoopBackOff check application logs."
 
-      - alert: KubePodNotInRunningPhaseForTooLong
+      - alert: KubePodInFailedPhase
         expr: (kube_pod_status_phase{phase="Failed", pod!~"kube-state-metrics-.*"}) == 1
         for: 1m
         labels:
           severity: warning
         annotations:
-          summary: "{{ $labels.pod }} in {{ $labels.namespace }} is {{ $labels.phase }}"
-          description: "Pod has been outside the Running phase for 15+ minutes. Check scheduling constraints, resource availability, or node health."
+          summary: "{{ $labels.pod }} in {{ $labels.namespace }} is in Failed phase"
+          description: "A pod ended in the Failed phase — a crashed container, an eviction, or a failed Job. Check kubectl describe pod and events; failed Jobs are covered separately by KubeJobFailed."
 
       - alert: KubeNodeNotReady
         expr: (kube_node_status_condition{condition="Ready", status="true"}) == 0
@@ -336,7 +338,7 @@ groups:
           severity: warning
         annotations:
           summary: "PVC {{ $labels.persistentvolumeclaim }} in {{ $labels.namespace }} is {{ $labels.phase }}"
-          description: "A PersistentVolumeClaim failed to bind. Check storage class availability and whether local-path-provisioner (your default StorageClass) can satisfy the request."
+          description: "A PersistentVolumeClaim failed to bind. Check storage class availability and whether the default k3s local-path provisioner can satisfy the request."
 
       - alert: KubeJobFailed
         expr: (kube_job_status_failed{job_name!~"scan-vulnerabilityreport.*"}) > 0
@@ -431,7 +433,7 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "Istio agent cert on {{ $labels.pod }} expires in {{ humanize $value }} days"
+          summary: "Istio agent cert on {{ $labels.pod }} expires in {{ humanizeDuration $value }}"
           description: "Workload certificate is close to expiry. This is usually auto-rotated by istiod, but if this alert keeps firing without the value resetting, cert rotation may be stuck — check istiod logs and sidecar connectivity to the control plane."
 
       - alert: IstioEnvoyProxyNotLive
@@ -468,7 +470,7 @@ groups:
           severity: warning
         annotations:
           summary: "Envoy worker thread stalling on {{ $labels.pod }} ({{ $labels.thread_name }})"
-          description: "Envoy's watchdog detected the worker thread took too long to respond to its heartbeat, indicating the proxy is under heavy load or stuck processing. Mega-miss is more severe and may precede a crash/restart."
+          description: "Envoy's watchdog detected the worker thread took too long to respond to its heartbeat, indicating the proxy is under heavy load or stuck processing."
 
       - alert: IstioEnvoyWatchdogMegaMiss
         expr: (increase(envoy_server_watchdog_mega_miss[15m])) > 0
@@ -510,13 +512,13 @@ groups:
   - name: argocd
     rules:
       - alert: ArgoCDApplicationOutOfSync
-        expr: (argocd_app_info{sync_status="Synced"}) < 1
+        expr: argocd_app_info{sync_status!="Synced"} == 1
         for: 1m
         labels:
           severity: warning
         annotations:
-          summary: "Application {{ $labels.name }} is OutOfSync"
-          description: "The live cluster state has drifted from what's declared in Git for {{ $labels.name }}. Check the ArgoCD UI diff to see what changed — this could be manual kubectl edits or a failed auto-sync."
+          summary: "Application {{ $labels.name }} is {{ $labels.sync_status }}"
+          description: "The live cluster state has drifted from Git (or sync state is unknown) for {{ $labels.name }}. Check the ArgoCD UI diff to see what changed — this could be manual kubectl edits or a failed auto-sync."
 
       - alert: ArgoCDApplicationUnhealthy
         expr: (argocd_app_info{health_status!="Healthy"}) > 0
@@ -590,8 +592,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "Alertmanager cluster degraded"
-          description: "Cluster health score is non-zero or peers have failed — only relevant if running multiple Alertmanager replicas. May cause duplicate or missed notifications if peers can't gossip alert state."
+          summary: "Alertmanager has failed cluster peers"
+          description: "Alertmanager gossip reports failed peers — only relevant if running multiple replicas. May cause duplicate or missed notifications if peers can't gossip alert state."
 
       - alert: AlertmanagerInvalidAlertsBeingReceived
         expr: (increase(alertmanager_alerts_invalid_total[15m])) > 0
@@ -648,7 +650,7 @@ groups:
           severity: warning
         annotations:
           summary: "Loki rejecting push requests from Promtail"
-          description: "The /loki/api/v1/push endpoint is failing. Promtail agents (including this darkestserver node) will start buffering and eventually dropping logs. Check Loki's ingester health and disk space."
+          description: "The /loki/api/v1/push endpoint is failing. Promtail agents on every node will start buffering and eventually dropping logs. Check Loki's ingester health and disk space."
 
       - alert: LokiIngesterWALDiskUsageHigh
         expr: (loki_ingester_wal_disk_usage_percent * 100) > 80
@@ -678,7 +680,7 @@ groups:
           description: "The ingester is failing to flush chunks to long-term storage. Check the storage backend (filesystem/S3/etc.) for connectivity or permission issues."
 
       - alert: LokiQuerySchedulerQueueBackingUp
-        expr: (histogram_quantile(0.99, rate(loki_query_scheduler_queue_duration_seconds_bucket[5m]))) > 10
+        expr: (histogram_quantile(0.99, sum by (le) (rate(loki_query_scheduler_queue_duration_seconds_bucket[5m])))) > 10
         for: 1m
         labels:
           severity: warning
@@ -749,8 +751,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "Promtail dropping log entries to {{ $labels.host }}"
-          description: "Promtail is failing to deliver log lines to Loki (ingester_error) and dropping them permanently after retries. Check Loki ingester health, disk space, and rate limits."
+          summary: "Promtail dropped {{ humanize $value }} bytes of log data to {{ $labels.host }}"
+          description: "Promtail is failing to deliver log data to Loki (ingester_error) and discarding it after retries. Check Loki ingester health, disk space, and rate limits."
 
       - alert: PromtailBatchRetriesClimbing
         expr: (increase(promtail_batch_retries_total[15m])) > 5
@@ -788,8 +790,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "Tempo distributor rejecting trace pushes"
-          description: "Traces from the mesh are being rejected. Check Tempo's ingestion limits and distributor logs."
+          summary: "Tempo receiving no trace pushes"
+          description: "No span deliveries have been observed for 5m — Tempo is ingesting nothing from the mesh. If workload traffic should be flowing, check the Tempo distributor and Istio sidecar reporting."
 
       - alert: TempoIngesterTracesDropped
         expr: (sum(rate(tempo_discarded_spans_total[5m])) by (reason)) > 0
@@ -854,8 +856,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "iGPU {{ $labels.__name__ }} at {{ humanize $value }}% busy"
-          description: "The Intel iGPU's hardware transcode engine is running near capacity, likely from multiple concurrent Jellyfin transcodes. Playback for additional streams may stutter or fall back to software transcoding. Check active Jellyfin sessions."
+          summary: "iGPU 3D render engine at {{ humanize $value }}% busy"
+          description: "The Intel iGPU's hardware render engine is running near capacity, likely from multiple concurrent Jellyfin transcodes. Playback for additional streams may stutter or fall back to software transcoding. Check active Jellyfin sessions."
 
       - alert: IntelGpuVideoEngineSaturated
         expr: (igpu_engines_video_0_busy) > 90
@@ -863,8 +865,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "iGPU {{ $labels.__name__ }} at {{ humanize $value }}% busy"
-          description: "The Intel iGPU's hardware transcode engine is running near capacity, likely from multiple concurrent Jellyfin transcodes. Playback for additional streams may stutter or fall back to software transcoding. Check active Jellyfin sessions."
+          summary: "iGPU video (transcode) engine at {{ humanize $value }}% busy"
+          description: "The Intel iGPU's hardware video transcode engine is running near capacity, likely from multiple concurrent Jellyfin streams. Playback for additional streams may stutter or fall back to software transcoding. Check active Jellyfin sessions."
 
       - alert: IntelGpuGPUPowerDrawAbnormallyHighForExtendedPeriod
         expr: (igpu_power_gpu) > 15
@@ -912,7 +914,7 @@ groups:
           severity: warning
         annotations:
           summary: "{{ humanize $value }} torrent(s) in error state ({{ $labels.category }})"
-          description: "One or more torrents have entered an error status, usually due to disk write failures or missing destination paths. Check the qBittorrent UI for details"
+          description: "One or more torrents have entered an error status, usually due to disk write failures or missing destination paths. Check the qBittorrent UI for details."
 
       - alert: QbitMissingFiles
         expr: (qbittorrent_torrents_count{status="missingFiles"}) > 0
@@ -930,7 +932,7 @@ groups:
           severity: warning
         annotations:
           summary: "{{ humanize $value }} torrent(s) stalled downloading"
-          description: "Multiple torrents have been stuck with no download progress for 30+ minutes. Could indicate dead torrents, a blocked tracker, or a network/firewall issue."
+          description: "Multiple torrents are marked stalled by qBittorrent — no download progress. Could indicate dead torrents, a blocked tracker, or a network/firewall issue."
 
       - alert: QbitFirewalled
         expr: (qbittorrent_firewalled) == 1
@@ -1092,7 +1094,7 @@ groups:
           severity: warning
         annotations:
           summary: "ZFS pool {{ $labels.pool }} health check failed (value={{ humanize $value }})"
-          description: "Fires when zfs_pool_health for the tank pool reports a non-zero status\n(0=ONLINE, 1=DEGRADED, 2=FAULTED, 3=OFFLINE, 4=UNAVAIL, 5=REMOVED, 6=SUSPENDED).\nA non-zero value means the pool needs immediate attention — check `zpool status tank`\non the host for details."
+          description: "Fires when zfs_pool_health for the tank pool reports a non-zero status (0=ONLINE, 1=DEGRADED, 2=FAULTED, 3=OFFLINE, 4=UNAVAIL, 5=REMOVED, 6=SUSPENDED). A non-zero value means the pool needs immediate attention — check zpool status tank on the host for details."
 
       - alert: ZfsPoolCapacity
         expr: (100 * zfs_pool_allocated_bytes{pool="tank"} / zfs_pool_size_bytes{pool="tank"}) > 80
@@ -1110,7 +1112,7 @@ groups:
           severity: warning
         annotations:
           summary: "tank dataset has only {{ humanize $value }} TiB free"
-          description: "Fires when zfs_dataset_available_bytes for the tank filesystem drops below 1 TiB.\nCheck tank/media/tv and tank/media/movies for cleanup candidates, or plan a\npool expansion."
+          description: "Fires when zfs_dataset_available_bytes for the tank filesystem drops below 1 TiB. Check tank/media/tv and tank/media/movies for cleanup candidates, or plan a pool expansion."
 
       - alert: ZfsFragmentation
         expr: (zfs_pool_fragmentation_ratio{pool="tank"}) > 0.5
@@ -1119,7 +1121,7 @@ groups:
           severity: warning
         annotations:
           summary: "ZFS pool tank fragmentation at {{ humanize $value }}"
-          description: "Fires when zfs_pool_fragmentation_ratio for tank exceeds 0.5. High fragmentation\ncan degrade write performance over time; not urgent but worth monitoring —\nconsider a scrub or reviewing recordsize/ashift settings if it keeps climbing."
+          description: "Fires when zfs_pool_fragmentation_ratio for tank exceeds 0.5. High fragmentation can degrade write performance over time; not urgent but worth monitoring — consider a scrub or reviewing recordsize/ashift settings if it keeps climbing."
 
       - alert: ZfsScrapeCollectorFailure
         expr: (zfs_scrape_collector_success{collector=~"pool|dataset-filesystem|dataset-volume"}) == 0
@@ -1128,7 +1130,7 @@ groups:
           severity: warning
         annotations:
           summary: "zfs_exporter collector {{ $labels.collector }} failing"
-          description: "Fires when a zfs_exporter collector (pool, dataset-filesystem, or dataset-volume)\nreports success=0. This means the exporter itself can't read ZFS stats — check\nthat the exporter process has permission to run zpool/zfs commands and that the\nhost isn't under heavy I/O load."
+          description: "Fires when a zfs_exporter collector (pool, dataset-filesystem, or dataset-volume) reports success=0. This means the exporter itself can't read ZFS stats — check that the exporter process has permission to run zpool/zfs commands and that the host isn't under heavy I/O load."
 
       - alert: ZfsExporterTargetDown
         expr: (up{job="zfs_exporter"}) < 1
@@ -1137,5 +1139,5 @@ groups:
           severity: warning
         annotations:
           summary: "zfs-exporter target is down"
-          description: "Fires when Prometheus can't scrape the zfs-exporter job at all. Check that the\nexporter service is running on the host and that the port is reachable —\nthis is a scrape-level failure, not a ZFS metric threshold."
+          description: "Fires when Prometheus can't scrape the zfs-exporter job at all. Check that the exporter service is running on the host and that the port is reachable — this is a scrape-level failure, not a ZFS metric threshold."
 {% endraw %}
