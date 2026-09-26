@@ -21,6 +21,7 @@ Homelab infra: Proxmox VMs provisioned with Terraform, configured with Ansible, 
 ## Terraform (`Terraform/`)
 
 - Provider `bpg/proxmox` pinned `~> 0.70.1`. No `required_version`. No remote backend — **state (`terraform.tfstate`) is committed to git**.
+- `Terraform/.terraform/` is gitignored — provider binaries were once committed (81MB, several stale versions); never re-add them. CI installs providers via the filesystem mirror action.
 - VMs defined as a `map(object)` in `terraform.tfvars` (keys: `gateway`, `media`, `monitoring`, `github`). Map keys are state addresses: **renaming a key destroys the VM**.
   - After a key rename, add the old key to the hardcoded stale-state cleanup list in `deploy.yml` (`for stale in ...`), or CI's plan sees destroy + recreate and blocks.
 - `lifecycle.ignore_changes` (in `modules/proxmox_vm/main.tf`) covers `disk`, `initialization`, `clone`, `hostpci`, `cpu` and more — don't remove.

@@ -16,10 +16,10 @@ A fully automated homelab running on Proxmox, provisioned with Terraform, config
 
 | VM                | IP            | Cores | RAM  | Role                                      |
 | :---------------- | :------------ | :---- | :--- | :---------------------------------------- |
-| gateway-server    | 192.168.10.200 | 1     | 2 GB | DNS (AdGuard Home, systemd), CrowdSec     |
-| media-server      | 192.168.10.201 | 3     | 8 GB | Media stack — K3s worker                  |
-| monitoring-server | 192.168.10.203 | 1     | 2 GB | Observability stack — K3s worker          |
-| git-k3s-server    | 192.168.10.204 | 4     | 8 GB | GitHub Actions runner + K3s control plane |
+| gateway-server    | 192.168.10.200 | 1     | 3 GB | DNS (AdGuard Home, systemd), CrowdSec     |
+| media-server      | 192.168.10.201 | 6     | 13 GB | Media stack — K3s worker                 |
+| monitoring-server | 192.168.10.203 | 1     | 5 GB | Observability stack — K3s worker          |
+| git-k3s-server    | 192.168.10.204 | 3     | 7 GB | GitHub Actions runner + K3s control plane |
 
 ---
 
@@ -130,7 +130,7 @@ Gateway also runs: **AdGuard Home** (systemd service — DNS :53, UI :8081; see 
 
 ### K3s App Pattern (Ansible-managed apps only)
 
-Apps still in `k3s_apps_list` (currently just `adguard-exporter`) render through one generic template (`app.yml.j2`) — Namespace + PV + PVC + Deployment + NodePort Service — from an entry in `group_vars/git-k3s-server-vm.yml`:
+Apps still in `k3s_apps_list` (currently **empty** — all apps moved to ArgoCD; the generic mechanism is kept for any future app that needs it) render through one generic template (`app.yml.j2`) — Namespace + PV + PVC + Deployment + NodePort Service — from an entry in `group_vars/git-k3s-server-vm.yml`:
 
 ```yaml
 k3s_apps_list:
@@ -199,7 +199,7 @@ testing job
 Deploy job
 ├── Terraform init + plan (saved to tfplan)
 ├── Destroy check — fails pipeline if any VM would be destroyed or replaced
-└── Ansible playbooks (monitoring-server → git-k3s-server)
+└── Ansible playbooks (gateway → monitoring → media → git-k3s)
     └── git-k3s-server bootstraps K3s, Helm infra, ArgoCD, Image Updater
         — ArgoCD then syncs media/monitoring/network from git independently
 
