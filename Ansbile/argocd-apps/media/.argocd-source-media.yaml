@@ -2,11 +2,11 @@ kustomize:
   images:
   - ghcr.io/seerr-team/seerr@sha256:f4768de5f616248d723e05891f3345a1402123775d03bf0890dbfedc0831bda1
   - jellyfin/jellyfin@sha256:78d3ea1207d1322471fcac39a614f004f2ccf7e878f95ab2977d752f07e4dd7e
-  - linuxserver/bazarr@sha256:d24bd0048c759a468970989e9df11a6b96a7628d556d00f923e60a35ba59237b
-  - linuxserver/radarr@sha256:c960f2b52ec6542dbe6707c5a21e696a7c74fd8b17997454f4d10a55dacee133
-  - linuxserver/prowlarr@sha256:c96b56d94d116a9f4de94bc23d3381689492e6c3cfb7435320e8d982e406f99a
-  - linuxserver/qbittorrent@sha256:2be038f3421f60f62e8e4bf201f66f385b68e4fbc9ed3ab79051069ea22e2650
+  - linuxserver/bazarr@sha256:762f802274598da27255b2e5778f262b2b71b355a23e3812d9ee1520f8dbe37c
+  - linuxserver/radarr@sha256:adb6c09d6b729ea5e642c99cea35af72702ef476bf4763f153299ac5db9f0b4f
+  - linuxserver/prowlarr@sha256:f2b26429893d4c4cb71941b7ee50b1bdecd9d5f9f9e02d5410615e9f4f7c8d95
+  - linuxserver/qbittorrent@sha256:caab2ebce30799ab342c374ea268fef4ec063a8ec3733a4e5d4a8e856ee32ce8
   - ghcr.io/flaresolverr/flaresolverr@sha256:c80ae007ce2ccdcd217a12426e4f039ef763ff90738c808d38810c3e59323767
   - ghcr.io/thecfu/scraparr@sha256:b9f79a85c33564dfdb1e50ab3d725faeb27b89f4ad5cae7013e39e2f572a8085
-  - linuxserver/sonarr@sha256:a5c1a5fecbef946927ab90ad68df319ac5fe644057e5fc18cd993f01ac07b2b2
-  - ghcr.io/connorgallopo/tracearr@sha256:f1aba630ecd4771e11e1657aa771bbd25f94556fa557b8b7debd782d107f6518
+  - linuxserver/sonarr@sha256:f247545d23ba8b233d6604575347e48a623fe6ad75dda02348bf81917f3b5c06
+  - ghcr.io/connorgallopo/tracearr@sha256:8e52d9b65ca22d136b51668750f681d1b22d229e9b6f9a2c1a4dcf14eb758202
