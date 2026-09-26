@@ -93,7 +93,8 @@ spec:
               cpu: "100m"
             limits:
               memory: "1Gi"
-              cpu: "1000m"
+              # actual usage ~20m; 1-core node — keep limit budget for prometheus
+              cpu: "500m"
       volumes:
         - name: config
           persistentVolumeClaim:

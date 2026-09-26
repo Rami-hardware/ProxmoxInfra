@@ -27,6 +27,37 @@ spec:
   volumeName: prometheus-config-pv
   storageClassName: ""
 ---
+# TSDB persistence — without this the data lived in emptyDir and every pod
+# rollout (Image Updater bumps monitoring images regularly) wiped all history.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: prometheus-data-pv
+spec:
+  capacity:
+    storage: 20Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  hostPath:
+    path: /opt/docker/prometheus-data
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-data-pvc
+  namespace: monitoring
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  volumeName: prometheus-data-pv
+  storageClassName: ""
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -55,7 +86,10 @@ spec:
           image: prom/prometheus:latest
           args:
             - "--config.file=/etc/prometheus/prometheus.yml"
-            - "--storage.tsdb.retention.time=30d"
+            # size cap guards the node disk; ~600MB/day at 30s scrape means
+            # 15d fits well under 12GB
+            - "--storage.tsdb.retention.time=15d"
+            - "--storage.tsdb.retention.size=12GB"
             - "--web.enable-lifecycle"
             - "--web.enable-remote-write-receiver"
             - "--storage.tsdb.wal-compression"
@@ -66,17 +100,24 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /etc/prometheus
+            - name: data
+              mountPath: /prometheus
           resources:
             requests:
               memory: "512Mi"
               cpu: "200m"
             limits:
               memory: "2Gi"
-              cpu: "2000m"
+              # VM only has ~1 allocatable core — a 2-core limit was fiction
+              # that made the node's CPU limits sum to ~280% of allocatable
+              cpu: "900m"
       volumes:
         - name: config
           persistentVolumeClaim:
             claimName: prometheus-config-pvc
+        - name: data
+          persistentVolumeClaim:
+            claimName: prometheus-data-pvc
 ---
 apiVersion: v1
 kind: Service

@@ -3,7 +3,7 @@
 prometheus_config_dir: /opt/docker/prometheus
 prometheus_config_file: "{{ prometheus_config_dir }}/prometheus.yml"
 prometheus_rules_file: "{{ prometheus_config_dir }}/prometheus-rules.yml"
-prometheus_scrape_interval: 15s
+prometheus_scrape_interval: 30s
 
 prometheus_scrape_jobs:
   - name: prometheus

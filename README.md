@@ -17,8 +17,8 @@ A fully automated homelab running on Proxmox, provisioned with Terraform, config
 | VM                | IP            | Cores | RAM  | Role                                      |
 | :---------------- | :------------ | :---- | :--- | :---------------------------------------- |
 | gateway-server    | 192.168.10.200 | 1     | 3 GB | DNS (AdGuard Home, systemd), CrowdSec     |
-| media-server      | 192.168.10.201 | 6     | 13 GB | Media stack — K3s worker                 |
-| monitoring-server | 192.168.10.203 | 1     | 5 GB | Observability stack — K3s worker          |
+| media-server      | 192.168.10.201 | 6     | 10 GB | Media stack — K3s worker                 |
+| monitoring-server | 192.168.10.203 | 1     | 8 GB | Observability stack — K3s worker          |
 | git-k3s-server    | 192.168.10.204 | 3     | 7 GB | GitHub Actions runner + K3s control plane |
 
 ---
