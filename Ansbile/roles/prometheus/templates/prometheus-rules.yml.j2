@@ -313,6 +313,17 @@ groups:
           summary: "{{ $labels.pod }} stuck in {{ $labels.reason }}"
           description: "Pod container is stuck waiting on {{ $labels.reason }}. For ImagePullBackOff check registry access/credentials; for CrashLoopBackOff check application logs."
 
+      # Ported from Grafana UI rules — was mislabeled as a log alert but the
+      # query is pure kube-state-metrics, so it lives here.
+      - alert: KubePodOOMKilled
+        expr: increase(kube_pod_container_status_last_terminated_reason{reason="OOMKilled"}[1h]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.pod }} in {{ $labels.namespace }} was OOMKilled"
+          description: "The container's last termination was an OOM kill within the last hour — its memory limit is too low for the current workload or it is leaking. Check kubectl describe pod and consider raising the memory limit."
+
       - alert: KubePodInFailedPhase
         expr: (kube_pod_status_phase{phase="Failed", pod!~"kube-state-metrics-.*"}) == 1
         for: 1m

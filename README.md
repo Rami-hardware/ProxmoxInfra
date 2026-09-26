@@ -254,7 +254,7 @@ App-level changes (editing anything under `Ansbile/argocd-apps/`) don't need a C
 
 - Prometheus and Loki datasources auto-provisioned from `/etc/grafana/provisioning/datasources/`
 - Alerts routed via Alertmanager → webhook to notification server
-- All Prometheus-evaluated alert rules (nodes, k8s, ingress, istio, blackbox probes, Loki, Tempo, SMART, ZFS, etc.) are repo-managed in `Ansbile/roles/prometheus/templates/prometheus-rules.yml.j2` — the former Grafana-UI rules were consolidated there; add or change alerts in the repo rules, not the Grafana UI. Only Loki-datasource (LogQL) alert rules remain in Grafana's UI.
+- All Prometheus-evaluated alert rules (nodes, k8s, ingress, istio, blackbox probes, Loki, Tempo, SMART, ZFS, etc.) are repo-managed in `Ansbile/roles/prometheus/templates/prometheus-rules.yml.j2`; log-based (LogQL) alerts are repo-managed in `Ansbile/roles/loki/templates/loki-rules.yml.j2` and evaluated by Loki's ruler. Grafana's UI holds no alert rules — add or change alerts in the repo templates.
 
 ---
 

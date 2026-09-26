@@ -32,3 +32,19 @@ limits_config:
   allow_structured_metadata: false
   reject_old_samples: {{ loki_reject_old_samples | lower }}
   reject_old_samples_max_age: {{ loki_reject_old_samples_max_age }}
+
+# LogQL alerting — rules rendered to /opt/docker/loki/rules (mounted at
+# /etc/loki/rules) by roles/loki; alerts go to the same Alertmanager →
+# alert-forwarder → Discord chain as the Prometheus rules.
+ruler:
+  enable_api: true
+  rule_path: /loki/rules
+  alertmanager_url: http://{{ hostvars['monitoring-server']['ansible_host'] }}:9093
+  enable_alertmanager_v2: true
+  ring:
+    kvstore:
+      store: inmemory
+  storage:
+    type: local
+    local:
+      directory: /etc/loki/rules

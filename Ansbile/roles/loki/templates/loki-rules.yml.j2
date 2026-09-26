@@ -1,0 +1,46 @@
+# Managed by Ansible (roles/loki) — do not edit on the host.
+# LogQL alerts evaluated by Loki's ruler; fired alerts go to Alertmanager.
+# The body is LogQL + Go-template syntax ($labels, $value) — Jinja must not
+# touch it, hence the raw block.
+{% raw %}
+groups:
+  # Ported from Grafana UI rules (group 'Logs evaluation') — the only
+  # alert set that never moved to Prometheus, because these query logs.
+  - name: logs
+    rules:
+      - alert: LogErrorRateSpike
+        expr: sum by (namespace, container) (count_over_time({job=~".+", container!~"loki|grafana|istio-proxy"} |= "error" [5m])) > 20
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Error rate spike in {{ $labels.namespace }}/{{ $labels.container }}"
+          description: "{{ humanize $value }} log lines containing 'error' in the last 5m — check the container logs in Grafana Explore."
+
+      - alert: TLSOrCertificateErrorInLogs
+        expr: count_over_time({job=~".+", container!~"loki|grafana|istio-proxy"} |~ "(?i)x509.*(fail|error|invalid)|certificate.*expired|tls.*handshake.*(fail|error|reset)" [15m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "TLS/certificate errors in {{ $labels.namespace }}/{{ $labels.container }} logs"
+          description: "{{ $value }} certificate/TLS error lines in 15m — check certificate validity and upstream TLS handshakes."
+
+      - alert: SonarrRadarrDownloadFailures
+        expr: count_over_time({namespace="media", container=~"sonarr|radarr"} |~ "(?i)failed to import|download failed" [15m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Download failures in {{ $labels.container }}"
+          description: "{{ $value }} 'failed to import' / 'download failed' log lines in 15m — check Activity > Queue in Sonarr/Radarr."
+
+      - alert: TempoLogsSilent
+        expr: count_over_time({namespace="istio-system", container="tempo"}[10m]) < 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No logs from {{ $labels.container }} in 10+ minutes"
+          description: "This service normally logs continuously and has gone silent — likely means the container crashed or is hung rather than idle. Check pod status."
+{% endraw %}

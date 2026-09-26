@@ -29,3 +29,16 @@
     dest: "{{ loki_config_dir }}/config.yml"
     mode: '0644'
     force: true
+
+- name: Ensure Loki rules directory exists
+  ansible.builtin.file:
+    path: "{{ loki_config_dir }}/rules"
+    state: directory
+    mode: '0755'
+
+- name: Template Loki ruler rules
+  ansible.builtin.template:
+    src: loki-rules.yml.j2
+    dest: "{{ loki_config_dir }}/rules/rules.yml"
+    mode: '0644'
+    force: true
