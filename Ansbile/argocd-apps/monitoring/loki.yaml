@@ -108,8 +108,9 @@ spec:
               memory: "384Mi"
               cpu: "250m"
       securityContext:
-        # loki image runs as uid/gid 10001; kubelet chowns the DirectoryOrCreate
-        # hostPath so the data dir is writable
+        # loki image runs as uid/gid 10001. NOTE: kubelet does NOT chown
+        # hostPath volumes (fsGroup is a no-op here) — ownership of
+        # /opt/docker/loki-data is enforced by roles/loki on the monitoring VM.
         fsGroup: 10001
       volumes:
         - name: config

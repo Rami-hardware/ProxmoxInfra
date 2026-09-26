@@ -1,5 +1,11 @@
 ---
 loki_config_dir: /opt/docker/loki
+# hostPath backing the loki-data-pv mounted at /loki in the k3s pod.
+# Must be owned by the loki image user (10001): kubelet does NOT chown
+# hostPath volumes, so the pod would crashloop on mkdir /loki/chunks.
+loki_data_dir: /opt/docker/loki-data
+loki_data_dir_uid: 10001
+loki_data_dir_gid: 10001
 loki_http_port: 3100
 loki_reject_old_samples: true
 loki_reject_old_samples_max_age: 168h

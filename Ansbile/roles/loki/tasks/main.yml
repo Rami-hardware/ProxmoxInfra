@@ -23,6 +23,18 @@
     mode: '0755'
   loop: "{{ loki_data_dirs }}"
 
+# Backs loki-data-pv (hostPath, mounted at /loki in the k3s pod). kubelet's
+# DirectoryOrCreate creates this as root:root and fsGroup is not applied to
+# hostPath volumes — without correct ownership the pod crashloops with
+# "mkdir /loki/chunks: permission denied".
+- name: Ensure Loki PV data directory is owned by the loki user
+  ansible.builtin.file:
+    path: "{{ loki_data_dir }}"
+    state: directory
+    owner: "{{ loki_data_dir_uid }}"
+    group: "{{ loki_data_dir_gid }}"
+    mode: '0755'
+
 - name: Template Loki config
   ansible.builtin.template:
     src: loki.yml.j2
