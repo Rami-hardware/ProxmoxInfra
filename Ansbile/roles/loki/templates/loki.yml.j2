@@ -30,8 +30,16 @@ schema_config:
 
 limits_config:
   allow_structured_metadata: false
+  retention_period: {{ loki_retention_period | default('30d') }}
   reject_old_samples: {{ loki_reject_old_samples | lower }}
   reject_old_samples_max_age: {{ loki_reject_old_samples_max_age }}
+
+# Retention deletes need the compactor running with retention enabled.
+# delete_request_store: filesystem is required on Loki 3.x for retention.
+compactor:
+  working_directory: /loki/compactor
+  retention_enabled: true
+  delete_request_store: filesystem
 
 # LogQL alerting — rules rendered to /opt/docker/loki/rules (mounted at
 # /etc/loki/rules) by roles/loki; alerts go to the same Alertmanager →

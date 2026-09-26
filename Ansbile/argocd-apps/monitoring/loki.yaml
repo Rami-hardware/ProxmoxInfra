@@ -20,6 +20,37 @@ spec:
   hostPath:
     path: /opt/docker/loki
 ---
+# Log data persistence — without this, /loki lived in the container's
+# writable layer and every rollout wiped all log history.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: loki-data-pv
+spec:
+  capacity:
+    storage: 20Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  hostPath:
+    path: /opt/docker/loki-data
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: loki-data-pvc
+  namespace: monitoring
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  volumeName: loki-data-pv
+  storageClassName: ""
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -67,6 +98,8 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /etc/loki
+            - name: data
+              mountPath: /loki
           resources:
             requests:
               memory: "128Mi"
@@ -74,10 +107,17 @@ spec:
             limits:
               memory: "384Mi"
               cpu: "250m"
+      securityContext:
+        # loki image runs as uid/gid 10001; kubelet chowns the DirectoryOrCreate
+        # hostPath so the data dir is writable
+        fsGroup: 10001
       volumes:
         - name: config
           persistentVolumeClaim:
             claimName: loki-config-pvc
+        - name: data
+          persistentVolumeClaim:
+            claimName: loki-data-pvc
 ---
 apiVersion: v1
 kind: Service
