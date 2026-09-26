@@ -113,4 +113,1029 @@ groups:
         annotations:
           summary: "CoreDNS metrics endpoint down ({{ $labels.instance }})"
           description: "Prometheus cannot scrape CoreDNS — the pod may be restarting, breaking all cluster DNS."
+  # Ported from Grafana UI rules (group 'Nodes Evaluation') — rule names renamed to alert: CamelCase.
+  - name: nodes
+    rules:
+      - alert: NodeRootFilesystemLowSpace
+        expr: (node_filesystem_avail_bytes{mountpoint="/",job="nodes" , instance!="host-node"} / node_filesystem_size_bytes{mountpoint="/",job="nodes",instance!="host-node"} * 100) < 15
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }}: {{ $labels.mountpoint }} at {{ humanize $value }}% free"
+          description: "Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }} is running low on space. Check for log growth, container image buildup, or old snapshots."
+
+      - alert: NodeAnyFilesystemLowSpace
+        expr: (node_filesystem_avail_bytes{job="nodes",fstype!="tmpfs"} / node_filesystem_size_bytes{job="nodes",fstype!="tmpfs"} * 100) < 10
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }}: {{ $labels.mountpoint }} at {{ humanize $value }}% free"
+          description: "Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }} is running low on space. Check for log growth, container image buildup, or old snapshots."
+
+      - alert: NodeHighMemoryUsage
+        expr: ((1 - (node_memory_MemAvailable_bytes{job="nodes",instance!="host-node"} / node_memory_MemTotal_bytes{job="nodes" , instance!="host-node"})) * 100) > 95
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} memory usage at {{ humanize $value }}%"
+          description: "Memory usage on {{ $labels.instance }} is elevated. Check running workloads and consider whether this node is undersized for what's scheduled on it."
+
+      - alert: NodeLoadAverageHighNormalizedPerCore
+        expr: (node_load1{job="nodes",instance!="host-node"} / count without (cpu, mode) (node_cpu_seconds_total{job="nodes", mode="idle" ,instance!="host-node"})) > 2
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} load average high ({{ humanize $value }}x cores)"
+          description: "1-minute load average on {{ $labels.instance }} exceeds 2x its core count — check for a runaway process."
+
+      - alert: NodeOOMKills
+        expr: (increase(node_vmstat_oom_kill{job="nodes"}[15m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "OOM kill on {{ $labels.instance }}"
+          description: "The kernel killed a process on {{ $labels.instance }} due to memory exhaustion. Check dmesg/journalctl -k for details."
+
+      - alert: NodeClockNotSynced
+        expr: (node_timex_sync_status{job="nodes"}) < 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} clock not synchronized"
+          description: "NTP/chrony sync lost on {{ $labels.instance }}. Can cause cert validation issues and confusing log timestamps."
+
+      - alert: NodeTCPRetransmitRateHigh
+        expr: (rate(node_netstat_Tcp_RetransSegs{job="nodes"}[5m]) / rate(node_netstat_Tcp_OutSegs{job="nodes"}[5m]) * 100) > 5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} TCP retransmit rate at {{ humanize $value }}%"
+          description: "Elevated retransmission rate on {{ $labels.instance }} suggests network congestion or packet loss."
+
+      - alert: NodeFilesystemDeviceError
+        expr: (node_filesystem_device_error{job="nodes", mountpoint=~"^/(boot(/efi)?)?$"}) == 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Filesystem error on {{ $labels.instance }}, device {{ $labels.device }}"
+          description: "node_exporter reported a device-level error on a physical disk on {{ $labels.instance }} — may indicate a failing drive."
+
+      - alert: NodeExporterDown
+        expr: (up{job="nodes"}) < 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} node_exporter unreachable"
+          description: "Prometheus can't scrape node_exporter on {{ $labels.instance }}. Host may be down, rebooting, or network-isolated."
+
+      - alert: NodePrimaryInterfaceDown
+        expr: (node_network_up{job="nodes",device="eth0"}) < 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} primary interface down"
+          description: "eth0 is down on {{ $labels.instance }} — this would cut off connectivity to the node."
+
+  # Ported from Grafana UI rules (group 'CoreDNS evaluation') — rule names renamed to alert: CamelCase.
+  - name: coredns
+    rules:
+      - alert: CoreDNSDNSResponseErrors
+        expr: (sum(rate(coredns_dns_responses_total{rcode="SERVFAIL"}[5m])) by (zone)) > 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CoreDNS SERVFAIL rate elevated for zone {{ $labels.zone }}"
+          description: "CoreDNS is failing to resolve queries for this zone. Check upstream connectivity and whether the relevant Service/Endpoint objects are healthy."
+
+      - alert: CoreDNSReloadFailures
+        expr: (increase(coredns_reload_failed_total[15m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CoreDNS Corefile reload failed"
+          description: "A configuration reload attempt failed — CoreDNS is still running the previous config. Check the coredns-custom or coredns ConfigMap for a syntax error."
+
+      - alert: CoreDNSPanics
+        expr: (increase(coredns_panics_total[15m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CoreDNS panic detected"
+          description: "CoreDNS crashed internally and recovered/restarted. This can cause brief DNS resolution gaps cluster-wide. Check pod logs for the panic stack trace."
+
+      - alert: CoreDNSForwardMaxConcurrentRejects
+        expr: (increase(coredns_forward_max_concurrent_rejects_total[15m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CoreDNS rejecting queries — overloaded"
+          description: "CoreDNS hit its max concurrent forwarded queries limit and started dropping requests. Consider increasing the forward plugin's max_concurrent or investigating a query storm."
+
+      - alert: CoreDNSHighRequestLatency
+        expr: (histogram_quantile(0.99, sum(rate(coredns_dns_request_duration_seconds_bucket[5m])) by (zone, le))) > 0.5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CoreDNS p99 latency at {{ humanize $value }}s for zone {{ $labels.zone }}"
+          description: "DNS resolution is taking unusually long. Check upstream health and CoreDNS pod resource usage (CPU throttling is a common cause)."
+
+      - alert: CoreDNSCacheHitRatioDropping
+        expr: (sum(rate(coredns_cache_hits_total[5m])) / (sum(rate(coredns_cache_hits_total[5m])) + sum(rate(coredns_cache_misses_total[5m]))) * 100) < 50
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CoreDNS cache hit ratio at {{ humanize $value }}%"
+          description: "Cache effectiveness has dropped, meaning more queries are hitting upstream/kubernetes API. Could indicate cache eviction pressure or unusually diverse query patterns."
+
+      - alert: CoreDNSKubernetesAPIClientErrors
+        expr: (sum(rate(coredns_kubernetes_rest_client_requests_total{code=~"5.."}[5m]))) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CoreDNS getting errors from Kubernetes API"
+          description: "CoreDNS's watch on Kubernetes Services/Endpoints is failing. New or updated services may not resolve correctly until this is fixed. Check API server health and CoreDNS's RBAC permissions."
+
+  # Ported from Grafana UI rules (group 'kube evaluation') — rule names renamed to alert: CamelCase.
+  - name: kube-state
+    rules:
+      - alert: KubeDeploymentHasUnavailableReplicas
+        expr: (count by (namespace, deployment) ( kube_deployment_status_condition{deployment!="kube-state-metrics", condition="Available", status="false"} == 1 ) ) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Deployment {{ $labels.deployment }} in {{ $labels.namespace }} has no available replicas"
+          description: "Deployment {{ $labels.deployment }} Available condition is false — no replicas are serving traffic. Check kubectl -n {{ $labels.namespace }} describe deployment {{ $labels.deployment }} and pod events for scheduling, image pull, or crash issues."
+
+      - alert: KubeDeploymentSpecVsAvailableReplicaMismatch
+        expr: (kube_deployment_spec_replicas - kube_deployment_status_replicas_available) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.deployment }} in {{ $labels.namespace }} has unavailable replicas"
+          description: "Deployment {{ $labels.deployment }} is not meeting its desired replica count. Check kubectl -n {{ $labels.namespace }} describe deployment {{ $labels.deployment }} and pod events for scheduling, image pull, or crash issues."
+
+      - alert: KubePodCrashLooping
+        expr: (increase(kube_pod_container_status_restarts_total[15m])) > 3
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.pod }} in {{ $labels.namespace }} restarting repeatedly ({{ $labels.container }})"
+          description: "Container has restarted more than 3 times in 15 minutes — classic crash loop signature. Check kubectl logs --previous for the crash reason."
+
+      - alert: KubePodStuckInWaiting
+        expr: (kube_pod_container_status_waiting_reason{reason=~"CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError"}) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.pod }} stuck in {{ $labels.reason }}"
+          description: "Pod container is stuck waiting on {{ $labels.reason }}. For ImagePullBackOff check registry access/credentials; for CrashLoopBackOff check application logs."
+
+      - alert: KubePodNotInRunningPhaseForTooLong
+        expr: (kube_pod_status_phase{phase="Failed", pod!~"kube-state-metrics-.*"}) == 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.pod }} in {{ $labels.namespace }} is {{ $labels.phase }}"
+          description: "Pod has been outside the Running phase for 15+ minutes. Check scheduling constraints, resource availability, or node health."
+
+      - alert: KubeNodeNotReady
+        expr: (kube_node_status_condition{condition="Ready", status="true"}) == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Node {{ $labels.node }} is NotReady"
+          description: "A cluster node has failed its readiness check. This can cascade into pod evictions and rescheduling. Check kubectl describe node {{ $labels.node }} and kubelet status on that host immediately."
+
+      - alert: KubePVCNotBound
+        expr: (kube_persistentvolumeclaim_status_phase{phase!="Bound"}) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PVC {{ $labels.persistentvolumeclaim }} in {{ $labels.namespace }} is {{ $labels.phase }}"
+          description: "A PersistentVolumeClaim failed to bind. Check storage class availability and whether local-path-provisioner (your default StorageClass) can satisfy the request."
+
+      - alert: KubeJobFailed
+        expr: (kube_job_status_failed{job_name!~"scan-vulnerabilityreport.*"}) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Job {{ $labels.job_name }} in {{ $labels.namespace }} failed"
+          description: "A Kubernetes Job has failed. Check kubectl -n {{ $labels.namespace }} logs job/{{ $labels.job_name }} for the failure reason."
+
+      - alert: KubeCronJobHasnTCompletedSuccessfullyRecently
+        expr: (time() - kube_cronjob_status_last_successful_time) > 86400
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CronJob {{ $labels.cronjob }} hasn't succeeded in 24h+"
+          description: "Expected recurring job hasn't completed successfully. Check if the CronJob is suspended, or if recent job attempts are failing."
+
+  # Ported from Grafana UI rules (group 'ingress nginx evaluation') — rule names renamed to alert: CamelCase.
+  - name: ingress-nginx
+    rules:
+      - alert: IngressConfigReloadFailed
+        expr: (nginx_ingress_controller_config_last_reload_successful) < 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "nginx config reload failed"
+          description: "The last configuration reload attempt failed — nginx is still serving the previous config. Any recent ingress changes (new hosts, TLS updates) are NOT live. Check controller logs for the specific syntax/config error."
+
+      - alert: IngressSSLCertificateExpiringSoon
+        expr: ((nginx_ingress_controller_ssl_expire_time_seconds - time()) / 86400) < 14
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "TLS cert for {{ $labels.host }} expires in {{ humanize $value }} days"
+          description: "Certificate served by ingress for {{ $labels.host }} is approaching expiry. If this is managed by cert-manager, check the Certificate/CertificateRequest resources for renewal failures."
+
+      - alert: IngressOrphanedIngress
+        expr: (nginx_ingress_controller_orphan_ingress) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Ingress {{ $labels.ingress }} in {{ $labels.namespace }} is orphaned ({{ $labels.type }})"
+          description: "This ingress has no matching service or healthy endpoints, so requests to it will return 503. Check that the backing Service and pod are up in namespace {{ $labels.namespace }}."
+
+      - alert: IngressHigh5xxRateFromUpstreams
+        expr: (( sum(rate(nginx_ingress_controller_requests{status=~"5.."}[5m])) by (ingress) / sum(rate(nginx_ingress_controller_requests[5m])) by (ingress) * 100 ) and on (ingress) ( sum(increase(nginx_ingress_controller_requests{status=~"5.."}[5m])) by (ingress) > 2 )) > 5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.ingress }} returning {{ humanize $value }}% 5xx errors"
+          description: "A significant share of requests to this ingress are failing server-side. Fires only when ratio >5% AND more than 2 actual 5xx occur within 5m — a bare ratio pages on single-request blips (hostPort pod swaps during Image Updater rollouts), since probe traffic dominates low-volume ingresses."
+
+      - alert: IngressConnectionCountNearWorkerLimit
+        expr: (sum(nginx_ingress_controller_nginx_process_connections{state="active"})) > 5000
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "nginx active connections at {{ humanize $value }}"
+          description: "Active connection count is approaching typical worker limits. Consider scaling the ingress controller or checking for a client hammering a specific endpoint."
+
+      - alert: IngressAdmissionWebhookFailures
+        expr: (nginx_ingress_controller_check_success) == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Ingress {{ $labels.ingress }} in {{ $labels.namespace }} failing config check"
+          description: "This ingress's configuration is failing nginx's syntax test, meaning it likely isn't being applied. Check the ingress annotations/rules for errors."
+
+      - alert: IngressControllerDown
+        expr: (up{job="ingress-nginx"}) < 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ingress-nginx-controller unreachable"
+          description: "Prometheus can't scrape the ingress controller. This likely means external access to every service behind it (Jellyfin, Grafana, ArgoCD, the *arr stack, etc.) is down. Check the controller pod status immediately."
+
+  # Ported from Grafana UI rules (group 'Istio evaluation') — rule names renamed to alert: CamelCase.
+  - name: istio
+    rules:
+      - alert: IstioAgentCertificateExpiringSoon
+        expr: (istio_agent_cert_expiry_seconds) < 10800
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Istio agent cert on {{ $labels.pod }} expires in {{ humanize $value }} days"
+          description: "Workload certificate is close to expiry. This is usually auto-rotated by istiod, but if this alert keeps firing without the value resetting, cert rotation may be stuck — check istiod logs and sidecar connectivity to the control plane."
+
+      - alert: IstioEnvoyProxyNotLive
+        expr: (envoy_server_live) < 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Envoy proxy down on {{ $labels.pod }}"
+          description: "The Envoy sidecar reports not-live. This pod's traffic (inbound and outbound through the mesh) may be broken. Check pod status and istio-proxy container logs."
+
+      - alert: IstioEnvoyConnectionFailuresToXdsGrpc
+        expr: (envoy_cluster_upstream_cx_connect_fail{cluster_name="xds-grpc"}) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Sidecar can't connect to istiod ({{ $labels.pod }})"
+          description: "Envoy is failing to establish the xds-grpc connection to istiod, meaning this proxy won't receive config updates (routes, certs, policies). Check istiod pod health and network connectivity from this node."
+
+      - alert: IstiodConnectionTerminations
+        expr: (increase(istio_agent_istiod_connection_terminations[15m])) > 5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Istiod connections terminating repeatedly on {{ $labels.pod }}"
+          description: "The sidecar's connection to istiod is being cut and re-established frequently — check for istiod restarts, resource pressure, or network instability between this pod and istiod."
+
+      - alert: IstioEnvoyWatchdogMiss
+        expr: (increase(envoy_server_watchdog_miss[15m])) > 3
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Envoy worker thread stalling on {{ $labels.pod }} ({{ $labels.thread_name }})"
+          description: "Envoy's watchdog detected the worker thread took too long to respond to its heartbeat, indicating the proxy is under heavy load or stuck processing. Mega-miss is more severe and may precede a crash/restart."
+
+      - alert: IstioEnvoyWatchdogMegaMiss
+        expr: (increase(envoy_server_watchdog_mega_miss[15m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Envoy worker thread stalling on {{ $labels.pod }} ({{ $labels.thread_name }})"
+          description: "Envoy's watchdog detected the worker thread took too long to respond to its heartbeat, indicating the proxy is under heavy load or stuck processing. Mega-miss is more severe and may precede a crash/restart."
+
+      - alert: IstioXDSConfigPushFailuresPending
+        expr: (sum(rate(istio_agent_xds_proxy_requests[5m])) - sum(rate(istio_agent_xds_proxy_responses[5m]))) > 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "XDS proxy requests/responses out of sync on {{ $labels.pod }}"
+          description: "A sustained gap between XDS requests and responses suggests the sidecar isn't successfully completing config sync cycles with istiod."
+
+      - alert: IstioEnvoyTotalConnectionsAbnormallyHigh
+        expr: (envoy_server_total_connections) > 1000
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Envoy connection count elevated on {{ $labels.pod }}"
+          description: "Total connections on this sidecar are unusually high — check for a connection leak in the application or an unexpected traffic spike."
+
+      - alert: IstioEnvoyMemoryGrowingUnbounded
+        expr: (envoy_server_memory_allocated) > 200000000
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Envoy memory usage high on {{ $labels.pod }}"
+          description: "Sidecar memory allocation is climbing past the expected baseline — check for a memory leak or whether sidecar resource limits need adjusting."
+
+  # Ported from Grafana UI rules (group 'ArgoCD evaluation') — rule names renamed to alert: CamelCase.
+  - name: argocd
+    rules:
+      - alert: ArgoCDApplicationOutOfSync
+        expr: (argocd_app_info{sync_status="Synced"}) < 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Application {{ $labels.name }} is OutOfSync"
+          description: "The live cluster state has drifted from what's declared in Git for {{ $labels.name }}. Check the ArgoCD UI diff to see what changed — this could be manual kubectl edits or a failed auto-sync."
+
+      - alert: ArgoCDApplicationUnhealthy
+        expr: (argocd_app_info{health_status!="Healthy"}) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Application {{ $labels.name }} is {{ $labels.health_status }}"
+          description: "This application's resources are reporting a non-Healthy status (Degraded/Progressing/Missing/Unknown). Check the Application's resource tree in the ArgoCD UI for the specific failing resource."
+
+      - alert: ArgoCDComponentsDown
+        expr: (up{job=~"argocd.*"}) < 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ArgoCD component {{ $labels.job }} unreachable"
+          description: "A core ArgoCD component isn't responding to scrapes. GitOps sync and UI access may be degraded. Check kubectl -n argocd get pods."
+
+  # Ported from Grafana UI rules (group 'Alertmanager evaluation') — rule names renamed to alert: CamelCase.
+  - name: alertmanager
+    rules:
+      - alert: AlertmanagerConfigReloadFailed
+        expr: (alertmanager_config_last_reload_successful) < 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alertmanager config reload failed"
+          description: "The last reload of alertmanager.yml failed — Alertmanager is running on stale config. Any recent receiver/route changes are NOT active. Check for a YAML syntax error."
+
+      - alert: AlertmanagerNotificationsFailingToSend
+        expr: (sum(rate(alertmanager_notifications_failed_total[15m])) by (integration)) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alertmanager notifications failing via {{ $labels.integration }}"
+          description: "Alerts are firing but failing to actually deliver through the {{ $labels.integration }} receiver. Check credentials, webhook URLs, or the destination service's availability."
+
+      - alert: AlertmanagerNotificationRequestsFailingAtTheHTTPLevel
+        expr: (sum(rate(alertmanager_notification_requests_failed_total[15m])) by (integration)) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alertmanager HTTP requests to {{ $labels.integration }} failing"
+          description: "Outbound requests to this notification integration are failing at the transport level — check network connectivity or endpoint availability."
+
+      - alert: AlertmanagerHighNotificationLatency
+        expr: (histogram_quantile(0.99, sum(rate(alertmanager_notification_latency_seconds_bucket[5m])) by (integration, le)) and on(integration) (sum(rate(alertmanager_notification_latency_seconds_count[5m])) by (integration) > 0)) > 10
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alertmanager notification latency high for {{ $labels.integration }} (p99 {{ humanize $value }}s)"
+          description: "Notifications are taking unusually long to send. Check whether the receiving endpoint is slow or rate-limiting."
+
+      - alert: AlertmanagerClusterUnhealthy
+        expr: (alertmanager_cluster_health_score) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alertmanager cluster degraded"
+          description: "Cluster health score is non-zero or peers have failed — only relevant if running multiple Alertmanager replicas. May cause duplicate or missed notifications if peers can't gossip alert state."
+
+      - alert: AlertmanagerFailedPeersInCluster
+        expr: (alertmanager_cluster_failed_peers) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alertmanager cluster degraded"
+          description: "Cluster health score is non-zero or peers have failed — only relevant if running multiple Alertmanager replicas. May cause duplicate or missed notifications if peers can't gossip alert state."
+
+      - alert: AlertmanagerInvalidAlertsBeingReceived
+        expr: (increase(alertmanager_alerts_invalid_total[15m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alertmanager receiving invalid alerts"
+          description: "Prometheus is sending alerts that Alertmanager rejects as invalid — likely a labeling issue in an alert rule. Check recent alert rule changes."
+
+      - alert: AlertmanagerAggregationGroupCreationFailures
+        expr: (increase(alertmanager_dispatcher_aggregation_group_creation_given_up_total[15m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alertmanager dispatcher failing to group alerts"
+          description: "The dispatcher is giving up on creating new alert aggregation groups, likely due to a very high alert volume. Check for an alert storm."
+
+      - alert: AlertmanagerSilenceGCErrors
+        expr: (increase(alertmanager_silences_gc_errors_total[1h])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alertmanager silence garbage collection failing"
+          description: "Errors during silence cleanup — usually benign but worth checking storage/disk health for the Alertmanager data directory."
+
+      - alert: AlertmanagerDown
+        expr: (up{job="alertmanager-internal"}) < 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alertmanager unreachable"
+          description: "Prometheus can't scrape Alertmanager. If this is down, NO alert notifications will be delivered at all, from any rule. Check the pod status immediately and consider a secondary out-of-band check (e.g. a dead man's switch / heartbeat alert via a third-party service) since Alertmanager can't page you about its own outage."
+
+  # Ported from Grafana UI rules (group 'Loki Evaluation') — rule names renamed to alert: CamelCase.
+  - name: loki
+    rules:
+      - alert: LokiHighRequestErrorRate5xx
+        expr: (sum(rate(loki_request_duration_seconds_count{status_code=~"5.."}[5m])) / sum(rate(loki_request_duration_seconds_count[5m])) * 100) > 5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Loki 5xx error rate at {{ humanize $value }}%"
+          description: "A significant share of Loki HTTP requests are failing with server errors. Check Loki logs for panics, OOM, or storage backend issues."
+
+      - alert: LokiPushFailures
+        expr: (sum(rate(loki_request_duration_seconds_count{route="loki_api_v1_push", status_code!~"2..|204"}[5m]))) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Loki rejecting push requests from Promtail"
+          description: "The /loki/api/v1/push endpoint is failing. Promtail agents (including this darkestserver node) will start buffering and eventually dropping logs. Check Loki's ingester health and disk space."
+
+      - alert: LokiIngesterWALDiskUsageHigh
+        expr: (loki_ingester_wal_disk_usage_percent * 100) > 80
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Loki ingester WAL disk usage at {{ humanize $value }}%"
+          description: "The Write-Ahead-Log directory is filling up. If this reaches 100%, ingestion will fail. Check available disk space on the volume backing Loki's WAL."
+
+      - alert: LokiWALDiskFullFailures
+        expr: (increase(loki_ingester_wal_disk_full_failures_total[15m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Loki WAL disk is full"
+          description: "The ingester can no longer write WAL entries due to a full disk — this stops log ingestion entirely. Free up space or expand the volume immediately."
+
+      - alert: LokiIngesterChunkFlushFailures
+        expr: (increase(loki_ingester_chunks_flush_failures_total[15m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Loki chunk flush failures detected"
+          description: "The ingester is failing to flush chunks to long-term storage. Check the storage backend (filesystem/S3/etc.) for connectivity or permission issues."
+
+      - alert: LokiQuerySchedulerQueueBackingUp
+        expr: (histogram_quantile(0.99, rate(loki_query_scheduler_queue_duration_seconds_bucket[5m]))) > 10
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Loki query scheduler queue backing up (p99 > 10s)"
+          description: "Query scheduler queue times are climbing — Loki query throughput is saturated or a scheduler is stuck."
+
+      - alert: LokiRateStoreRefreshFailures
+        expr: (increase(loki_rate_store_refresh_failures_total[15m])) > 20
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Loki rate store sync failures increasing"
+          description: "The distributor is failing to sync stream rate info from ingesters, which can affect rate-limiting accuracy."
+
+      - alert: LokiRingMemberUnhealthy
+        expr: (loki_ring_members{state="Unhealthy"}) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Loki ring member {{ $labels.name }} unhealthy"
+          description: "A Loki component's ring membership is reporting unhealthy — that component may be crash-looping or network-partitioned from the rest of the cluster."
+
+      - alert: LokiGRPCHealthCheckFailingOnIngesterClient
+        expr: (sum(rate(loki_ingester_client_request_duration_seconds_count{operation="/logproto.Pusher/Push", status_code!="2xx"}[5m]))) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Distributor→ingester push errors detected"
+          description: "The Loki distributor is failing to push data to the ingester over gRPC. Check for ingester restarts, resource exhaustion, or connectivity issues."
+
+      - alert: LokiProcessDown
+        expr: (up{job="loki"}) < 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Loki process unreachable"
+          description: "Prometheus can't scrape the Loki metrics endpoint. Log ingestion and querying are likely both broken. Check the Loki pod/container status immediately."
+
+      - alert: LokiCompactorNotRunningRetentionFailing
+        expr: loki_boltdb_shipper_compactor_running < 1 and (time() - loki_compactor_apply_retention_last_successful_run_timestamp_seconds > 86400)
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Loki compactor not running / Retention hasn't run successfully"
+          description: "Compaction or retention enforcement has stopped. Over time this leads to unbounded storage growth and slower queries. Check compactor logs for errors."
+
+  # Ported from Grafana UI rules (group 'Promtail Evaluation') — rule names renamed to alert: CamelCase.
+  - name: promtail
+    rules:
+      - alert: PromtailDroppedLogEntries
+        expr: (increase(promtail_dropped_entries_total{reason="ingester_error"}[15m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Promtail dropping log entries to {{ $labels.host }}"
+          description: "Promtail is failing to deliver log lines to Loki (ingester_error) and dropping them permanently after retries. Check Loki ingester health, disk space, and rate limits."
+
+      - alert: PromtailDroppedBytes
+        expr: (increase(promtail_dropped_bytes_total{reason="ingester_error"}[15m])) > 1000000
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Promtail dropping log entries to {{ $labels.host }}"
+          description: "Promtail is failing to deliver log lines to Loki (ingester_error) and dropping them permanently after retries. Check Loki ingester health, disk space, and rate limits."
+
+      - alert: PromtailBatchRetriesClimbing
+        expr: (increase(promtail_batch_retries_total[15m])) > 5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Promtail batch retries increasing"
+          description: "Promtail is having to retry sending log batches to Loki more than usual, suggesting Loki is slow, overloaded, or briefly unreachable."
+
+      - alert: PromtailRequestErrors
+        expr: (sum(rate(promtail_request_duration_seconds_count{status_code=~"4..|5.."}[5m])) by (host, status_code)) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Promtail getting HTTP {{ $labels.status_code }} errors from Loki at {{ $labels.host }}"
+          description: "Promtail's push requests to {{ $labels.host }} are failing with HTTP errors. 400s usually mean malformed/out-of-order log lines; 503s mean Loki is overloaded or restarting."
+
+      - alert: PromtailProcessExporterDown
+        expr: (up{job="promtail"}) == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Promtail exporter unreachable"
+          description: "Prometheus can't scrape the promtail target — log shipping from this node has likely stopped entirely. Check the promtail pod/container status."
+
+  # Ported from Grafana UI rules (group 'Tempo Evaluation') — rule names renamed to alert: CamelCase.
+  - name: tempo
+    rules:
+      - alert: TempoDistributorPushFailures
+        expr: (absent(rate(tempo_distributor_push_duration_seconds_count[5m]))) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Tempo distributor rejecting trace pushes"
+          description: "Traces from the mesh are being rejected. Check Tempo's ingestion limits and distributor logs."
+
+      - alert: TempoIngesterTracesDropped
+        expr: (sum(rate(tempo_discarded_spans_total[5m])) by (reason)) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Tempo dropping spans ({{ $labels.reason }})"
+          description: "Spans are being discarded — check whether this is rate-limiting (may need to raise limits) or malformed trace data from a specific service."
+
+      - alert: TempoFlushFailures
+        expr: (sum(rate(tempo_ingester_failed_flushes_total[15m]))) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Tempo ingester failing to flush blocks"
+          description: "Traces aren't making it to long-term storage. Check the storage backend (local disk/S3) for space or connectivity issues."
+
+      - alert: TempoCompactorFailures
+        expr: (sum(rate(tempo_compactor_errors_total[15m]))) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Tempo compactor failing"
+          description: "Compaction isn't running successfully, which leads to unbounded storage growth and slower queries over time."
+
+      - alert: TempoQueryErrors
+        expr: (sum(rate(tempo_request_duration_seconds_count{route=~".*query.*", status_code=~"5.."}[5m]))) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Tempo trace queries failing"
+          description: "Grafana's trace lookups against Tempo are erroring — check querier logs and storage backend connectivity."
+
+      - alert: TempoHighIngestionLatency
+        expr: (histogram_quantile(0.99, sum(rate(tempo_distributor_push_duration_seconds_bucket[5m])) by (le))) > 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Tempo ingestion p99 latency at {{ humanize $value }}s"
+          description: "Trace ingestion is slower than expected — check for resource pressure on the Tempo pod."
+
+      - alert: TempoDown
+        expr: (up{job="tempo"}) < 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Tempo unreachable"
+          description: "Prometheus can't scrape Tempo. New traces from Istio/Envoy sidecars will fail to be ingested, and existing traces won't be queryable in Grafana."
+
+  # Ported from Grafana UI rules (group 'Intel GPU evaluation') — rule names renamed to alert: CamelCase.
+  - name: intel-gpu
+    rules:
+      - alert: IntelGpuGPURenderEngineSaturated
+        expr: (igpu_engines_render_3d_0_busy) > 90
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "iGPU {{ $labels.__name__ }} at {{ humanize $value }}% busy"
+          description: "The Intel iGPU's hardware transcode engine is running near capacity, likely from multiple concurrent Jellyfin transcodes. Playback for additional streams may stutter or fall back to software transcoding. Check active Jellyfin sessions."
+
+      - alert: IntelGpuVideoEngineSaturated
+        expr: (igpu_engines_video_0_busy) > 90
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "iGPU {{ $labels.__name__ }} at {{ humanize $value }}% busy"
+          description: "The Intel iGPU's hardware transcode engine is running near capacity, likely from multiple concurrent Jellyfin transcodes. Playback for additional streams may stutter or fall back to software transcoding. Check active Jellyfin sessions."
+
+      - alert: IntelGpuGPUPowerDrawAbnormallyHighForExtendedPeriod
+        expr: (igpu_power_gpu) > 15
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "iGPU power draw at {{ humanize $value }}W"
+          description: "Sustained high power draw suggests the GPU has been under continuous load for an extended period — check for a stuck/runaway transcode job."
+
+      - alert: IntelGpuGPUNeverIdleRC6ResidencyStuckAt0
+        expr: ((igpu_rc6{job="intel_gpu"} < 1) and on(instance, job) ((max_over_time(igpu_engines_video_0_busy{job="intel_gpu"}[10m]) > 5) or (max_over_time(igpu_engines_render_3d_0_busy{job="intel_gpu"}[10m]) > 5) or (max_over_time(igpu_engines_video_enhance_0_busy{job="intel_gpu"}[10m]) > 5) or (max_over_time(igpu_engines_blitter_0_busy{job="intel_gpu"}[10m]) > 5))) < 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "iGPU idle residency (RC6) at {{ humanize $value }}%"
+          description: "The GPU is not entering its idle power state and engine metrics confirm real recent GPU work. Correlate with active Jellyfin streams or any background transcode/thumbnail-generation jobs."
+
+      - alert: IntelGpuExporterDown
+        expr: (up{job="intel_gpu"}) < 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "intel-gpu-exporter unreachable"
+          description: "Prometheus can't scrape iGPU stats. Either the exporter pod/container crashed or lost access to the GPU device (check for a host reboot or driver issue)."
+
+  # Ported from Grafana UI rules (group 'qBittorrent Evaluation') — rule names renamed to alert: CamelCase.
+  - name: qbittorrent
+    rules:
+      - alert: QbitNotConnectedToBTNetwork
+        expr: (qbittorrent_connected) < 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "qBittorrent disconnected from BitTorrent network"
+          description: "qBittorrent is running but not connected to the torrent network — likely a networking issue on the host or VPN/proxy interruption if one is configured."
+
+      - alert: QbitTorrentsStuckInErrorState
+        expr: (qbittorrent_torrents_count{status="error"}) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ humanize $value }} torrent(s) in error state ({{ $labels.category }})"
+          description: "One or more torrents have entered an error status, usually due to disk write failures or missing destination paths. Check the qBittorrent UI for details"
+
+      - alert: QbitMissingFiles
+        expr: (qbittorrent_torrents_count{status="missingFiles"}) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ humanize $value }} torrent(s) with missing files ({{ $labels.category }})"
+          description: "qBittorrent can no longer find files for a torrent it's tracking — often caused by manual deletion or a mount/permissions issue on the tank/media dataset. Recheck or remove affected torrents."
+
+      - alert: QbitTorrentsStalledDownloading
+        expr: (qbittorrent_torrents_count{status="stalledDL"}) > 3
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ humanize $value }} torrent(s) stalled downloading"
+          description: "Multiple torrents have been stuck with no download progress for 30+ minutes. Could indicate dead torrents, a blocked tracker, or a network/firewall issue."
+
+      - alert: QbitFirewalled
+        expr: (qbittorrent_firewalled) == 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "qBittorrent is firewalled"
+          description: "qBittorrent reports being behind a firewall on the BT network, which reduces peer connectivity and download/upload speed. Check port forwarding on your router."
+
+      - alert: QBittorrentUnreachable
+        expr: (qbittorrent_up) < 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "qBittorrent is unreachable"
+          description: "qbittorrent_up reports 0 for 192.168.10.201:8080. Downloads from Sonarr/Radarr will silently queue but never complete. Check the qBittorrent container/service and its Web UI."
+
+  # Ported from Grafana UI rules (group 'scraparr  Evaluation') — rule names renamed to alert: CamelCase.
+  - name: scraparr
+    rules:
+      - alert: ScraparrSonarrQueueErrors
+        expr: (sonarr_queue_error) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Sonarr has {{ humanize $value }} item(s) in queue with errors"
+          description: "An item in the Sonarr download queue is stuck in an error state — likely a failed import or broken release. Check Activity > Queue in Sonarr."
+
+      - alert: ScraparrSonarrMissingEpisodesClimbing
+        expr: (sonarr_missing_episodes_total) > 250
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Sonarr missing episode count at {{ humanize $value }}"
+          description: "Number of missing monitored episodes has grown beyond the configured threshold. Not urgent, but worth checking indexer health or search activity."
+
+      - alert: ScraparrRadarrQueueErrors
+        expr: (radarr_queue_error) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Radarr has {{ humanize $value }} item(s) in queue with errors"
+          description: "An item in the Radarr download queue is stuck in an error state. Check Activity > Queue in Radarr."
+
+      - alert: ScraparrProwlarrIndexerFailures
+        expr: (prowlarr_failed_queries_by_indexer) > 15
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Indexer {{ $labels.indexer }} has {{ humanize $value }} failed queries"
+          description: "An indexer is failing queries repeatedly — likely rate-limited, down, or blocking the server IP. Check indexer status in Prowlarr and consider disabling temporarily."
+
+      - alert: ScraparrBazarrProviderDegraded
+        expr: (last_over_time(bazarr_provider_status{status!="Good",status!="DownloadLimitExceeded"}[12m])) > 0
+        for: 20m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Bazarr provider {{ $labels.provider }} is degraded"
+          description: "Subtitle provider status is failing (auth/HTTP errors, timeouts). Daily quota throttles (DownloadLimitExceeded) are intentionally excluded — they are provider-side, self-healing and not actionable (Bazarr auto-retries after the provider resets)."
+
+      - alert: ScraparrServiceDown
+        expr: (scraparr_services_up) == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.alias }} is unreachable"
+          description: "scraparr_services_up for {{ $labels.alias }} reports 0 — the service failed its health check. Check the container/pod status and logs for this service."
+
+      - alert: ScraparrExporterItselfDown
+        expr: (up{job="scraparr"}) == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "scraparr exporter unreachable"
+          description: "Prometheus can't scrape the scraparr exporter target — check that the container is running and the port is reachable."
+
+  # Ported from Grafana UI rules (group 'SMART Evaluation') — rule names renamed to alert: CamelCase.
+  - name: smart
+    rules:
+      - alert: SMARTOverallStatusFailure
+        expr: (smartctl_device_smart_status{device=~"nvme0|sda|sdb|sdc|sdd"}) < 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.device }} reports SMART FAILURE"
+          description: "smartctl_device_smart_status for {{ $labels.device }} is reporting a non-passing status. This is a strong signal of imminent drive failure — check zpool status and plan replacement/backup immediately."
+
+      - alert: SmartReallocatedSectorsAppearing
+        expr: (smartctl_device_attribute{attribute_name="Reallocated_Sector_Ct", attribute_value_type="raw"}) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.device }} has {{ $labels.attribute_name }} > 0"
+          description: "A SMART attribute historically at 0 for {{ $labels.device }} has become nonzero, which typically indicates the onset of physical disk degradation. Recommend running a full SMART long self-test and reviewing zpool scrub results."
+
+      - alert: SmartCurrentPendingSector
+        expr: (smartctl_device_attribute{attribute_name="Current_Pending_Sector", attribute_value_type="raw"}) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.device }} has {{ $labels.attribute_name }} > 0"
+          description: "A SMART attribute historically at 0 for {{ $labels.device }} has become nonzero, which typically indicates the onset of physical disk degradation. Recommend running a full SMART long self-test and reviewing zpool scrub results."
+
+      - alert: SmartOfflineUncorrectableSectors
+        expr: (smartctl_device_attribute{attribute_name="Offline_Uncorrectable", attribute_value_type="raw"}) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.device }} has {{ $labels.attribute_name }} > 0"
+          description: "A SMART attribute historically at 0 for {{ $labels.device }} has become nonzero, which typically indicates the onset of physical disk degradation. Recommend running a full SMART long self-test and reviewing zpool scrub results."
+
+      - alert: SmartDiskTemperatureHigh
+        expr: (smartctl_device_temperature{temperature_type="current"}) > 55
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.device }} temperature at {{ humanize $value }}°C"
+          description: "Disk temperature exceeded the safe operating threshold. Sustained heat accelerates wear — check chassis airflow/fan health."
+
+      - alert: SmartNVMeMediaErrorsCriticalWarningFlags
+        expr: smartctl_device_media_errors{device="nvme0"} > 0 and smartctl_device_critical_warning{device="nvme0"} > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "NVMe nvme0 logging media errors + critical warning flags"
+          description: "Both smartctl_device_media_errors and smartctl_device_critical_warning are > 0 on nvme0 — the device is logging media/reallocated errors and raised a critical warning. Plan for replacement."
+
+      - alert: SmartctlScrapeExitStatusFailure
+        expr: smartctl_device_smartctl_exit_status != 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "smartctl failed to query {{ $labels.device }}"
+          description: "The smartctl_exporter couldn't successfully run smartctl against {{ $labels.device }} — could mean the disk dropped off the bus, a permissions issue, or a controller problem."
+
+  # Ported from Grafana UI rules (group 'ZFS alerts') — rule names renamed to alert: CamelCase.
+  - name: zfs
+    rules:
+      - alert: ZfsPoolHealth
+        expr: (zfs_pool_health{pool="tank"}) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ZFS pool {{ $labels.pool }} health check failed (value={{ humanize $value }})"
+          description: "Fires when zfs_pool_health for the tank pool reports a non-zero status\n(0=ONLINE, 1=DEGRADED, 2=FAULTED, 3=OFFLINE, 4=UNAVAIL, 5=REMOVED, 6=SUSPENDED).\nA non-zero value means the pool needs immediate attention — check `zpool status tank`\non the host for details."
+
+      - alert: ZfsPoolCapacity
+        expr: (100 * zfs_pool_allocated_bytes{pool="tank"} / zfs_pool_size_bytes{pool="tank"}) > 80
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ZFS pool tank is {{ humanize $value }}% full"
+          description: "Fires when pool usage (zfs_pool_allocated_bytes / zfs_pool_size_bytes) exceeds 80%. Consider expanding the pool or cleaning up tank/media/tv and tank/media/movies (largest consumers)."
+
+      - alert: ZfsDatasetLevelFreeSpace
+        expr: (zfs_dataset_available_bytes{name="tank"} / (1024*1024*1024*1024)) < 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "tank dataset has only {{ humanize $value }} TiB free"
+          description: "Fires when zfs_dataset_available_bytes for the tank filesystem drops below 1 TiB.\nCheck tank/media/tv and tank/media/movies for cleanup candidates, or plan a\npool expansion."
+
+      - alert: ZfsFragmentation
+        expr: (zfs_pool_fragmentation_ratio{pool="tank"}) > 0.5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ZFS pool tank fragmentation at {{ humanize $value }}"
+          description: "Fires when zfs_pool_fragmentation_ratio for tank exceeds 0.5. High fragmentation\ncan degrade write performance over time; not urgent but worth monitoring —\nconsider a scrub or reviewing recordsize/ashift settings if it keeps climbing."
+
+      - alert: ZfsScrapeCollectorFailure
+        expr: (zfs_scrape_collector_success{collector=~"pool|dataset-filesystem|dataset-volume"}) == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "zfs_exporter collector {{ $labels.collector }} failing"
+          description: "Fires when a zfs_exporter collector (pool, dataset-filesystem, or dataset-volume)\nreports success=0. This means the exporter itself can't read ZFS stats — check\nthat the exporter process has permission to run zpool/zfs commands and that the\nhost isn't under heavy I/O load."
+
+      - alert: ZfsExporterTargetDown
+        expr: (up{job="zfs_exporter"}) < 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "zfs-exporter target is down"
+          description: "Fires when Prometheus can't scrape the zfs-exporter job at all. Check that the\nexporter service is running on the host and that the port is reachable —\nthis is a scrape-level failure, not a ZFS metric threshold."
 {% endraw %}

@@ -51,6 +51,7 @@ terraform plan -input=false -no-color -detailed-exitcode -out=tfplan
 - **All config rendered from Jinja2 templates** (`*.yml.j2`) — no inline hardcoded content in tasks.
 - **IPs referenced via `hostvars[host]['ansible_host']`** from inventory — single source of truth, never hardcode IPs.
 - Command/shell tasks need explicit `changed_when` / `failed_when`.
+- Alerting: all Prometheus-evaluated rules live in `roles/prometheus/templates/prometheus-rules.yml.j2` (Alertmanager → alert-forwarder → Discord). Grafana's UI keeps only Loki-datasource (LogQL) rules — add metric alerts to the template, not Grafana.
 
 ### Commands
 
