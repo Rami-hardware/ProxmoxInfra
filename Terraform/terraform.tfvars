@@ -6,7 +6,7 @@ vms = {
     cores      = 1
     memory     = 2048
     ciuser     = "gateway"
-    cipassword = "gateway@123"
+    cipassword = ""
     hostpcis   = []
     disks = [
       {
@@ -28,7 +28,7 @@ vms = {
     cores      = 6
     memory     = 10240
     ciuser     = "media"
-    cipassword = "media@123"
+    cipassword = ""
     hostpcis   = ["0000:03:00.0", "0000:04:00.0"]
     disks = [
       {
@@ -50,7 +50,7 @@ vms = {
     cores      = 1
     memory     = 8192
     ciuser     = "monitoring"
-    cipassword = "monitoring@123"
+    cipassword = ""
     hostpcis   = []
     disks = [
       {
@@ -73,7 +73,7 @@ vms = {
     cores      = 3
     memory     = 7168
     ciuser     = "github"
-    cipassword = "github@123"
+    cipassword = ""
     hostpcis   = []
     disks = [
       {

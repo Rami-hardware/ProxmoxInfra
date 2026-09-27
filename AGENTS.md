@@ -28,6 +28,7 @@ Homelab infra: Proxmox VMs provisioned with Terraform, configured with Ansible, 
 - CI deliberately does NOT apply VMs — plan only, with a destroy/replace guard that fails the pipeline. `terraform apply` in `deploy.yml` is commented out on purpose (manual applies only).
 - Manual apply requires `parallelism=1` (Proxmox API race conditions) and `-target` per VM.
 - Provider values come from `TF_VAR_*` env vars (GitHub secrets) — never hardcode tokens.
+- VM SSH is **key-only** (PasswordAuthentication no; single authorized key shared by the CI runner + owner). The `cipassword` values in tfvars are empty — cloud-init legacy, no live effect (`initialization` is ignore_changes).
 
 ### Commands (run from `Terraform/`)
 
