@@ -1,0 +1,13 @@
+apiVersion: 1
+
+providers:
+  - name: default
+    orgId: 1
+    folder: Homelab
+    type: file
+    disableDeletion: false
+    allowUiUpdates: true
+    options:
+      # inside the container; the hostPath backing this is
+      # {{ grafana_provisioning_dir | dirname }}/dashboards on the VM
+      path: /etc/grafana/provisioning/dashboards

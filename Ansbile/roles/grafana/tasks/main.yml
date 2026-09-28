@@ -23,3 +23,24 @@
     owner: 472
     group: 472
     recurse: true
+
+# Dashboards as code — JSONs live in the repo (files/dashboards/) and are
+# provisioned into the folder "Homelab" on startup. allowUiUpdates stays on,
+# so UI edits work; they just don't flow back to git.
+- name: Ensure Grafana dashboards provisioning directory exists
+  ansible.builtin.file:
+    path: "{{ grafana_provisioning_dir | dirname }}/dashboards"
+    state: directory
+    mode: '0755'
+
+- name: Provision Grafana dashboard provider
+  ansible.builtin.template:
+    src: dashboards-provider.yml.j2
+    dest: "{{ grafana_provisioning_dir | dirname }}/dashboards/provider.yml"
+    mode: '0644'
+
+- name: Provision Grafana dashboards from repo
+  ansible.builtin.copy:
+    src: dashboards/
+    dest: "{{ grafana_provisioning_dir | dirname }}/dashboards/"
+    mode: '0644'
