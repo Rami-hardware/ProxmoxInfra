@@ -8,6 +8,7 @@ providers:
     disableDeletion: false
     allowUiUpdates: true
     options:
-      # inside the container; the hostPath backing this is
-      # {{ grafana_provisioning_dir | dirname }}/dashboards on the VM
-      path: /etc/grafana/provisioning/dashboards
+      # NOTE: must NOT point at the provisioning folder itself (/etc/grafana/
+      # provisioning/...) — grafana's file reader silently skips its own
+      # provisioning tree. The same files are visible via the data PVC path.
+      path: /opt/docker/grafana/provisioning/dashboards
