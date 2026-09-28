@@ -13,6 +13,8 @@ on:
         required: true
       ANSIBLE_VAULT_PASSWORD:
         required: true
+      ADGUARD_WEB_PASSWORD:
+        required: false
       DISCORD_WEBHOOK_URL:
         required: true
       SONARR_API_KEY:
@@ -173,6 +175,7 @@ jobs:
         env:
           ANSIBLE_VAULT_PASSWORD_FILE: ~/.vault_pass
           ANSIBLE_HOST_KEY_CHECKING: 'False'
+          ADGUARD_WEB_PASSWORD: ${{ secrets.ADGUARD_WEB_PASSWORD }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           SONARR_API_KEY: ${{ secrets.SONARR_API_KEY }}
           BAZARR_API_KEY: ${{ secrets.BAZARR_API_KEY }}
