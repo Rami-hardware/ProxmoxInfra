@@ -1014,8 +1014,12 @@
     "type": "interval"
    },
    {
-    "allValue": null,
-    "current": {},
+    "allValue": ".*",
+    "current": {
+     "selected": true,
+     "text": "All",
+     "value": "$__all"
+    },
     "datasource": "${DS_SIGNCL-PROMETHEUS}",
     "hide": 0,
     "includeAll": true,
@@ -1026,7 +1030,7 @@
     "query": "label_values(probe_success, instance)",
     "refresh": 1,
     "regex": "",
-    "sort": 0,
+    "sort": 1,
     "tagValuesQuery": "",
     "tags": [],
     "tagsQuery": "",
