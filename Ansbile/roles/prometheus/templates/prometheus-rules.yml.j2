@@ -17,6 +17,7 @@ groups:
         labels:
           severity: critical
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/dns.md"
           summary: "AdGuard DNS not answering on {{ $labels.instance }}"
           description: "Blackbox DNS probe failed for 2m — all pod DNS for *.homelab.lan and public names via CoreDNS is degraded."
 
@@ -32,6 +33,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/dns.md"
           summary: "CoreDNS marks upstreams broken ({{ $labels.instance }})"
           description: "CoreDNS health checks are failing against its upstreams at a sustained rate (>25 breaks in 10m) — expect SERVFAILs or fallback traffic."
 
@@ -44,6 +46,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/sites.md"
           summary: "Local probe failed: {{ $labels.instance }}"
           description: "A locally-monitored site has failed its HTTP health check for 2m. Check whether the pod/service is running and whether ingress-nginx is routing the host correctly."
 
@@ -53,6 +56,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/sites.md"
           summary: "Public probe failed: {{ $labels.instance }}"
           description: "A public site has failed its HTTP health check for 5m. Check the service and ingress first, then the public DNS/Cloudflare path."
 
@@ -68,6 +72,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/sites.md"
           summary: "{{ $labels.instance }} returned HTTP {{ humanize $value }} (scope: {{ $labels.scope }})"
           description: "Fires when a monitored site responds but with an HTTP error status (4xx/5xx). The service may be running but misconfigured, crashing internally, or behind a broken ingress rule."
 
@@ -77,6 +82,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/sites.md"
           summary: "{{ $labels.instance }} is responding slowly ({{ humanize $value }}s, scope: {{ $labels.scope }})"
           description: "HTTP response time exceeded 3s while the probe still succeeded. Could indicate backend load, network issues, or a struggling pod."
 
@@ -86,6 +92,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/sites.md"
           summary: "{{ $labels.instance }} followed {{ humanize $value }} redirects (possible redirect loop)"
           description: "A monitored site's HTTP request follows more redirects than expected. Often a misconfigured ingress rule, broken HTTP-to-HTTPS redirect, or a service advertising the wrong external URL."
 
@@ -95,6 +102,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/dns.md"
           summary: "{{ $labels.instance }} DNS lookup took {{ humanize $value }}s (scope: {{ $labels.scope }})"
           description: "DNS resolution for a monitored site took longer than 1s. Check AdGuard Home performance, upstream DNS fallback behavior, or resolver load."
 
@@ -104,6 +112,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/sites.md"
           summary: "{{ $labels.instance }} TLS certificate expires in {{ humanizeDuration $value }}"
           description: "blackbox_exporter detects a TLS certificate nearing expiry on a monitored site. Check cert-manager status and renewal for this domain."
 
@@ -113,6 +122,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "blackbox_exporter unreachable"
           description: "While this is down there is NO probe data at all — every SiteDown/HTTP-status/latency alert is blind. Fix the exporter first; other availability alerts are meaningless until it returns."
 
@@ -122,6 +132,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/sites.md"
           summary: "speedtest exporter not completing tests"
           description: "speedtest_up reports 0 — tests failing or the exporter is wedged. Low urgency by design: it scrapes hourly and a single test can take minutes."
 
@@ -132,6 +143,7 @@ groups:
         labels:
           severity: critical
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/dns.md"
           summary: "AdGuard Home filtering protection is OFF"
           description: "AdGuard's filtering protection has been disabled — every client on the LAN is unfiltered and unprotected. Re-enable in the AdGuard UI (or check whether a config change turned it off)."
 
@@ -141,6 +153,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/dns.md"
           summary: "No DNS queries reached AdGuard for 15m"
           description: "AdGuard is up but zero queries arrived in 15m — clients can't reach it even though the process is alive. Check the gateway firewall, port 53 forwarding, and client DNS settings. AdGuardDNSDown (port 53 probe) covers the answering side; this covers the receiving side."
 
@@ -150,6 +163,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/dns.md"
           summary: "adguard-exporter on the gateway can't fetch stats"
           description: "The custom exporter's last fetch of AdGuard's stats API failed — DNS metrics are stale. Check the adguard-exporter service on the gateway and AdGuard's API availability."
 
@@ -159,6 +173,7 @@ groups:
         labels:
           severity: critical
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/dns.md"
           summary: "CoreDNS metrics endpoint down ({{ $labels.instance }})"
           description: "Prometheus cannot scrape CoreDNS — the pod may be restarting, breaking all cluster DNS."
   # Ported from Grafana UI rules (group 'Nodes Evaluation') — rule names renamed to alert: CamelCase.
@@ -170,6 +185,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/nodes.md"
           summary: "{{ $labels.instance }}: {{ $labels.mountpoint }} at {{ humanize $value }}% free"
           description: "Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }} is running low on space. Check for log growth, container image buildup, or old snapshots."
 
@@ -179,6 +195,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/nodes.md"
           summary: "{{ $labels.instance }}: {{ $labels.mountpoint }} at {{ humanize $value }}% free"
           description: "Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }} is running low on space. Check for log growth, container image buildup, or old snapshots."
 
@@ -188,6 +205,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/nodes.md"
           summary: "{{ $labels.instance }} memory usage at {{ humanize $value }}%"
           description: "Memory usage on {{ $labels.instance }} is elevated. Check running workloads and consider whether this node is undersized for what's scheduled on it."
 
@@ -197,6 +215,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/nodes.md"
           summary: "{{ $labels.instance }} load average high ({{ humanize $value }}x cores)"
           description: "1-minute load average on {{ $labels.instance }} exceeds 2x its core count — check for a runaway process."
 
@@ -206,6 +225,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/nodes.md"
           summary: "OOM kill on {{ $labels.instance }}"
           description: "The kernel killed a process on {{ $labels.instance }} due to memory exhaustion. Check dmesg/journalctl -k for details."
 
@@ -215,6 +235,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/nodes.md"
           summary: "{{ $labels.instance }} clock not synchronized"
           description: "NTP/chrony sync lost on {{ $labels.instance }}. Can cause cert validation issues and confusing log timestamps."
 
@@ -224,6 +245,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/nodes.md"
           summary: "{{ $labels.instance }} TCP retransmit rate at {{ humanize $value }}%"
           description: "Elevated retransmission rate on {{ $labels.instance }} suggests network congestion or packet loss."
 
@@ -233,6 +255,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/nodes.md"
           summary: "Filesystem error on {{ $labels.instance }}, device {{ $labels.device }}"
           description: "node_exporter reported a device-level error on a physical disk on {{ $labels.instance }} — may indicate a failing drive."
 
@@ -242,6 +265,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/nodes.md"
           summary: "{{ $labels.instance }} node_exporter unreachable"
           description: "Prometheus can't scrape node_exporter on {{ $labels.instance }}. Host may be down, rebooting, or network-isolated."
 
@@ -251,6 +275,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/nodes.md"
           summary: "{{ $labels.instance }} primary interface down"
           description: "eth0 is down on {{ $labels.instance }} — this would cut off connectivity to the node."
 
@@ -260,6 +285,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/nodes.md"
           summary: "{{ $labels.instance }}: {{ $labels.mountpoint }} at {{ humanize $value }} free-inode ratio"
           description: "Fewer than 5% of inodes remain on {{ $labels.mountpoint }} — usually millions of small files (caches, sessions, build artifacts) rather than disk space. df shows free space but touch fails. Find the directory hogging inodes."
 
@@ -269,6 +295,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/nodes.md"
           summary: "{{ $labels.instance }}: {{ $labels.mountpoint }} predicted to fill within 7 days"
           description: "Based on the last 6h trend, {{ $labels.mountpoint }} on {{ $labels.instance }} runs out of space within ~7 days ({{ humanize $value }} bytes projected). Trend, not a guarantee — clean up or grow before NodeFilesystemLowSpace fires."
 
@@ -281,6 +308,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/dns.md"
           summary: "CoreDNS SERVFAIL rate elevated for zone {{ $labels.zone }}"
           description: "CoreDNS is failing to resolve queries for this zone. Check upstream connectivity and whether the relevant Service/Endpoint objects are healthy."
 
@@ -290,6 +318,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/dns.md"
           summary: "CoreDNS Corefile reload failed"
           description: "A configuration reload attempt failed — CoreDNS is still running the previous config. Check the CoreDNS Corefile (k3s coredns manifest/ConfigMap) for a syntax error."
 
@@ -299,6 +328,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/dns.md"
           summary: "CoreDNS panic detected"
           description: "CoreDNS crashed internally and recovered/restarted. This can cause brief DNS resolution gaps cluster-wide. Check pod logs for the panic stack trace."
 
@@ -308,6 +338,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/dns.md"
           summary: "CoreDNS rejecting queries — overloaded"
           description: "CoreDNS hit its max concurrent forwarded queries limit and started dropping requests. Consider increasing the forward plugin's max_concurrent or investigating a query storm."
 
@@ -317,6 +348,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/dns.md"
           summary: "CoreDNS p99 latency at {{ humanize $value }}s for zone {{ $labels.zone }}"
           description: "DNS resolution is taking unusually long. Check upstream health and CoreDNS pod resource usage (CPU throttling is a common cause)."
 
@@ -326,6 +358,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/dns.md"
           summary: "CoreDNS cache hit ratio at {{ humanize $value }}%"
           description: "Cache effectiveness has dropped, meaning more queries are hitting upstream/kubernetes API. Could indicate cache eviction pressure or unusually diverse query patterns."
 
@@ -335,6 +368,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/dns.md"
           summary: "CoreDNS getting errors from Kubernetes API"
           description: "CoreDNS's watch on Kubernetes Services/Endpoints is failing. New or updated services may not resolve correctly until this is fixed. Check API server health and CoreDNS's RBAC permissions."
 
@@ -347,6 +381,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/k8s-workloads.md"
           summary: "Deployment {{ $labels.deployment }} in {{ $labels.namespace }} has no available replicas"
           description: "Deployment {{ $labels.deployment }} Available condition is false — no replicas are serving traffic. Check kubectl -n {{ $labels.namespace }} describe deployment {{ $labels.deployment }} and pod events for scheduling, image pull, or crash issues."
 
@@ -356,6 +391,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/k8s-workloads.md"
           summary: "{{ $labels.deployment }} in {{ $labels.namespace }} has unavailable replicas"
           description: "Deployment {{ $labels.deployment }} is not meeting its desired replica count. Check kubectl -n {{ $labels.namespace }} describe deployment {{ $labels.deployment }} and pod events for scheduling, image pull, or crash issues."
 
@@ -365,6 +401,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/k8s-workloads.md"
           summary: "{{ $labels.pod }} in {{ $labels.namespace }} restarting repeatedly ({{ $labels.container }})"
           description: "Container has restarted more than 3 times in 15 minutes — classic crash loop signature. Check kubectl logs --previous for the crash reason."
 
@@ -374,6 +411,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/k8s-workloads.md"
           summary: "{{ $labels.pod }} stuck in {{ $labels.reason }}"
           description: "Pod container is stuck waiting on {{ $labels.reason }}. For ImagePullBackOff check registry access/credentials; for CrashLoopBackOff check application logs."
 
@@ -385,6 +423,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/k8s-workloads.md"
           summary: "{{ $labels.pod }} in {{ $labels.namespace }} was OOMKilled"
           description: "The container's last termination was an OOM kill within the last hour — its memory limit is too low for the current workload or it is leaking. Check kubectl describe pod and consider raising the memory limit."
 
@@ -394,6 +433,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/k8s-workloads.md"
           summary: "{{ $labels.pod }} in {{ $labels.namespace }} is in Failed phase"
           description: "A pod ended in the Failed phase — a crashed container, an eviction, or a failed Job. Check kubectl describe pod and events; failed Jobs are covered separately by KubeJobFailed."
 
@@ -403,6 +443,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/k8s-workloads.md"
           summary: "Node {{ $labels.node }} is NotReady"
           description: "A cluster node has failed its readiness check. This can cascade into pod evictions and rescheduling. Check kubectl describe node {{ $labels.node }} and kubelet status on that host immediately."
 
@@ -412,6 +453,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/k8s-workloads.md"
           summary: "PVC {{ $labels.persistentvolumeclaim }} in {{ $labels.namespace }} is {{ $labels.phase }}"
           description: "A PersistentVolumeClaim failed to bind. Check storage class availability and whether the default k3s local-path provisioner can satisfy the request."
 
@@ -421,6 +463,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/k8s-workloads.md"
           summary: "Job {{ $labels.job_name }} in {{ $labels.namespace }} failed"
           description: "A Kubernetes Job has failed. Check kubectl -n {{ $labels.namespace }} logs job/{{ $labels.job_name }} for the failure reason."
 
@@ -430,6 +473,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/k8s-workloads.md"
           summary: "CronJob {{ $labels.cronjob }} hasn't succeeded in 24h+"
           description: "Expected recurring job hasn't completed successfully. Check if the CronJob is suspended, or if recent job attempts are failing."
 
@@ -443,6 +487,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/k8s-workloads.md"
           summary: "kubelet unreachable on {{ $labels.instance }}"
           description: "Prometheus can't scrape kubelet metrics on {{ $labels.instance }} — the kubelet is down, or TLS/auth broke (x509 errors after node reboots usually mean the scrape config lost its insecure_skip_verify). Workloads keep running but the node is unmanageable and container metrics are blind."
 
@@ -455,6 +500,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/sites.md"
           summary: "{{ $labels.pod }} ({{ $labels.container }}) at {{ humanize $value }} of its memory limit"
           description: "Working set has exceeded 90% of the container's memory limit for 15m — the OOM killer is the next step. Raise the limit or find the leak before KubePodOOMKilled does the post-mortem."
 
@@ -464,6 +510,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/k8s-workloads.md"
           summary: "PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} at {{ humanize $value }}% free"
           description: "A PersistentVolumeClaim has less than 10% free. Apps on full PVCs start failing writes (databases corrupt, uploads truncate). Clean up or extend before KubePVCFillForecast7d confirms the trend."
 
@@ -473,8 +520,106 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/k8s-workloads.md"
           summary: "PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} predicted to fill within 7 days"
           description: "Based on the last 6h trend this claim runs out of space within ~7 days. Trend, not a guarantee — but worth acting on before KubePVCAlmostFull makes it urgent."
+
+  # ── SLOs: multi-window burn-rate alerting ─────────────────────────────────
+  # SLOs (14d window, matching the 15d metric retention):
+  #   local sites  99.5% (budget 0.005)   public sites 99.5%
+  #   DNS          99.9% (budget 0.001)  — DNS is the network's lynchpin.
+  # Recording rules keep the burn-rate queries cheap; windows follow the
+  # Google SRE workbook multiwindow pattern (fast burn = page, slow burn =
+  # investigate). probe_success is 0/1, so avg_over_time IS the success ratio.
+{% endraw %}
+  - name: slo-recording
+    interval: 1m
+    rules:
+{% for window in ["5m", "30m", "1h", "6h", "2d", "14d"] %}
+      - record: "slo:availability:{{ window }}"
+        expr: 'avg by (scope) (avg_over_time(probe_success[{{ window }}]))'
+{% endfor %}
+      - record: slo:error_budget_remaining
+        expr: 1 - ((1 - slo:availability:14d{scope="local"}) / 0.005)
+        labels:
+          scope: local
+      - record: slo:error_budget_remaining
+        expr: 1 - ((1 - slo:availability:14d{scope="public"}) / 0.005)
+        labels:
+          scope: public
+      - record: slo:error_budget_remaining
+        expr: 1 - ((1 - slo:availability:14d{scope="dns"}) / 0.001)
+        labels:
+          scope: dns
+{% raw %}
+
+  - name: slo
+    rules:
+      - alert: SLOLocalSitesFastBurn
+        expr: '(1 - slo:availability:1h{scope="local"}) / 0.005 > 14.4 and (1 - slo:availability:5m{scope="local"}) / 0.005 > 14.4'
+        for: 5m
+        labels:
+          severity: critical
+          slo: local-sites
+        annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/slo.md"
+          summary: "SLO burn: local sites availability burning 14.4x budget (1h + 5m windows)"
+          description: "Local sites are burning error budget {{ humanize $value }}x faster than sustainable (1h + 5m windows vs the 99.5% SLO) — the 14-day budget is gone in about a day at this rate. Usually a shared cause (ingress, gateway, DNS) rather than one site. See the sites runbook."
+
+      - alert: SLOLocalSitesSlowBurn
+        expr: '(1 - slo:availability:6h{scope="local"}) / 0.005 > 6 and (1 - slo:availability:30m{scope="local"}) / 0.005 > 6'
+        for: 1h
+        labels:
+          severity: warning
+          slo: local-sites
+        annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/slo.md"
+          summary: "SLO burn: local sites availability burning 6x budget (6h + 30m windows)"
+          description: "Sustained elevated error rate on local sites over 6h — 10 days of error budget would be spent in a day at this rate. Investigate flapping targets or recurring blips before the budget is gone."
+
+      - alert: SLODNSFastBurn
+        expr: '(1 - slo:availability:1h{scope="dns"}) / 0.001 > 14.4 and (1 - slo:availability:5m{scope="dns"}) / 0.001 > 14.4'
+        for: 5m
+        labels:
+          severity: critical
+          slo: dns
+        annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/slo.md"
+          summary: "SLO burn: DNS availability burning 14.4x budget (1h + 5m windows)"
+          description: "DNS probes are failing well beyond the 99.9% SLO budget rate. DNS outages cascade into every other service — treat as critical. See the DNS runbook."
+
+      - alert: SLODNSSlowBurn
+        expr: '(1 - slo:availability:6h{scope="dns"}) / 0.001 > 6 and (1 - slo:availability:30m{scope="dns"}) / 0.001 > 6'
+        for: 1h
+        labels:
+          severity: warning
+          slo: dns
+        annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/slo.md"
+          summary: "SLO burn: DNS availability burning 6x budget (6h + 30m windows)"
+          description: "DNS reliability is eroding — intermittent probe failures over 6h. Check AdGuard/CoreDNS health and the DNS chain before the tight DNS budget (0.1%) is exhausted."
+
+      - alert: SLOPublicSitesFastBurn
+        expr: '(1 - slo:availability:1h{scope="public"}) / 0.005 > 14.4 and (1 - slo:availability:5m{scope="public"}) / 0.005 > 14.4'
+        for: 5m
+        labels:
+          severity: warning
+          slo: public-sites
+        annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/slo.md"
+          summary: "SLO burn: public sites availability burning 14.4x budget (1h + 5m windows)"
+          description: "Public sites failing well beyond budget — usually means the Cloudflare tunnel/CF path or the whole ingress is down rather than one site. See the sites runbook."
+
+      - alert: SLOPublicSitesSlowBurn
+        expr: '(1 - slo:availability:6h{scope="public"}) / 0.005 > 6 and (1 - slo:availability:30m{scope="public"}) / 0.005 > 6'
+        for: 1h
+        labels:
+          severity: warning
+          slo: public-sites
+        annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/slo.md"
+          summary: "SLO burn: public sites availability burning 6x budget (6h + 30m windows)"
+          description: "Sustained public availability erosion over 6h — check Cloudflare + ingress health before the 14d budget is spent."
 
   - name: cert-manager
     rules:
@@ -484,6 +629,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "Certificate {{ $labels.name }} in {{ $labels.namespace }} not Ready for 15m"
           description: "cert-manager reports the Certificate resource as not Ready — issuance or renewal is failing. In-cluster TLS keeps serving the old cert until it expires; check kubectl describe certificate and CertificateRequest events."
 
@@ -496,6 +642,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/ingress.md"
           summary: "nginx config reload failed"
           description: "The last configuration reload attempt failed — nginx is still serving the previous config. Any recent ingress changes (new hosts, TLS updates) are NOT live. Check controller logs for the specific syntax/config error."
 
@@ -505,6 +652,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/ingress.md"
           summary: "TLS cert for {{ $labels.host }} expires in {{ humanize $value }} days"
           description: "Certificate served by ingress for {{ $labels.host }} is approaching expiry. If this is managed by cert-manager, check the Certificate/CertificateRequest resources for renewal failures."
 
@@ -514,6 +662,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/ingress.md"
           summary: "Ingress {{ $labels.ingress }} in {{ $labels.namespace }} is orphaned ({{ $labels.type }})"
           description: "This ingress has no matching service or healthy endpoints, so requests to it will return 503. Check that the backing Service and pod are up in namespace {{ $labels.namespace }}."
 
@@ -523,6 +672,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/ingress.md"
           summary: "{{ $labels.ingress }} returning {{ humanize $value }}% 5xx errors"
           description: "A significant share of requests to this ingress are failing server-side. Fires only when ratio >5% AND more than 2 actual 5xx occur within 5m — a bare ratio pages on single-request blips (hostPort pod swaps during Image Updater rollouts), since probe traffic dominates low-volume ingresses."
 
@@ -532,6 +682,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/ingress.md"
           summary: "nginx active connections at {{ humanize $value }}"
           description: "Active connection count is approaching typical worker limits. Consider scaling the ingress controller or checking for a client hammering a specific endpoint."
 
@@ -541,6 +692,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/ingress.md"
           summary: "Ingress {{ $labels.ingress }} in {{ $labels.namespace }} failing config check"
           description: "This ingress's configuration is failing nginx's syntax test, meaning it likely isn't being applied. Check the ingress annotations/rules for errors."
 
@@ -550,6 +702,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/ingress.md"
           summary: "ingress-nginx-controller unreachable"
           description: "Prometheus can't scrape the ingress controller. This likely means external access to every service behind it (Jellyfin, Grafana, ArgoCD, the *arr stack, etc.) is down. Check the controller pod status immediately."
 
@@ -562,6 +715,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "Istio agent cert on {{ $labels.pod }} expires in {{ humanizeDuration $value }}"
           description: "Workload certificate is close to expiry. This is usually auto-rotated by istiod, but if this alert keeps firing without the value resetting, cert rotation may be stuck — check istiod logs and sidecar connectivity to the control plane."
 
@@ -571,6 +725,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "Envoy proxy down on {{ $labels.pod }}"
           description: "The Envoy sidecar reports not-live. This pod's traffic (inbound and outbound through the mesh) may be broken. Check pod status and istio-proxy container logs."
 
@@ -580,6 +735,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "Sidecar can't connect to istiod ({{ $labels.pod }})"
           description: "Envoy is failing to establish the xds-grpc connection to istiod, meaning this proxy won't receive config updates (routes, certs, policies). Check istiod pod health and network connectivity from this node."
 
@@ -589,6 +745,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "Istiod connections terminating repeatedly on {{ $labels.pod }}"
           description: "The sidecar's connection to istiod is being cut and re-established frequently — check for istiod restarts, resource pressure, or network instability between this pod and istiod."
 
@@ -598,6 +755,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "Envoy worker thread stalling on {{ $labels.pod }} ({{ $labels.thread_name }})"
           description: "Envoy's watchdog detected the worker thread took too long to respond to its heartbeat, indicating the proxy is under heavy load or stuck processing."
 
@@ -607,6 +765,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "Envoy worker thread stalling on {{ $labels.pod }} ({{ $labels.thread_name }})"
           description: "Envoy's watchdog detected the worker thread took too long to respond to its heartbeat, indicating the proxy is under heavy load or stuck processing. Mega-miss is more severe and may precede a crash/restart."
 
@@ -616,6 +775,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "XDS proxy requests/responses out of sync on {{ $labels.pod }}"
           description: "A sustained gap between XDS requests and responses suggests the sidecar isn't successfully completing config sync cycles with istiod."
 
@@ -625,6 +785,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "Envoy connection count elevated on {{ $labels.pod }}"
           description: "Total connections on this sidecar are unusually high — check for a connection leak in the application or an unexpected traffic spike."
 
@@ -634,6 +795,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "Envoy memory usage high on {{ $labels.pod }}"
           description: "Sidecar memory allocation is climbing past the expected baseline — check for a memory leak or whether sidecar resource limits need adjusting."
 
@@ -646,6 +808,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/argocd-alertmanager.md"
           summary: "Application {{ $labels.name }} is {{ $labels.sync_status }}"
           description: "The live cluster state has drifted from Git (or sync state is unknown) for {{ $labels.name }}. Check the ArgoCD UI diff to see what changed — this could be manual kubectl edits or a failed auto-sync."
 
@@ -655,6 +818,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/argocd-alertmanager.md"
           summary: "Application {{ $labels.name }} is {{ $labels.health_status }}"
           description: "This application's resources are reporting a non-Healthy status (Degraded/Progressing/Missing/Unknown). Check the Application's resource tree in the ArgoCD UI for the specific failing resource."
 
@@ -664,6 +828,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/argocd-alertmanager.md"
           summary: "ArgoCD component {{ $labels.job }} unreachable"
           description: "A core ArgoCD component isn't responding to scrapes. GitOps sync and UI access may be degraded. Check kubectl -n argocd get pods."
 
@@ -676,6 +841,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/argocd-alertmanager.md"
           summary: "Alertmanager config reload failed"
           description: "The last reload of alertmanager.yml failed — Alertmanager is running on stale config. Any recent receiver/route changes are NOT active. Check for a YAML syntax error."
 
@@ -685,6 +851,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/argocd-alertmanager.md"
           summary: "Alertmanager notifications failing via {{ $labels.integration }}"
           description: "Alerts are firing but failing to actually deliver through the {{ $labels.integration }} receiver. Check credentials, webhook URLs, or the destination service's availability."
 
@@ -694,6 +861,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/argocd-alertmanager.md"
           summary: "Alertmanager HTTP requests to {{ $labels.integration }} failing"
           description: "Outbound requests to this notification integration are failing at the transport level — check network connectivity or endpoint availability."
 
@@ -703,6 +871,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/argocd-alertmanager.md"
           summary: "Alertmanager notification latency high for {{ $labels.integration }} (p99 {{ humanize $value }}s)"
           description: "Notifications are taking unusually long to send. Check whether the receiving endpoint is slow or rate-limiting."
 
@@ -712,6 +881,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/argocd-alertmanager.md"
           summary: "Alertmanager cluster degraded"
           description: "Cluster health score is non-zero or peers have failed — only relevant if running multiple Alertmanager replicas. May cause duplicate or missed notifications if peers can't gossip alert state."
 
@@ -721,6 +891,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/argocd-alertmanager.md"
           summary: "Alertmanager has failed cluster peers"
           description: "Alertmanager gossip reports failed peers — only relevant if running multiple replicas. May cause duplicate or missed notifications if peers can't gossip alert state."
 
@@ -730,6 +901,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/argocd-alertmanager.md"
           summary: "Alertmanager receiving invalid alerts"
           description: "Prometheus is sending alerts that Alertmanager rejects as invalid — likely a labeling issue in an alert rule. Check recent alert rule changes."
 
@@ -739,6 +911,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/argocd-alertmanager.md"
           summary: "Alertmanager dispatcher failing to group alerts"
           description: "The dispatcher is giving up on creating new alert aggregation groups, likely due to a very high alert volume. Check for an alert storm."
 
@@ -748,6 +921,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/argocd-alertmanager.md"
           summary: "Alertmanager silence garbage collection failing"
           description: "Errors during silence cleanup — usually benign but worth checking storage/disk health for the Alertmanager data directory."
 
@@ -757,6 +931,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/argocd-alertmanager.md"
           summary: "Alertmanager unreachable"
           description: "Prometheus can't scrape Alertmanager. If this is down, NO alert notifications will be delivered at all, from any rule. Check the pod status immediately and consider a secondary out-of-band check (e.g. a dead man's switch / heartbeat alert via a third-party service) since Alertmanager can't page you about its own outage."
 
@@ -769,6 +944,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
           summary: "Loki 5xx error rate at {{ humanize $value }}%"
           description: "A significant share of Loki HTTP requests are failing with server errors. Check Loki logs for panics, OOM, or storage backend issues."
 
@@ -778,6 +954,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
           summary: "Loki rejecting push requests from Promtail"
           description: "The /loki/api/v1/push endpoint is failing. Promtail agents on every node will start buffering and eventually dropping logs. Check Loki's ingester health and disk space."
 
@@ -787,6 +964,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
           summary: "Loki ingester WAL disk usage at {{ humanize $value }}%"
           description: "The Write-Ahead-Log directory is filling up. If this reaches 100%, ingestion will fail. Check available disk space on the volume backing Loki's WAL."
 
@@ -796,6 +974,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
           summary: "Loki WAL disk is full"
           description: "The ingester can no longer write WAL entries due to a full disk — this stops log ingestion entirely. Free up space or expand the volume immediately."
 
@@ -805,6 +984,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
           summary: "Loki chunk flush failures detected"
           description: "The ingester is failing to flush chunks to long-term storage. Check the storage backend (filesystem/S3/etc.) for connectivity or permission issues."
 
@@ -814,6 +994,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
           summary: "Loki query scheduler queue backing up (p99 > 10s)"
           description: "Query scheduler queue times are climbing — Loki query throughput is saturated or a scheduler is stuck."
 
@@ -823,6 +1004,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
           summary: "Loki rate store sync failures increasing"
           description: "The distributor is failing to sync stream rate info from ingesters, which can affect rate-limiting accuracy."
 
@@ -832,6 +1014,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
           summary: "Loki ring member {{ $labels.name }} unhealthy"
           description: "A Loki component's ring membership is reporting unhealthy — that component may be crash-looping or network-partitioned from the rest of the cluster."
 
@@ -841,6 +1024,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
           summary: "Distributor→ingester push errors detected"
           description: "The Loki distributor is failing to push data to the ingester over gRPC. Check for ingester restarts, resource exhaustion, or connectivity issues."
 
@@ -850,6 +1034,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
           summary: "Loki process unreachable"
           description: "Prometheus can't scrape the Loki metrics endpoint. Log ingestion and querying are likely both broken. Check the Loki pod/container status immediately."
 
@@ -859,6 +1044,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
           summary: "Loki compactor not running / Retention hasn't run successfully"
           description: "Compaction or retention enforcement has stopped. Over time this leads to unbounded storage growth and slower queries. Check compactor logs for errors."
 
@@ -871,6 +1057,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
           summary: "Promtail dropping log entries to {{ $labels.host }}"
           description: "Promtail is failing to deliver log lines to Loki (ingester_error) and dropping them permanently after retries. Check Loki ingester health, disk space, and rate limits."
 
@@ -880,6 +1067,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
           summary: "Promtail dropped {{ humanize $value }} bytes of log data to {{ $labels.host }}"
           description: "Promtail is failing to deliver log data to Loki (ingester_error) and discarding it after retries. Check Loki ingester health, disk space, and rate limits."
 
@@ -889,6 +1077,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
           summary: "Promtail batch retries increasing"
           description: "Promtail is having to retry sending log batches to Loki more than usual, suggesting Loki is slow, overloaded, or briefly unreachable."
 
@@ -898,6 +1087,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
           summary: "Promtail getting HTTP {{ $labels.status_code }} errors from Loki at {{ $labels.host }}"
           description: "Promtail's push requests to {{ $labels.host }} are failing with HTTP errors. 400s usually mean malformed/out-of-order log lines; 503s mean Loki is overloaded or restarting."
 
@@ -907,6 +1097,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
           summary: "Promtail exporter unreachable"
           description: "Prometheus can't scrape the promtail target — log shipping from this node has likely stopped entirely. Check the promtail pod/container status."
 
@@ -919,6 +1110,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "Tempo receiving no trace pushes"
           description: "No span deliveries have been observed for 5m — Tempo is ingesting nothing from the mesh. If workload traffic should be flowing, check the Tempo distributor and Istio sidecar reporting."
 
@@ -928,6 +1120,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "Tempo dropping spans ({{ $labels.reason }})"
           description: "Spans are being discarded — check whether this is rate-limiting (may need to raise limits) or malformed trace data from a specific service."
 
@@ -937,6 +1130,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "Tempo ingester failing to flush blocks"
           description: "Traces aren't making it to long-term storage. Check the storage backend (local disk/S3) for space or connectivity issues."
 
@@ -946,6 +1140,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "Tempo compactor failing"
           description: "Compaction isn't running successfully, which leads to unbounded storage growth and slower queries over time."
 
@@ -955,6 +1150,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "Tempo trace queries failing"
           description: "Grafana's trace lookups against Tempo are erroring — check querier logs and storage backend connectivity."
 
@@ -964,6 +1160,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "Tempo ingestion p99 latency at {{ humanize $value }}s"
           description: "Trace ingestion is slower than expected — check for resource pressure on the Tempo pod."
 
@@ -973,6 +1170,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "Tempo unreachable"
           description: "Prometheus can't scrape Tempo. New traces from Istio/Envoy sidecars will fail to be ingested, and existing traces won't be queryable in Grafana."
 
@@ -985,6 +1183,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "iGPU 3D render engine at {{ humanize $value }}% busy"
           description: "The Intel iGPU's hardware render engine is running near capacity, likely from multiple concurrent Jellyfin transcodes. Playback for additional streams may stutter or fall back to software transcoding. Check active Jellyfin sessions."
 
@@ -994,6 +1193,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "iGPU video (transcode) engine at {{ humanize $value }}% busy"
           description: "The Intel iGPU's hardware video transcode engine is running near capacity, likely from multiple concurrent Jellyfin streams. Playback for additional streams may stutter or fall back to software transcoding. Check active Jellyfin sessions."
 
@@ -1003,6 +1203,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "iGPU power draw at {{ humanize $value }}W"
           description: "Sustained high power draw suggests the GPU has been under continuous load for an extended period — check for a stuck/runaway transcode job."
 
@@ -1012,6 +1213,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "iGPU idle residency (RC6) at {{ humanize $value }}%"
           description: "The GPU is not entering its idle power state and engine metrics confirm real recent GPU work. Correlate with active Jellyfin streams or any background transcode/thumbnail-generation jobs."
 
@@ -1021,6 +1223,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "intel-gpu-exporter unreachable"
           description: "Prometheus can't scrape iGPU stats. Either the exporter pod/container crashed or lost access to the GPU device (check for a host reboot or driver issue)."
 
@@ -1033,6 +1236,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "qBittorrent disconnected from BitTorrent network"
           description: "qBittorrent is running but not connected to the torrent network — likely a networking issue on the host or VPN/proxy interruption if one is configured."
 
@@ -1042,6 +1246,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "{{ humanize $value }} torrent(s) in error state ({{ $labels.category }})"
           description: "One or more torrents have entered an error status, usually due to disk write failures or missing destination paths. Check the qBittorrent UI for details."
 
@@ -1051,6 +1256,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "{{ humanize $value }} torrent(s) with missing files ({{ $labels.category }})"
           description: "qBittorrent can no longer find files for a torrent it's tracking — often caused by manual deletion or a mount/permissions issue on the tank/media dataset. Recheck or remove affected torrents."
 
@@ -1060,6 +1266,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "{{ humanize $value }} torrent(s) stalled downloading"
           description: "Multiple torrents are marked stalled by qBittorrent — no download progress. Could indicate dead torrents, a blocked tracker, or a network/firewall issue."
 
@@ -1069,6 +1276,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "qBittorrent is firewalled"
           description: "qBittorrent reports being behind a firewall on the BT network, which reduces peer connectivity and download/upload speed. Check port forwarding on your router."
 
@@ -1078,6 +1286,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "qBittorrent is unreachable"
           description: "qbittorrent_up reports 0 for 192.168.10.201:8080. Downloads from Sonarr/Radarr will silently queue but never complete. Check the qBittorrent container/service and its Web UI."
 
@@ -1090,6 +1299,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "Sonarr has {{ humanize $value }} item(s) in queue with errors"
           description: "An item in the Sonarr download queue is stuck in an error state — likely a failed import or broken release. Check Activity > Queue in Sonarr."
 
@@ -1099,6 +1309,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "Sonarr missing episode count at {{ humanize $value }}"
           description: "Number of missing monitored episodes has grown beyond the configured threshold. Not urgent, but worth checking indexer health or search activity."
 
@@ -1108,6 +1319,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "Radarr has {{ humanize $value }} item(s) in queue with errors"
           description: "An item in the Radarr download queue is stuck in an error state. Check Activity > Queue in Radarr."
 
@@ -1117,6 +1329,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "Indexer {{ $labels.indexer }} has {{ humanize $value }} failed queries"
           description: "An indexer is failing queries repeatedly — likely rate-limited, down, or blocking the server IP. Check indexer status in Prowlarr and consider disabling temporarily."
 
@@ -1126,6 +1339,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "Bazarr provider {{ $labels.provider }} is degraded"
           description: "Subtitle provider status is failing (auth/HTTP errors, timeouts). Daily quota throttles (DownloadLimitExceeded) are intentionally excluded — they are provider-side, self-healing and not actionable (Bazarr auto-retries after the provider resets)."
 
@@ -1135,6 +1349,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "{{ $labels.alias }} is unreachable"
           description: "scraparr_services_up for {{ $labels.alias }} reports 0 — the service failed its health check. Check the container/pod status and logs for this service."
 
@@ -1144,6 +1359,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "scraparr exporter unreachable"
           description: "Prometheus can't scrape the scraparr exporter target — check that the container is running and the port is reachable."
 
@@ -1156,6 +1372,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/sites.md"
           summary: "{{ $labels.device }} reports SMART FAILURE"
           description: "smartctl_device_smart_status for {{ $labels.device }} is reporting a non-passing status. This is a strong signal of imminent drive failure — check zpool status and plan replacement/backup immediately."
 
@@ -1165,6 +1382,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "{{ $labels.device }} has {{ $labels.attribute_name }} > 0"
           description: "A SMART attribute historically at 0 for {{ $labels.device }} has become nonzero, which typically indicates the onset of physical disk degradation. Recommend running a full SMART long self-test and reviewing zpool scrub results."
 
@@ -1174,6 +1392,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "{{ $labels.device }} has {{ $labels.attribute_name }} > 0"
           description: "A SMART attribute historically at 0 for {{ $labels.device }} has become nonzero, which typically indicates the onset of physical disk degradation. Recommend running a full SMART long self-test and reviewing zpool scrub results."
 
@@ -1183,6 +1402,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "{{ $labels.device }} has {{ $labels.attribute_name }} > 0"
           description: "A SMART attribute historically at 0 for {{ $labels.device }} has become nonzero, which typically indicates the onset of physical disk degradation. Recommend running a full SMART long self-test and reviewing zpool scrub results."
 
@@ -1192,6 +1412,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "{{ $labels.device }} temperature at {{ humanize $value }}°C"
           description: "Disk temperature exceeded the safe operating threshold. Sustained heat accelerates wear — check chassis airflow/fan health."
 
@@ -1201,6 +1422,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "NVMe nvme0 logging media errors + critical warning flags"
           description: "Both smartctl_device_media_errors and smartctl_device_critical_warning are > 0 on nvme0 — the device is logging media/reallocated errors and raised a critical warning. Plan for replacement."
 
@@ -1210,6 +1432,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "smartctl failed to query {{ $labels.device }}"
           description: "The smartctl_exporter couldn't successfully run smartctl against {{ $labels.device }} — could mean the disk dropped off the bus, a permissions issue, or a controller problem."
 
@@ -1222,6 +1445,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "ZFS pool {{ $labels.pool }} health check failed (value={{ humanize $value }})"
           description: "Fires when zfs_pool_health for the tank pool reports a non-zero status (0=ONLINE, 1=DEGRADED, 2=FAULTED, 3=OFFLINE, 4=UNAVAIL, 5=REMOVED, 6=SUSPENDED). A non-zero value means the pool needs immediate attention — check zpool status tank on the host for details."
 
@@ -1231,6 +1455,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "ZFS pool tank is {{ humanize $value }}% full"
           description: "Fires when pool usage (zfs_pool_allocated_bytes / zfs_pool_size_bytes) exceeds 80%. Consider expanding the pool or cleaning up tank/media/tv and tank/media/movies (largest consumers)."
 
@@ -1240,6 +1465,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "tank dataset has only {{ humanize $value }} TiB free"
           description: "Fires when zfs_dataset_available_bytes for the tank filesystem drops below 1 TiB. Check tank/media/tv and tank/media/movies for cleanup candidates, or plan a pool expansion."
 
@@ -1249,6 +1475,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "ZFS pool tank fragmentation at {{ humanize $value }}"
           description: "Fires when zfs_pool_fragmentation_ratio for tank exceeds 0.5. High fragmentation can degrade write performance over time; not urgent but worth monitoring — consider a scrub or reviewing recordsize/ashift settings if it keeps climbing."
 
@@ -1258,6 +1485,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "zfs_exporter collector {{ $labels.collector }} failing"
           description: "Fires when a zfs_exporter collector (pool, dataset-filesystem, or dataset-volume) reports success=0. This means the exporter itself can't read ZFS stats — check that the exporter process has permission to run zpool/zfs commands and that the host isn't under heavy I/O load."
 
@@ -1267,6 +1495,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "zfs-exporter target is down"
           description: "Fires when Prometheus can't scrape the zfs-exporter job at all. Check that the exporter service is running on the host and that the port is reachable — this is a scrape-level failure, not a ZFS metric threshold."
 {% endraw %}

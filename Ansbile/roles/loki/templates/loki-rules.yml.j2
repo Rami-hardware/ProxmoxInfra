@@ -14,6 +14,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
           summary: "Error rate spike in {{ $labels.namespace }}/{{ $labels.container }}"
           description: "{{ humanize $value }} log lines containing 'error' in the last 5m — check the container logs in Grafana Explore."
 
@@ -23,6 +24,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
           summary: "TLS/certificate errors in {{ $labels.namespace }}/{{ $labels.container }} logs"
           description: "{{ $value }} certificate/TLS error lines in 15m — check certificate validity and upstream TLS handshakes."
 
@@ -32,6 +34,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
           summary: "Download failures in {{ $labels.container }}"
           description: "{{ $value }} 'failed to import' / 'download failed' log lines in 15m — check Activity > Queue in Sonarr/Radarr."
 
@@ -41,6 +44,7 @@ groups:
         labels:
           severity: warning
         annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "No logs from {{ $labels.container }} in 10+ minutes"
           description: "This service normally logs continuously and has gone silent — likely means the container crashed or is hung rather than idle. Check pod status."
 {% endraw %}
