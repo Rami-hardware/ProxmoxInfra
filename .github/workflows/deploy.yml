@@ -13,9 +13,9 @@ on:
         required: true
       ANSIBLE_VAULT_PASSWORD:
         required: true
-      ADGUARD_WEB_PASSWORD:
+      ADGUARD_EXPORTER_PASSWORD:
         required: false
-      ADGUARD_WEB_USERNAME:
+      ADGUARD_EXPORTER_USERNAME:
         required: false
       DISCORD_WEBHOOK_URL:
         required: true
@@ -177,8 +177,8 @@ jobs:
         env:
           ANSIBLE_VAULT_PASSWORD_FILE: ~/.vault_pass
           ANSIBLE_HOST_KEY_CHECKING: 'False'
-          ADGUARD_WEB_PASSWORD: ${{ secrets.ADGUARD_WEB_PASSWORD }}
-          ADGUARD_WEB_USERNAME: ${{ secrets.ADGUARD_WEB_USERNAME }}
+          ADGUARD_EXPORTER_PASSWORD: ${{ secrets.ADGUARD_EXPORTER_PASSWORD }}
+          ADGUARD_EXPORTER_USERNAME: ${{ secrets.ADGUARD_EXPORTER_USERNAME }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           SONARR_API_KEY: ${{ secrets.SONARR_API_KEY }}
           BAZARR_API_KEY: ${{ secrets.BAZARR_API_KEY }}
