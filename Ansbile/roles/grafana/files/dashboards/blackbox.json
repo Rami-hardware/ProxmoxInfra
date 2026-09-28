@@ -25,7 +25,7 @@
    "bars": false,
    "dashLength": 10,
    "dashes": false,
-   "datasource": "${DS_SIGNCL-PROMETHEUS}",
+   "datasource": "prometheus",
    "fill": 1,
    "gridPos": {
     "h": 8,
@@ -128,7 +128,7 @@
     "rgba(237, 129, 40, 0.89)",
     "#299c46"
    ],
-   "datasource": "${DS_SIGNCL-PROMETHEUS}",
+   "datasource": "prometheus",
    "format": "none",
    "gauge": {
     "maxValue": 100,
@@ -218,7 +218,7 @@
    "bars": false,
    "dashLength": 10,
    "dashes": false,
-   "datasource": "${DS_SIGNCL-PROMETHEUS}",
+   "datasource": "prometheus",
    "fill": 1,
    "gridPos": {
     "h": 6,
@@ -303,7 +303,7 @@
    "bars": false,
    "dashLength": 10,
    "dashes": false,
-   "datasource": "${DS_SIGNCL-PROMETHEUS}",
+   "datasource": "prometheus",
    "fill": 1,
    "gridPos": {
     "h": 6,
@@ -393,7 +393,7 @@
     "rgba(237, 129, 40, 0.89)",
     "#d44a3a"
    ],
-   "datasource": "${DS_SIGNCL-PROMETHEUS}",
+   "datasource": "prometheus",
    "decimals": 0,
    "format": "none",
    "gauge": {
@@ -489,7 +489,7 @@
     "rgba(237, 129, 40, 0.89)",
     "#d44a3a"
    ],
-   "datasource": "${DS_SIGNCL-PROMETHEUS}",
+   "datasource": "prometheus",
    "format": "none",
    "gauge": {
     "maxValue": 100,
@@ -569,7 +569,7 @@
     "rgba(237, 129, 40, 0.89)",
     "#299c46"
    ],
-   "datasource": "${DS_SIGNCL-PROMETHEUS}",
+   "datasource": "prometheus",
    "format": "none",
    "gauge": {
     "maxValue": 100,
@@ -663,7 +663,7 @@
     "rgba(237, 129, 40, 0.89)",
     "#299c46"
    ],
-   "datasource": "${DS_SIGNCL-PROMETHEUS}",
+   "datasource": "prometheus",
    "decimals": 2,
    "format": "dtdurations",
    "gauge": {
@@ -760,7 +760,7 @@
     "rgba(237, 129, 40, 0.89)",
     "#d44a3a"
    ],
-   "datasource": "${DS_SIGNCL-PROMETHEUS}",
+   "datasource": "prometheus",
    "format": "s",
    "gauge": {
     "maxValue": 100,
@@ -842,7 +842,7 @@
     "rgba(237, 129, 40, 0.89)",
     "#d44a3a"
    ],
-   "datasource": "${DS_SIGNCL-PROMETHEUS}",
+   "datasource": "prometheus",
    "format": "s",
    "gauge": {
     "maxValue": 100,
@@ -1020,7 +1020,7 @@
      "text": "All",
      "value": "$__all"
     },
-    "datasource": "${DS_SIGNCL-PROMETHEUS}",
+    "datasource": "prometheus",
     "hide": 0,
     "includeAll": true,
     "label": null,
