@@ -4,6 +4,11 @@ k3s_server_version: "v1.34.3+k3s3"
 # resolving public names when AdGuard on the gateway is rebooting/down.
 k3s_server_public_dns_fallback: "8.8.8.8"
 
+# Tertiary upstream: unbound on the monitoring VM — full recursion plus the
+# homelab.lan wildcard (-> ingress IP), so internal names survive a gateway
+# outage. Served by the unbound package on monitoring-server.
+k3s_server_secondary_dns: "192.168.10.203"
+
 # Internal zone delegated to AdGuard via a coredns-custom server block —
 # AdGuard is authoritative for it; public resolvers return NXDOMAIN.
 k3s_server_internal_domain: homelab.lan

@@ -129,7 +129,7 @@
     cmd: |
       set -o pipefail
       GW_IP={{ hostvars['gateway-server']['ansible_host'] }}
-      FWD="forward . ${GW_IP} {{ k3s_server_public_dns_fallback }} {\n    policy sequential\n    }"
+      FWD="forward . ${GW_IP} {{ k3s_server_secondary_dns }} {{ k3s_server_public_dns_fallback }} {\n    policy sequential\n    }"
       k3s kubectl get configmap coredns -n kube-system -o yaml | \
         sed "s|forward . /etc/resolv.conf|${FWD}|g" | \
         k3s kubectl apply -f -
@@ -149,6 +149,7 @@
   changed_when: false
   failed_when: >
     'forward . ' ~ hostvars['gateway-server']['ansible_host']
+    ~ ' ' ~ k3s_server_secondary_dns
     ~ ' ' ~ k3s_server_public_dns_fallback not in k3s_server_coredns_forward_verify.stdout
 
 - name: Verify CoreDNS internal zone is loaded
