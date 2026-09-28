@@ -1,0 +1,7 @@
+[Timer]
+# Reset the distro default (06:00 + 60m jitter) and install OS updates at a
+# fixed civil time: 07:00 UTC == 10:00 Arabia (+03), matching the vzdump
+# backup window. VMs run UTC, hence the offset.
+OnCalendar=
+OnCalendar=*-*-* 07:00:00
+RandomizedDelaySec=0

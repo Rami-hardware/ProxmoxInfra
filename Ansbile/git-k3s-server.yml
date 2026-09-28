@@ -5,6 +5,7 @@
   vars_files:
     - group_vars/vault.yml
   roles:
+    - common
     # Docker daemon — used by the CI runner for image builds.
     - docker_setup
     - dns

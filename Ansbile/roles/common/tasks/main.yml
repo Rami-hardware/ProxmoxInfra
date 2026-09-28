@@ -1,0 +1,7 @@
+---
+- name: Pin unattended-upgrades install window to 10:00 local (07:00 UTC; VMs run UTC)
+  ansible.builtin.template:
+    src: apt-daily-upgrade-override.conf.j2
+    dest: /etc/systemd/system/apt-daily-upgrade.timer.d/override.conf
+    mode: '0644'
+  notify: Restart apt-daily-upgrade timer

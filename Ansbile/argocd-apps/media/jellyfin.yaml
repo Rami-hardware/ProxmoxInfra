@@ -101,8 +101,10 @@ spec:
               memory: "2Gi"
               cpu: "2000m"
             limits:
-              memory: "5Gi"
-              cpu: "5000m"
+              # transcode bursts measured ~1Gi; 3Gi/3 cores keeps 2x burst room
+              # without letting one pod own the 6-core node's limit budget
+              memory: "3Gi"
+              cpu: "3000m"
       volumes:
         - name: config
           persistentVolumeClaim:
