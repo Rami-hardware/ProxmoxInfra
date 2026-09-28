@@ -55,6 +55,7 @@ terraform plan -input=false -no-color -detailed-exitcode -out=tfplan
 - **IPs referenced via `hostvars[host]['ansible_host']`** from inventory — single source of truth, never hardcode IPs.
 - Command/shell tasks need explicit `changed_when` / `failed_when`.
 - Alerting: all Prometheus-evaluated rules live in `roles/prometheus/templates/prometheus-rules.yml.j2` (Alertmanager → alert-forwarder → Discord). LogQL rules live in `roles/loki/templates/loki-rules.yml.j2`, evaluated by Loki's ruler. Grafana keeps NO alert rules — never add alerts in the Grafana UI.
+- SRE docs: SLOs (99.5% local/public, 99.9% DNS, 14d window) with multiwindow burn-rate alerts live in the rules file; every alert carries a `runbook_url` into `docs/runbooks/`. DR: `docs/rebuild.md`. Incidents: `docs/incident-template.md`. Keep runbooks updated after incidents.
 
 ### Commands
 
