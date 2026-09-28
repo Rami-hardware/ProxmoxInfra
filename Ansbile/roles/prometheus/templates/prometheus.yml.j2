@@ -63,18 +63,12 @@ scrape_configs:
 {{ job.metric_relabel_configs | to_nice_yaml(indent=2) | indent(6, true) }}
 {% endif %}
 {% endfor %}
-{% set adguard_pw = lookup('env', 'ADGUARD_EXPORTER_PASSWORD') %}
-{% if adguard_pw or adguard_web_password is defined %}
-    # AdGuard Home exposes native Prometheus metrics on its web port, but
-    # they require the admin login. Credentials come from the
-    # ADGUARD_EXPORTER_* GH secrets (the old exporter's creds = the AdGuard admin login).
+    # AdGuard Home has no native metrics endpoint; a minimal stdlib exporter
+    # runs on the gateway as adguard-exporter.service (see /opt/adguard-exporter),
+    # polling AdGuard's /control/stats API and serving on :9618.
   - job_name: adguard
     metrics_path: /metrics
-    basic_auth:
-      username: {{ lookup('env', 'ADGUARD_EXPORTER_USERNAME') or 'admin' }}
-      password: {{ adguard_pw if adguard_pw else adguard_web_password }}
     static_configs:
-      - targets: ["{{ hostvars['gateway-server']['ansible_host'] }}:8081"]
+      - targets: ["{{ hostvars['gateway-server']['ansible_host'] }}:9618"]
         labels:
           instance: gateway-server
-{% endif %}

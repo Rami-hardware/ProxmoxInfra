@@ -125,6 +125,34 @@ groups:
           summary: "speedtest exporter not completing tests"
           description: "speedtest_up reports 0 — tests failing or the exporter is wedged. Low urgency by design: it scrapes hourly and a single test can take minutes."
 
+      # AdGuard Home (custom exporter on gateway:9618 — see /opt/adguard-exporter)
+      - alert: AdGuardProtectionDisabled
+        expr: adguard_protection_enabled == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AdGuard Home filtering protection is OFF"
+          description: "AdGuard's filtering protection has been disabled — every client on the LAN is unfiltered and unprotected. Re-enable in the AdGuard UI (or check whether a config change turned it off)."
+
+      - alert: AdGuardQueriesStopped
+        expr: increase(adguard_num_dns_queries[15m]) == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No DNS queries reached AdGuard for 15m"
+          description: "AdGuard is up but zero queries arrived in 15m — clients can't reach it even though the process is alive. Check the gateway firewall, port 53 forwarding, and client DNS settings. AdGuardDNSDown (port 53 probe) covers the answering side; this covers the receiving side."
+
+      - alert: AdGuardExporterDown
+        expr: adguard_up == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "adguard-exporter on the gateway can't fetch stats"
+          description: "The custom exporter's last fetch of AdGuard's stats API failed — DNS metrics are stale. Check the adguard-exporter service on the gateway and AdGuard's API availability."
+
       - alert: CoreDNSDown
         expr: up{job="coredns"} == 0
         for: 5m
@@ -418,8 +446,11 @@ groups:
           summary: "kubelet unreachable on {{ $labels.instance }}"
           description: "Prometheus can't scrape kubelet metrics on {{ $labels.instance }} — the kubelet is down, or TLS/auth broke (x509 errors after node reboots usually mean the scrape config lost its insecure_skip_verify). Workloads keep running but the node is unmanageable and container metrics are blind."
 
+      # The trailing `and` guards against containers with no memory limit:
+      # cAdvisor reports limit=0 there, so the division is +Inf and the alert
+      # phantom-fires on every unlimited system pod (calico, metallb, argocd...).
       - alert: ContainerNearMemoryLimit
-        expr: container_memory_working_set_bytes{job="kubelet-cadvisor",container!="",image!=""} / container_spec_memory_limit_bytes{job="kubelet-cadvisor",container!="",image!=""} > 0.9
+        expr: (container_memory_working_set_bytes{job="kubelet-cadvisor",container!="",image!=""} / container_spec_memory_limit_bytes{job="kubelet-cadvisor",container!="",image!=""} > 0.9) and (container_spec_memory_limit_bytes{job="kubelet-cadvisor",container!="",image!=""} > 0)
         for: 15m
         labels:
           severity: warning
