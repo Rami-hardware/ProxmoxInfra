@@ -107,6 +107,24 @@ groups:
           summary: "{{ $labels.instance }} TLS certificate expires in {{ humanizeDuration $value }}"
           description: "blackbox_exporter detects a TLS certificate nearing expiry on a monitored site. Check cert-manager status and renewal for this domain."
 
+      - alert: BlackboxExporterDown
+        expr: up{job="blackbox-exporter"} == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "blackbox_exporter unreachable"
+          description: "While this is down there is NO probe data at all — every SiteDown/HTTP-status/latency alert is blind. Fix the exporter first; other availability alerts are meaningless until it returns."
+
+      - alert: SpeedtestExporterDown
+        expr: speedtest_up == 0
+        for: 3h
+        labels:
+          severity: warning
+        annotations:
+          summary: "speedtest exporter not completing tests"
+          description: "speedtest_up reports 0 — tests failing or the exporter is wedged. Low urgency by design: it scrapes hourly and a single test can take minutes."
+
       - alert: CoreDNSDown
         expr: up{job="coredns"} == 0
         for: 5m
@@ -208,6 +226,24 @@ groups:
           summary: "{{ $labels.instance }} primary interface down"
           description: "eth0 is down on {{ $labels.instance }} — this would cut off connectivity to the node."
 
+      - alert: NodeFilesystemInodesLow
+        expr: node_filesystem_files_free{job="nodes",fstype!~"tmpfs"} / node_filesystem_files{job="nodes",fstype!~"tmpfs"} < 0.05
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }}: {{ $labels.mountpoint }} at {{ humanize $value }} free-inode ratio"
+          description: "Fewer than 5% of inodes remain on {{ $labels.mountpoint }} — usually millions of small files (caches, sessions, build artifacts) rather than disk space. df shows free space but touch fails. Find the directory hogging inodes."
+
+      - alert: NodeDiskWillFillIn7Days
+        expr: predict_linear(node_filesystem_avail_bytes{job="nodes",fstype!~"tmpfs"}[6h], 7*24*3600) < 0
+        for: 6h
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }}: {{ $labels.mountpoint }} predicted to fill within 7 days"
+          description: "Based on the last 6h trend, {{ $labels.mountpoint }} on {{ $labels.instance }} runs out of space within ~7 days ({{ humanize $value }} bytes projected). Trend, not a guarantee — clean up or grow before NodeFilesystemLowSpace fires."
+
   # Ported from Grafana UI rules (group 'CoreDNS evaluation') — rule names renamed to alert: CamelCase.
   - name: coredns
     rules:
@@ -279,7 +315,7 @@ groups:
     rules:
       - alert: KubeDeploymentHasUnavailableReplicas
         expr: (count by (namespace, deployment) ( kube_deployment_status_condition{deployment!="kube-state-metrics", condition="Available", status="false"} == 1 ) ) > 0
-        for: 1m
+        for: 3m
         labels:
           severity: warning
         annotations:
@@ -288,7 +324,7 @@ groups:
 
       - alert: KubeDeploymentSpecVsAvailableReplicaMismatch
         expr: (kube_deployment_spec_replicas - kube_deployment_status_replicas_available) > 0
-        for: 1m
+        for: 3m
         labels:
           severity: warning
         annotations:
@@ -360,7 +396,7 @@ groups:
           summary: "Job {{ $labels.job_name }} in {{ $labels.namespace }} failed"
           description: "A Kubernetes Job has failed. Check kubectl -n {{ $labels.namespace }} logs job/{{ $labels.job_name }} for the failure reason."
 
-      - alert: KubeCronJobHasnTCompletedSuccessfullyRecently
+      - alert: KubeCronJobStale
         expr: (time() - kube_cronjob_status_last_successful_time) > 86400
         for: 1m
         labels:
@@ -368,6 +404,57 @@ groups:
         annotations:
           summary: "CronJob {{ $labels.cronjob }} hasn't succeeded in 24h+"
           description: "Expected recurring job hasn't completed successfully. Check if the CronJob is suspended, or if recent job attempts are failing."
+
+  # kubelet-local metrics: cadvisor (container runtime) + kubelet /metrics
+  # (PVC usage) — both scraped over https with the node bearer token.
+  - name: kubelet
+    rules:
+      - alert: KubeletDown
+        expr: up{job="kubelet-cadvisor"} == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "kubelet unreachable on {{ $labels.instance }}"
+          description: "Prometheus can't scrape kubelet metrics on {{ $labels.instance }} — the kubelet is down, or TLS/auth broke (x509 errors after node reboots usually mean the scrape config lost its insecure_skip_verify). Workloads keep running but the node is unmanageable and container metrics are blind."
+
+      - alert: ContainerNearMemoryLimit
+        expr: container_memory_working_set_bytes{job="kubelet-cadvisor",container!="",image!=""} / container_spec_memory_limit_bytes{job="kubelet-cadvisor",container!="",image!=""} > 0.9
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.pod }} ({{ $labels.container }}) at {{ humanize $value }} of its memory limit"
+          description: "Working set has exceeded 90% of the container's memory limit for 15m — the OOM killer is the next step. Raise the limit or find the leak before KubePodOOMKilled does the post-mortem."
+
+      - alert: KubePVCAlmostFull
+        expr: (kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes) * 100 < 10
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} at {{ humanize $value }}% free"
+          description: "A PersistentVolumeClaim has less than 10% free. Apps on full PVCs start failing writes (databases corrupt, uploads truncate). Clean up or extend before KubePVCFillForecast7d confirms the trend."
+
+      - alert: KubePVCFillForecast7d
+        expr: predict_linear(kubelet_volume_stats_available_bytes[6h], 7*24*3600) < 0
+        for: 6h
+        labels:
+          severity: warning
+        annotations:
+          summary: "PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} predicted to fill within 7 days"
+          description: "Based on the last 6h trend this claim runs out of space within ~7 days. Trend, not a guarantee — but worth acting on before KubePVCAlmostFull makes it urgent."
+
+  - name: cert-manager
+    rules:
+      - alert: CertManagerCertNotReady
+        expr: certmanager_certificate_ready_status{condition="False"} == 1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Certificate {{ $labels.name }} in {{ $labels.namespace }} not Ready for 15m"
+          description: "cert-manager reports the Certificate resource as not Ready — issuance or renewal is failing. In-cluster TLS keeps serving the old cert until it expires; check kubectl describe certificate and CertificateRequest events."
 
   # Ported from Grafana UI rules (group 'ingress nginx evaluation') — rule names renamed to alert: CamelCase.
   - name: ingress-nginx
@@ -570,7 +657,7 @@ groups:
           summary: "Alertmanager notifications failing via {{ $labels.integration }}"
           description: "Alerts are firing but failing to actually deliver through the {{ $labels.integration }} receiver. Check credentials, webhook URLs, or the destination service's availability."
 
-      - alert: AlertmanagerNotificationRequestsFailingAtTheHTTPLevel
+      - alert: AlertmanagerHTTPNotificationsFailing
         expr: (sum(rate(alertmanager_notification_requests_failed_total[15m])) by (integration)) > 0
         for: 1m
         labels:
@@ -717,7 +804,7 @@ groups:
           summary: "Loki ring member {{ $labels.name }} unhealthy"
           description: "A Loki component's ring membership is reporting unhealthy — that component may be crash-looping or network-partitioned from the rest of the cluster."
 
-      - alert: LokiGRPCHealthCheckFailingOnIngesterClient
+      - alert: LokiIngesterPushGRPCErrors
         expr: (sum(rate(loki_ingester_client_request_duration_seconds_count{operation="/logproto.Pusher/Push", status_code!="2xx"}[5m]))) > 0
         for: 1m
         labels:
@@ -879,7 +966,7 @@ groups:
           summary: "iGPU video (transcode) engine at {{ humanize $value }}% busy"
           description: "The Intel iGPU's hardware video transcode engine is running near capacity, likely from multiple concurrent Jellyfin streams. Playback for additional streams may stutter or fall back to software transcoding. Check active Jellyfin sessions."
 
-      - alert: IntelGpuGPUPowerDrawAbnormallyHighForExtendedPeriod
+      - alert: IntelGpuPowerDrawHigh
         expr: (igpu_power_gpu) > 15
         for: 1m
         labels:
@@ -888,7 +975,7 @@ groups:
           summary: "iGPU power draw at {{ humanize $value }}W"
           description: "Sustained high power draw suggests the GPU has been under continuous load for an extended period — check for a stuck/runaway transcode job."
 
-      - alert: IntelGpuGPUNeverIdleRC6ResidencyStuckAt0
+      - alert: IntelGpuNeverIdle
         expr: ((igpu_rc6{job="intel_gpu"} < 1) and on(instance, job) ((max_over_time(igpu_engines_video_0_busy{job="intel_gpu"}[10m]) > 5) or (max_over_time(igpu_engines_render_3d_0_busy{job="intel_gpu"}[10m]) > 5) or (max_over_time(igpu_engines_video_enhance_0_busy{job="intel_gpu"}[10m]) > 5) or (max_over_time(igpu_engines_blitter_0_busy{job="intel_gpu"}[10m]) > 5))) < 90
         for: 10m
         labels:
@@ -954,7 +1041,7 @@ groups:
           summary: "qBittorrent is firewalled"
           description: "qBittorrent reports being behind a firewall on the BT network, which reduces peer connectivity and download/upload speed. Check port forwarding on your router."
 
-      - alert: QBittorrentUnreachable
+      - alert: QbitUnreachable
         expr: (qbittorrent_up) < 1
         for: 1m
         labels:

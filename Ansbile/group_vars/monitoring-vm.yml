@@ -1,6 +1,9 @@
 ---
 # ── Prometheus ────────────────────────────────────────────────────────────────
 prometheus_config_dir: /opt/docker/prometheus
+# TSDB hostPath PV (argocd-apps/monitoring/prometheus.yaml); owned by 65534
+# (nobody) because the k3s pod runs unprivileged
+prometheus_data_dir: /opt/docker/prometheus-data
 prometheus_config_file: "{{ prometheus_config_dir }}/prometheus.yml"
 prometheus_rules_file: "{{ prometheus_config_dir }}/prometheus-rules.yml"
 prometheus_scrape_interval: 30s
@@ -63,6 +66,32 @@ prometheus_scrape_jobs:
   - name: kubelet-cadvisor
     scheme: https
     metrics_path: /metrics/cadvisor
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tls_config:
+      insecure_skip_verify: true
+    targets:
+      - "{{ hostvars['git-k3s-server']['ansible_host'] }}:10250"
+      - "{{ hostvars['media-server']['ansible_host'] }}:10250"
+      - "{{ hostvars['monitoring-server']['ansible_host'] }}:10250"
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: "{{ hostvars['git-k3s-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "git-k3s-server"
+      - source_labels: [__address__]
+        regex: "{{ hostvars['media-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "media-server"
+      - source_labels: [__address__]
+        regex: "{{ hostvars['monitoring-server']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "monitoring-server"
+
+  # kubelet's own /metrics endpoint (not cadvisor): PVC usage stats
+  # (kubelet_volume_stats_*), runtime health. Same TLS/auth as cadvisor.
+  - name: kubelet-state
+    scheme: https
+    metrics_path: /metrics
     bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
     tls_config:
       insecure_skip_verify: true

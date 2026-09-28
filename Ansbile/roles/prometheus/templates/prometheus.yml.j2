@@ -32,6 +32,13 @@ scrape_configs:
     params:
 {{ job.params | to_nice_yaml(indent=2) | indent(6, true) }}
 {% endif %}
+{% if job.tls_config is defined %}
+    tls_config:
+{{ job.tls_config | to_nice_yaml(indent=2) | indent(6, true) }}
+{% endif %}
+{% if job.bearer_token_file is defined %}
+    bearer_token_file: {{ job.bearer_token_file }}
+{% endif %}
 {% if job.kubernetes_sd_configs is defined %}
     kubernetes_sd_configs:
 {{ job.kubernetes_sd_configs | to_nice_yaml(indent=2) | indent(6, true) }}
