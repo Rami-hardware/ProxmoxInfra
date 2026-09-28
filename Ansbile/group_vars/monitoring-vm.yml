@@ -53,11 +53,8 @@ prometheus_scrape_jobs:
     relabel_configs:
       - target_label: instance
         replacement: media-server
-  - name: adguard
-    targets: ["{{ hostvars['gateway-server']['ansible_host'] }}:9618"]
-    relabel_configs:
-      - target_label: instance
-        replacement: gateway-server
+  # adguard is scraped natively from gateway:8081 (see prometheus.yml.j2 —
+  # requires ADGUARD_WEB_PASSWORD); the old :9618 exporter job was dead.
   - name: kube-state-metrics
     targets: ["{{ hostvars['git-k3s-server']['ansible_host'] }}:8083"]
     relabel_configs:
