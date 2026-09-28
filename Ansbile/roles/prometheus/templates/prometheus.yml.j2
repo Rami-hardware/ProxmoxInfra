@@ -71,7 +71,7 @@ scrape_configs:
   - job_name: adguard
     metrics_path: /metrics
     basic_auth:
-      username: {{ adguard_web_username | default('admin') }}
+      username: {{ lookup('env', 'ADGUARD_WEB_USERNAME') or 'admin' }}
       password: {{ adguard_pw if adguard_pw else adguard_web_password }}
     static_configs:
       - targets: ["{{ hostvars['gateway-server']['ansible_host'] }}:8081"]
