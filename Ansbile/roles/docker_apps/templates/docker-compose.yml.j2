@@ -174,28 +174,6 @@ services:
     restart: unless-stopped
 {% endif %}
 
-{% if 'subsyncer' in docker_apps_enabled %}
-  subsyncarr:
-    image: mrorbitman/subsyncarr:latest
-    container_name: subsyncarr
-    mem_limit: 2g            # limit to 2 GB RAM
-    restart: unless-stopped
-    devices:
-      - /dev/dri:/dev/dri    # grant GPU access for Intel Arc
-    volumes:
-      - /mnt/media/movies:/movies
-      - /mnt/media/tv:/tv
-      - /mnt/config/subsyncarr:/config
-    environment:
-      - TZ=Etc/UTC
-      - SCAN_PATHS=/movies,/tv
-      - MAX_CONCURRENT_SYNC_TASKS=1
-      - INCLUDE_ENGINES=ffsubsync
-      - DOWNLOAD_SUBS=false
-      - FFMPEG_HWACCEL=vaapi 
-
-{% endif %}
-
 {% if 'uptime-kuma' in docker_apps_enabled %}
   uptime-kuma:
     image: louislam/uptime-kuma:latest
