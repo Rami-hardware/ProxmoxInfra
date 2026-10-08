@@ -749,9 +749,13 @@ groups:
           summary: "Istiod connections terminating repeatedly on {{ $labels.pod }}"
           description: "The sidecar's connection to istiod is being cut and re-established frequently — check for istiod restarts, resource pressure, or network instability between this pod and istiod."
 
+      # Sustained misses on one sidecar only. Short host-wide CPU contention (CI full
+      # redeploys starve every VM on the 12-core Proxmox host) causes 1-3 misses on
+      # many pods at once and self-clears — that used to page on every push.
+      # MegaMiss below still catches a genuinely stuck proxy immediately.
       - alert: IstioEnvoyWatchdogMiss
-        expr: (increase(envoy_server_watchdog_miss[15m])) > 3
-        for: 1m
+        expr: (increase(envoy_server_watchdog_miss[15m])) > 10
+        for: 10m
         labels:
           severity: warning
         annotations:

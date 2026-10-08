@@ -7,6 +7,18 @@ on:
       - development
       - staging
       - main
+    # Changes that deploy nothing through this pipeline. A full redeploy CPU-starves
+    # the Proxmox host (Envoy watchdog / ingress 5xx alerts), so don't run one for
+    # docs, local tooling, or ArgoCD app manifests (ArgoCD syncs those itself).
+    # A push that also touches anything else still runs the full pipeline.
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'tools/**'
+      - 'scripts/**'
+      - '.claude/**'
+      - '.mcp.json'
+      - 'Ansbile/argocd-apps/**'
   schedule:
     - cron: '0 3 1 * *'  # 1st of every month at 03:00 UTC — monthly redeploy (triggers cert regen as side effect)
   workflow_dispatch:
