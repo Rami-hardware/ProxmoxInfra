@@ -1,0 +1,31 @@
+[project]
+name = "alertops-mcp"
+version = "0.1.0"
+description = "MCP server: ingest Alertmanager alerts, investigate, remediate from an allowlist, verify, then close with a root cause"
+requires-python = ">=3.12"
+dependencies = [
+  "mcp==2.3.0",
+  "httpx>=0.27,<1",
+  "pyyaml>=6,<7",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8", "pytest-asyncio>=0.24"]
+
+[project.scripts]
+alertops-mcp = "alertops_mcp.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"

@@ -1,0 +1,66 @@
+# alertops-mcp configuration. Relative paths resolve against this file's directory.
+# Use another file with --config <path> or ALERTOPS_CONFIG=<path>.
+
+alertmanager_url: http://192.168.10.203:9093
+prometheus_url: http://192.168.10.203:9090
+loki_url: http://192.168.10.203:3100
+# alert-forwarder (Ansbile/apps/alert-forwarder): /notes rides the RESOLVED Discord
+# message, /report posts a standalone one.
+forwarder_url: http://192.168.10.203:30302
+
+repo_dir: ../..
+inventory: Ansbile/inventory.ini     # relative to repo_dir
+runbooks_dir: docs/runbooks          # relative to repo_dir
+state_dir: ~/.local/state/alertops   # sqlite DB, audit log, kill switch
+
+http_timeout_seconds: 15
+max_output_chars: 12000
+
+ssh:
+  key_file: ~/.ssh/id_rsa
+  connect_timeout_seconds: 10
+  command_timeout_seconds: 90
+  strict_host_key_checking: "yes"
+
+kubernetes:
+  # No local kubeconfig: kubectl runs on the control plane over ssh.
+  via_host: git-k3s-server
+  kubectl: [sudo, -n, k3s, kubectl]
+  read_namespaces: [media, monitoring, network, argocd, ingress-nginx, cert-manager, istio-system, kube-system, default]
+  remediation_namespaces: [media, monitoring, network]
+
+hosts:
+  # Inventory hosts the agent may run read-only checks on.
+  read: [gateway-server, media-server, monitoring-server, git-k3s-server, host-node]
+  # Per-host allowlists for remediation. Hosts not listed get no remediation
+  # (host-node = Proxmox: read-only on purpose).
+  remediation:
+    gateway-server:
+      systemd_units: [AdGuardHome.service, adguard-exporter.service, k3s-agent.service]
+      docker_containers: [crowdsec, crowdsec-nginx-bouncer]
+    media-server:
+      systemd_units: [nginx.service, smbd.service, nmbd.service, k3s-agent.service]
+      docker_containers: [docker_exporter]
+    monitoring-server:
+      systemd_units: [unbound.service, k3s-agent.service]
+      docker_containers: []
+    git-k3s-server:
+      # k3s.service (control plane) and the Actions runner are deliberately absent.
+      systemd_units: [iperf3.service]
+      docker_containers: []
+
+remediation:
+  enabled: true                    # false = read-only mode (also: touch <state_dir>/DISABLE_REMEDIATION)
+  max_actions_per_incident: 3
+  max_actions_per_hour: 10
+  target_cooldown_minutes: 15      # same action on same target
+  journal_vacuum_min_size: 200M    # floor for vacuum_journal
+
+verification:
+  stable_minutes: 3                # alert must stay clear this long, after the last remediation
+  step_seconds: 15
+  max_age_minutes: 30              # a verification older than this must be redone before closing
+
+close:
+  min_root_cause_chars: 30
+  min_fix_summary_chars: 15

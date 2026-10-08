@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "alertops": {
+      "command": "tools/alertops-mcp/.venv/bin/alertops-mcp",
+      "args": [
+        "--config",
+        "tools/alertops-mcp/config.yaml"
+      ]
+    }
+  }
+}
