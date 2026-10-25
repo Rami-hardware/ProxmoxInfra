@@ -6,5 +6,5 @@ kustomize:
   - prom/alertmanager@sha256:e9733bafb1bdef9b00e25a21f8f99dc26a22224bf16641ad754d1649f4c3357a
   - miguelndecarvalho/speedtest-exporter@sha256:f1064d49124c7fc45faabb87c6c876a2fd04e92b3dc14d4b871301217ba30fed
   - ghcr.io/onedr0p/intel-gpu-exporter@sha256:90a95483bf5d3752f4db2ab2e1663f19bba307fd832bf53557cbdc38c3701f84
-  - esanchezm/prometheus-qbittorrent-exporter@sha256:41a7030be19534bf13dfaf3371ec8cdd8a90adf2c29261a075e2255b3ad6e705
+  - esanchezm/prometheus-qbittorrent-exporter@sha256:9b6d77f54b06d118f785b420858cca273aba95d00ea6662a24a9efcbcd4c052b
   - prom/blackbox-exporter@sha256:ea1c7aa3ef3f307cd03e85f34abb604478ccb90b567fc690da0cd9776da76b13
