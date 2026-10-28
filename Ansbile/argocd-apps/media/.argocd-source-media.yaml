@@ -2,7 +2,7 @@ kustomize:
   images:
   - ghcr.io/seerr-team/seerr@sha256:d8fab675b55ad293ded98fd71efcfd46054cbad9746534ae1cc4794a88c0b3be
   - jellyfin/jellyfin@sha256:fea863d0cd9ec445985d9c75fc6ed64e38a1d2766cf0c250a33d553f4fc1b771
-  - linuxserver/bazarr@sha256:946dc8c5bb5331418eac60050cf40a63cb8f66ac039841dda493870e3559799c
+  - linuxserver/bazarr@sha256:9a625883f054e722795affe5e3ca71057e6ed817ecdf99f4a99624346fcc509c
   - linuxserver/radarr@sha256:084b3b2ab1d0ef930660727259546a241f2bdf67c9ed085d54bf1486a6887c9b
   - linuxserver/prowlarr@sha256:04be30163fbaf48d6aeee7b5893c9f6614ffbad6d853971df0d6dcdf01c7f104
   - linuxserver/qbittorrent@sha256:75ecbb1c89ab7b0a21c4bde40b4820e4f1649d2d56d83b91913422155e8d2a5f
