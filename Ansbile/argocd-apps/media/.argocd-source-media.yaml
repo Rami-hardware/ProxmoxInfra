@@ -8,5 +8,5 @@ kustomize:
   - linuxserver/qbittorrent@sha256:75ecbb1c89ab7b0a21c4bde40b4820e4f1649d2d56d83b91913422155e8d2a5f
   - ghcr.io/flaresolverr/flaresolverr@sha256:c80ae007ce2ccdcd217a12426e4f039ef763ff90738c808d38810c3e59323767
   - ghcr.io/thecfu/scraparr@sha256:b9f79a85c33564dfdb1e50ab3d725faeb27b89f4ad5cae7013e39e2f572a8085
-  - linuxserver/sonarr@sha256:48e36b608b461273b9dae857725cd0561a127f2c694b687318f6d0c5ce63e5c9
+  - linuxserver/sonarr@sha256:386c962ee6e260e3a5656b25df2ed056bcc9b6410e197d075f9547fd14c23bca
   - ghcr.io/connorgallopo/tracearr@sha256:bc2af6ba8a605036f9d2a9f39862947d11000d73a111792c6e3e7ba49f9aa30c
