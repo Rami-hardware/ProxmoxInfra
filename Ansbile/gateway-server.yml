@@ -10,6 +10,5 @@
     # - docker_apps
     - adguard
     - nginx_config
-    # - crowdsec
     - ufw
     # - k3s_agent

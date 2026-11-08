@@ -1,8 +1,6 @@
 docker_apps_enabled:
   - promtail
   - node-exporter
-  - crowdsec
-  - crowdsec-nginx-bouncer
 
 service_tcp_ports:
   - 80
@@ -37,20 +35,6 @@ fail2ban_var_path: "/var/log:/var/log:ro"
 fail2ban_data_path: "{{ docker_apps_compose_dir }}/fail2ban:/data"
 
 timezone: UTC
-
-crowdsec_val:
-  - /opt/docker/crowdsec/config:/etc/crowdsec
-  - /opt/docker/crowdsec/data:/var/lib/crowdsec/data
-  - /var/log/nginx:/var/log/nginx:ro # For Nginx logs
-
-crowdsec_nginx_val: /opt/docker/crowdsec/bouncer:/etc/crowdsec
-
-crowdsec_nginx_env:
-  - API_URL=http://crowdsec:8080
-  - API_KEY_FILE=/etc/crowdsec/bouncer_api_key
-
-crowdsec_online_api_key: a7c65c19d023489a88b70036e3a10397nmDvrI0bzgfqoUau
-crowdsec_online_api_secret: K6yiJt6KCOfj0AeXbeWQ4BptCGhEYfdCwrNwrr3NoStJ3BOGyoov7JCgbW467u3v
 
 nginx_services:
   - name: jellyfin

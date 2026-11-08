@@ -37,7 +37,6 @@ hosts:
   remediation:
     gateway-server:
       systemd_units: [AdGuardHome.service, adguard-exporter.service, k3s-agent.service]
-      docker_containers: [crowdsec, crowdsec-nginx-bouncer]
     media-server:
       systemd_units: [nginx.service, smbd.service, nmbd.service, k3s-agent.service]
       docker_containers: [docker_exporter]

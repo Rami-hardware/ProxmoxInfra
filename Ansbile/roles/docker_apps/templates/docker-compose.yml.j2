@@ -1,38 +1,5 @@
 version: "3.9"
 services:
-{% if 'crowdsec' in docker_apps_enabled %}
-  crowdsec:
-    image: crowdsecurity/crowdsec:latest
-    container_name: crowdsec
-    restart: unless-stopped
-    dns:
-      - 1.1.1.1
-      - 8.8.8.8
-    volumes:
-      - /opt/docker/crowdsec/data:/var/lib/crowdsec/data
-      - /opt/docker/crowdsec/config:/etc/crowdsec
-      - /opt/docker/nginx/logs:/var/log/nginx:ro
-
-    ports:
-      - "8080:8080"
-{% endif %}
-
-{% if 'crowdsec-nginx-bouncer' in docker_apps_enabled %}
-  crowdsec-nginx-bouncer:
-    image: crowdsecurity/openresty:latest
-    container_name: crowdsec-nginx-bouncer
-    restart: unless-stopped
-    depends_on:
-      - crowdsec
-      - nginx
-    environment:
-      CROWDSEC_BOUNCER_API_KEY_FILE: /run/secrets/crowdsec_nginx_bouncer_key
-      CROWDSEC_AGENT_HOST: crowdsec:8080
-      CROWDSEC_LOG_LEVEL: info
-    secrets:
-      - source: crowdsec_nginx_bouncer_key
-        target: crowdsec_nginx_bouncer_key
-{% endif %}
 {% if 'adguardhome' in docker_apps_enabled %}
   adguardhome:
     # Pinned + healthchecked; on gateway-server AdGuard runs as a systemd
@@ -677,7 +644,3 @@ volumes:
   portainer_data:
   uptime_kuma_data:
   pufferpanel-config:
-
-secrets:
-  crowdsec_nginx_bouncer_key:
-    file: /opt/docker/crowdsec/nginx-bouncer.key

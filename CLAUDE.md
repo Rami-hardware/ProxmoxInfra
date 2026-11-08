@@ -12,7 +12,7 @@ All agent rules, commands, conventions and load-bearing quirks live in AGENTS.md
 
 | Host (inventory) | IP | Role |
 | :--- | :--- | :--- |
-| `gateway-server` | .200 | DNS (AdGuard), CrowdSec, nginx reverse proxy for every `*.homelab.lan` URL; K3s worker for `network` ns |
+| `gateway-server` | .200 | DNS (AdGuard), nginx reverse proxy for every `*.homelab.lan` URL; K3s worker for `network` ns |
 | `media-server` | .201 | K3s worker, `media` ns; Intel Arc GPU passthrough |
 | `monitoring-server` | .203 | K3s worker, `monitoring` ns (Prometheus, Grafana, Loki, Tempo, Alertmanager); unbound (fallback DNS upstream) |
 | `git-k3s-server` | .204 | K3s control plane + self-hosted GitHub Actions runner + ArgoCD/Image Updater |
