@@ -32,6 +32,16 @@ controller:
   # rely on this (see the "Let's Encrypt wildcard" tasks).
   extraArgs:
     default-ssl-certificate: "ingress-nginx/{{ k3s_apps_public_cert_name }}-tls"
+    # Failover without a gap: on SIGTERM the controller reports not-ready but
+    # nginx keeps serving for this long. The fast readiness probe below lets
+    # MetalLB move the LoadBalancer IP to the other replica's node within ~5s,
+    # well before nginx stops listening. Without it, nginx closed at once and
+    # the IP only moved ~25s later (both LAN and public down meanwhile).
+    shutdown-grace-period: "15"
+
+  readinessProbe:
+    periodSeconds: 2
+    failureThreshold: 2
 
   image:
     tag: "v1.12.1"

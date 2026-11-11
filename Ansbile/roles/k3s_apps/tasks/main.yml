@@ -687,6 +687,17 @@
     path: "{{ k3s_apps_manifest_dir }}/calico-policy-only.yml"
     state: absent
 
+# Calico's CNI files stay behind in /etc/cni/net.d. k3s reads its own CNI dir
+# (/var/lib/rancher/k3s/agent/etc/cni/net.d), so they are inert, just clutter.
+- name: Remove leftover Calico CNI files on all nodes
+  ansible.builtin.file:
+    path: "/etc/cni/net.d/{{ item.1 }}"
+    state: absent
+  delegate_to: "{{ item.0 }}"
+  loop: "{{ ['git-k3s-server', 'media-server', 'monitoring-server', 'gateway-server'] | product(['10-calico.conflist', 'calico-kubeconfig']) | list }}"
+  loop_control:
+    label: "{{ item.0 }}: {{ item.1 }}"
+
 # Hand-applied 2026-09-28 and never in git, so ArgoCD can't prune it. It
 # allowed all of 10.42.0.0/16 (every pod) into media; the mesh policies in
 # argocd-apps/components/mesh-network-policy replace it.

@@ -1,5 +1,5 @@
 ---
-# ── Local TLS: self-signed CA + wildcard cert ─────────────────────────────────
+# ── Local CA (cert-manager homelab-ca-issuer, ca.homelab.lan) ────────────────
 - name: Ensure local TLS working directory exists
   ansible.builtin.file:
     path: /opt/k3s/local-tls
@@ -38,81 +38,13 @@
     mode: "0644"
   delegate_to: git-k3s-server
 
-- name: Generate local wildcard private key
-  community.crypto.openssl_privatekey:
-    path: /opt/k3s/local-tls/local.key
-    size: 4096
-    mode: "0600"
-  delegate_to: git-k3s-server
-
-- name: Generate local wildcard CSR
-  community.crypto.openssl_csr:
-    path: /opt/k3s/local-tls/local.csr
-    privatekey_path: /opt/k3s/local-tls/local.key
-    common_name: "*.homelab.lan"
-    subject_alt_name:
-      - "DNS:*.homelab.lan"
-      - "DNS:homelab.lan"
-    mode: "0600"
-  delegate_to: git-k3s-server
-
-- name: Inspect existing wildcard cert (if any)
-  community.crypto.x509_certificate_info:
-    path: /opt/k3s/local-tls/local.crt
-    valid_at:
-      sixty_days: "+60d"
-  register: nginx_config_cert_info
-  delegate_to: git-k3s-server
-  failed_when: false
-
-# Single decision point: regenerate if missing, wrong SAN, or expiring within 60 days.
-- name: Decide whether to regenerate wildcard cert
-  ansible.builtin.set_fact:
-    nginx_config_regen_cert: >-
-      {{
-        nginx_config_cert_info is failed
-        or nginx_config_cert_info.subject_alt_name is not defined
-        or 'DNS:*.homelab.lan' not in nginx_config_cert_info.subject_alt_name
-        or not (nginx_config_cert_info.valid_at.sixty_days | default(false))
-      }}
-
-- name: Remove stale wildcard cert
-  ansible.builtin.file:
-    path: /opt/k3s/local-tls/local.crt
-    state: absent
-  delegate_to: git-k3s-server
-  when: nginx_config_regen_cert | bool
-
-- name: Sign local wildcard cert with local CA
-  community.crypto.x509_certificate:
-    path: /opt/k3s/local-tls/local.crt
-    csr_path: /opt/k3s/local-tls/local.csr
-    ownca_path: /opt/k3s/local-tls/ca.crt
-    ownca_privatekey_path: /opt/k3s/local-tls/ca.key
-    provider: ownca
-    ownca_not_after: "+825d"
-    mode: "0644"
-  delegate_to: git-k3s-server
-
 - name: Read local CA cert
   ansible.builtin.slurp:
     src: /opt/k3s/local-tls/ca.crt
   register: nginx_config_local_ca_crt
   delegate_to: git-k3s-server
 
-- name: Read local wildcard cert
-  ansible.builtin.slurp:
-    src: /opt/k3s/local-tls/local.crt
-  register: nginx_config_local_tls_crt
-  delegate_to: git-k3s-server
-
-- name: Read local wildcard key
-  ansible.builtin.slurp:
-    src: /opt/k3s/local-tls/local.key
-  register: nginx_config_local_tls_key
-  delegate_to: git-k3s-server
-
-- name: Ensure TLS namespaces exist before applying secrets
+- name: Ensure ingress namespaces exist
   ansible.builtin.shell:
     cmd: |
       set -o pipefail
@@ -129,29 +61,6 @@
   loop_control:
     loop_var: ns_item
 
-- name: Template local-tls secret manifest
-  ansible.builtin.template:
-    src: local-tls-secret.yml.j2
-    dest: /opt/k3s/manifests/local-tls-secret.yml
-    owner: root
-    group: root
-    mode: "0600"
-  delegate_to: git-k3s-server
-
-- name: Apply local-tls secret
-  ansible.builtin.command: >
-    k3s kubectl apply --server-side --force-conflicts
-    -f /opt/k3s/manifests/local-tls-secret.yml
-  changed_when: true
-  delegate_to: git-k3s-server
-
-- name: Remove local-tls secret manifest (contains sensitive data)
-  ansible.builtin.file:
-    path: /opt/k3s/manifests/local-tls-secret.yml
-    state: absent
-  delegate_to: git-k3s-server
-
-# ── Cloudflare origin TLS ─────────────────────────────────────────────────────
 - name: Ensure k3s ingress manifests directory exists
   ansible.builtin.file:
     path: /opt/k3s/manifests
@@ -161,30 +70,6 @@
     mode: "0755"
   delegate_to: git-k3s-server
 
-# TLS secret — generated from cert files in role's files/ directory
-- name: Template cloudflare-origin-tls secret manifest
-  ansible.builtin.template:
-    src: tls-secret.yml.j2
-    dest: /opt/k3s/manifests/tls-secret.yml
-    owner: root
-    group: root
-    mode: "0600"
-  delegate_to: git-k3s-server
-
-- name: Apply cloudflare-origin-tls secret
-  ansible.builtin.command: >
-    k3s kubectl apply --server-side --force-conflicts
-    -f /opt/k3s/manifests/tls-secret.yml
-  changed_when: true
-  delegate_to: git-k3s-server
-
-- name: Remove TLS secret manifest (contains sensitive data)
-  ansible.builtin.file:
-    path: /opt/k3s/manifests/tls-secret.yml
-    state: absent
-  delegate_to: git-k3s-server
-
-# Ingress resources — ExternalEndpoints + Ingress for every service
 - name: Template ingress-services manifest
   ansible.builtin.template:
     src: ingress-services.yml.j2
@@ -217,6 +102,34 @@
   delegate_to: git-k3s-server
 
 # ── Publish CA cert to a world-readable path for easy scp/curl ───────────────
+# Unused TLS leftovers: no ingress references these. Every ingress gets its
+# own cert-manager certificate (homelab-ca-issuer, or the Let's Encrypt
+# wildcard for the public names).
+- name: Remove unused local-tls and cloudflare-origin-tls secrets
+  ansible.builtin.command: >
+    k3s kubectl delete secret local-tls cloudflare-origin-tls
+    -n {{ item }} --ignore-not-found
+  loop: [argocd, istio-system, media, monitoring, network]
+  register: nginx_config_old_tls
+  changed_when: "'deleted' in nginx_config_old_tls.stdout"
+  delegate_to: git-k3s-server
+
+- name: Remove the unused letsencrypt-cloudflare ClusterIssuer and its account key
+  ansible.builtin.shell:
+    cmd: |
+      k3s kubectl delete clusterissuer letsencrypt-cloudflare --ignore-not-found
+      k3s kubectl delete secret letsencrypt-cloudflare-key -n cert-manager --ignore-not-found
+  register: nginx_config_old_issuer
+  changed_when: "'deleted' in nginx_config_old_issuer.stdout"
+  delegate_to: git-k3s-server
+
+- name: Remove the old local wildcard cert files
+  ansible.builtin.file:
+    path: "/opt/k3s/local-tls/{{ item }}"
+    state: absent
+  loop: [local.key, local.csr, local.crt]
+  delegate_to: git-k3s-server
+
 - name: Publish CA cert to world-readable path
   ansible.builtin.copy:
     content: "{{ nginx_config_local_ca_crt.content | b64decode }}"

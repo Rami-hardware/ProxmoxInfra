@@ -209,3 +209,32 @@
   loop_control:
     label: "{{ item.domain }} -> {{ item.answer }}"
   changed_when: true
+
+# ── IPv6 answers ──────────────────────────────────────────────────────────────
+# The LAN has no IPv6 route, so AAAA answers only make clients try IPv6 first
+# and time out (seen as get.k3s.io and setup-terraform download failures in
+# CI). With this on, AdGuard answers AAAA queries with no records.
+- name: Read AdGuard DNS settings
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ adguard_ui_port }}/control/dns_info"
+    url_username: "{{ adguard_api_username }}"
+    url_password: "{{ adguard_api_password }}"
+    force_basic_auth: true
+    return_content: true
+  register: adguard_dns_info
+  check_mode: false
+  when: adguard_api_username | length > 0
+  no_log: true
+
+- name: Disable IPv6 (AAAA) resolution in AdGuard
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ adguard_ui_port }}/control/dns_config"
+    method: POST
+    url_username: "{{ adguard_api_username }}"
+    url_password: "{{ adguard_api_password }}"
+    force_basic_auth: true
+    body_format: json
+    body:
+      disable_ipv6: true
+  when: adguard_dns_info.json is defined and not adguard_dns_info.json.disable_ipv6
+  changed_when: true

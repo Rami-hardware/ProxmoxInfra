@@ -17,7 +17,10 @@ curl -sk -o /dev/null -w '%{http_code}
 - Two controller replicas (hostNetwork), one each on git-k3s-server and
   monitoring-server (`k3s_apps_ingress_nodes`). MetalLB announces
   192.168.10.210 (layer2) from one node with a Ready pod; if that node dies the
-  IP moves to the other within a few seconds. IngressControllerDown fires per
+  IP moves to the other within a few seconds. A stopping controller keeps
+  serving for 15s (`shutdown-grace-period`) while its readiness fails (2s x 2),
+  so MetalLB moves the IP before nginx closes. Measured before that fix: ~25s
+  of LAN and public (Cloudflare 521) errors per move. IngressControllerDown fires per
   node, so one alert = degraded, not down.
 - See which node holds the IP:
   `sudo k3s kubectl get servicel2statuses -A -o custom-columns=SVC:.status.serviceName,NODE:.status.node`
