@@ -460,7 +460,7 @@
       {{ playbook_dir }}/apps/alert-forwarder/chart
       --namespace monitoring
       --create-namespace
-      --set image.tag={{ alert_forwarder_image_tag | default('latest') }}
+      --set image.tag={{ k3s_apps_alert_forwarder_image_tag }}
       --set-string discordWebhookUrl={{ lookup('env', 'DISCORD_WEBHOOK_URL') | quote }}
       --wait
       --timeout 5m

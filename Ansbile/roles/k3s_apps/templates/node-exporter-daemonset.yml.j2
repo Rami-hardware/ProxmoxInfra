@@ -23,7 +23,7 @@ spec:
           effect: NoSchedule
       containers:
         - name: node-exporter
-          image: prom/node-exporter:latest
+          image: prom/node-exporter:v1.12.1
           securityContext:
             privileged: true
           args:

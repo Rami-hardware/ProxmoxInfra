@@ -51,6 +51,7 @@ terraform plan -input=false -no-color -detailed-exitcode -out=tfplan
 - **FQCN always**: `ansible.builtin.template`, `community.general.*` — no short module names.
 - **Role vars prefixed** `<role_name>_` (e.g. `k3s_server_version`, `grafana_data_dir`).
 - **All config rendered from Jinja2 templates** (`*.yml.j2`) — no inline hardcoded content in tasks.
+- **No moving image tags** (`:latest`, `:alpine`) in Ansible templates: pin a version (bump it on purpose). ArgoCD apps may use `:latest` in `kustomization.yaml` only because Image Updater pins the digest in `.argocd-source-*.yaml`. alert-forwarder deploys the `:<commit sha>` CI just built.
 - **IPs referenced via `hostvars[host]['ansible_host']`** from inventory — single source of truth, never hardcode IPs.
 - Command/shell tasks need explicit `changed_when` / `failed_when`.
 - Alerting: all Prometheus-evaluated rules live in `roles/prometheus/templates/prometheus-rules.yml.j2` (Alertmanager → alert-forwarder → Discord). LogQL rules live in `roles/loki/templates/loki-rules.yml.j2`, evaluated by Loki's ruler. Grafana keeps NO alert rules — never add alerts in the Grafana UI.
