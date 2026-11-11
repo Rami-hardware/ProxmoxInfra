@@ -13,3 +13,6 @@ trivy-k3s-result.json
 # Ansible / local tooling
 venv/
 *.retry
+
+# Ansible local cache
+.ansible/
