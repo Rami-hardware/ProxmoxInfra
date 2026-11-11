@@ -34,23 +34,6 @@ scrape_configs:
         regex: (.*)/(.*)
         replacement: /var/log/pods/*$1/*$2/*.log
 
-  - job_name: docker-containers
-    static_configs:
-      - targets:
-          - localhost
-        labels:
-          host: ${NODE_NAME}
-          __path__: /var/lib/docker/containers/*/*.log
-    pipeline_stages:
-      - json:
-          expressions:
-            stream: stream
-            log: log
-      - labels:
-          stream:
-      - output:
-          source: log
-
   - job_name: system
     static_configs:
       - targets:
