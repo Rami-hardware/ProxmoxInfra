@@ -3,7 +3,10 @@ server:
   grpc_listen_port: 0
 
 positions:
-  filename: /tmp/positions.yaml
+  # Persisted on the host via hostPath so positions survive pod restarts and
+  # node reboots — otherwise promtail replays old logs from the start and Loki
+  # rejects them as "entry too far behind" (counted as ingester_error drops).
+  filename: /var/lib/promtail/positions.yaml
 
 clients:
   - url: http://{{ hostvars['monitoring-server']['ansible_host'] }}:3100/loki/api/v1/push

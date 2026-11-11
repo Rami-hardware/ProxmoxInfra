@@ -716,6 +716,7 @@
     cmd: >
       helm upgrade --install istiod istio/istiod
       --namespace istio-system
+      --set nodeSelector."kubernetes\.io/hostname"=git-k3s-server
       --set meshConfig.enablePrometheusMerge=true
       --set global.proxy.resources.requests.cpu=20m
       --set global.proxy.resources.requests.memory=64Mi

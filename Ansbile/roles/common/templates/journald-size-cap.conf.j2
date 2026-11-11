@@ -1,0 +1,8 @@
+[Journal]
+# Cap the journal. The distro default (SystemMaxUse unset) allows the journal
+# to grow to 10% of the root fs (~1.9G on the small git-k3s-server VM), which
+# was a major driver of the NodeDiskWillFillIn7Days alert (2026-10-07).
+# Loki (promtail -> loki) is the central log store, so the local journal is
+# only a small recent-events buffer for debugging.
+SystemMaxUse=100M
+SystemKeepFree=500M

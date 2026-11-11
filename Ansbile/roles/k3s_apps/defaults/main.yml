@@ -18,7 +18,8 @@ k3s_apps_istio_injected_namespaces:
   - network
 
 # Manifest names to exclude from the "delete removed apps" cleanup —
-# these are managed outside k3s_apps_list (DaemonSets, RBAC, or Helm releases).
+# these are managed outside k3s_apps_list (DaemonSets, RBAC, Helm releases,
+# or the dedicated Tempo/Istio tasks later in this role).
 k3s_apps_helm_managed_names:
   - node-exporter
   - promtail
@@ -27,6 +28,11 @@ k3s_apps_helm_managed_names:
   - ingress-services
   - alert-forwarder
   - calico-policy-only
+  # tempo.yml is rendered/applied by the dedicated "Tempo (tracing backend)"
+  # tasks, not k3s_apps_list — without this entry the cleanup loop deletes the
+  # whole tempo stack (Deployment + PVC + Services) on every playbook run and
+  # the apply task recreates it minutes later, causing recurring ingress 5xx.
+  - tempo
 
 # App names migrated from k3s_apps_list to ArgoCD (see Ansbile/argocd-apps/).
 # Their old {{ k3s_apps_manifest_dir }}/<name>.yml files are stale and must

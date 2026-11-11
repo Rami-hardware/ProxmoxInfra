@@ -22,6 +22,12 @@ data:
     server:
       http_listen_port: 3200
 
+    # stats.grafana.org is unreachable in this homelab; leaving this enabled
+    # logs a "failed to report usage" line every minute whose "5 errors:"
+    # text pollutes substring-based error-log alerts.
+    usage_report:
+      reporting_enabled: false
+
     distributor:
       receivers:
         zipkin:

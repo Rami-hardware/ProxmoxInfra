@@ -22,7 +22,17 @@ sudo du -x -d1 -h / | sort -rh | head   # what's eating the disk
 - Clock: `sudo systemctl restart systemd-timesyncd` (or chrony); verify `timedatectl`.
 - OOM: identify the hog with the OOMKill timestamp in dmesg, raise its memory
   limit (k8s) or stop it. Repeat OOMs = right-size properly.
+  Check `constraint=` in the oom-kill line: `CONSTRAINT_MEMCG` = container hit
+  its k8s memory limit (pod restarts, app keeps running) — raise that
+  container's limit; host-level OOM means the node itself is short.
 - Interface/netdev errors: check the Proxmox host NIC and VLAN before the VM.
+- media-server load bursts: `ps aux --sort=-%cpu` usually shows
+  `/usr/lib/jellyfin-ffmpeg/ffmpeg ... thumbnail=n=24` — Jellyfin's chapter-image
+  extraction on newly downloaded media. Since 2026-09-29 this is throttled via
+  `EncodingThreadCount` = 4 (of 6 cores) in `/opt/jellyfin/config/encoding.xml`
+  (hostPath `/opt/jellyfin`, restart the jellyfin pod to reload); VAAPI handles
+  playback transcodes, so the cap only limits CPU ffmpeg bursts. If it fires
+  again, check that file wasn't reset by a Jellyfin settings change.
 
 ## Escalation
 If the VM is unreachable: Proxmox UI console -> check qm status; last resort

@@ -818,13 +818,17 @@ groups:
 
       - alert: ArgoCDApplicationUnhealthy
         expr: (argocd_app_info{health_status!="Healthy"}) > 0
-        for: 1m
+        # 10m, not 1m: Image Updater rollouts legitimately hold apps in
+        # Progressing for minutes while big images pull (tracearr ~900MB took
+        # ~3m on 2026-10-04 and fired this alert at 1m). Real failures
+        # (CrashLoopBackOff, stuck ImagePullBackOff) persist far longer.
+        for: 10m
         labels:
           severity: warning
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/argocd-alertmanager.md"
           summary: "Application {{ $labels.name }} is {{ $labels.health_status }}"
-          description: "This application's resources are reporting a non-Healthy status (Degraded/Progressing/Missing/Unknown). Check the Application's resource tree in the ArgoCD UI for the specific failing resource."
+          description: "This application's resources are reporting a non-Healthy status for 10+ minutes (Degraded/Progressing/Missing/Unknown). Brief Progressing during an Image Updater rollout is expected — this means it is stuck. Check the Application's resource tree in the ArgoCD UI for the specific failing resource."
 
       - alert: ArgoCDComponentsDown
         expr: (up{job=~"argocd.*"}) < 1
@@ -1338,7 +1342,11 @@ groups:
           description: "An indexer is failing queries repeatedly — likely rate-limited, down, or blocking the server IP. Check indexer status in Prowlarr and consider disabling temporarily."
 
       - alert: ScraparrBazarrProviderDegraded
-        expr: (last_over_time(bazarr_provider_status{status!="Good",status!="DownloadLimitExceeded"}[12m])) > 0
+        # Instant vector, no lookback: with last_over_time([12m]) a short provider
+        # blip kept the expr true after recovery, so `for: 20m` fired the alert
+        # ~11m after the provider had already healed. Now `for: 20m` means the
+        # provider must actually report a bad status continuously for 20m.
+        expr: bazarr_provider_status{status!="Good",status!="DownloadLimitExceeded"} > 0
         for: 20m
         labels:
           severity: warning

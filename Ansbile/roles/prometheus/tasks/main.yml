@@ -8,6 +8,19 @@
     state: directory
     mode: '0755'
 
+# Backs the prometheus-data-pv hostPath in argocd-apps/monitoring/prometheus.yaml.
+# Must exist (owned by 65534/nobody, the user the k3s Prometheus container runs
+# as) before the PV is mounted: hostPath type DirectoryOrCreate creates it
+# root-owned instead, and kubelet does not apply fsGroup to hostPath volumes —
+# the pod then crashes with "mkdir data/: permission denied".
+- name: Ensure Prometheus TSDB data directory exists
+  ansible.builtin.file:
+    path: "{{ prometheus_data_dir }}"
+    state: directory
+    owner: '65534'
+    group: '65534'
+    mode: '0755'
+
 - name: Template Prometheus config
   ansible.builtin.template:
     src: prometheus.yml.j2

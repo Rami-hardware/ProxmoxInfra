@@ -5,3 +5,10 @@
     dest: /etc/systemd/system/apt-daily-upgrade.timer.d/override.conf
     mode: '0644'
   notify: Restart apt-daily-upgrade timer
+
+- name: Cap systemd-journal size (default 10% of root fs is too much on small VMs)
+  ansible.builtin.template:
+    src: journald-size-cap.conf.j2
+    dest: /etc/systemd/journald.conf.d/00-size-cap.conf
+    mode: '0644'
+  notify: Restart systemd-journald

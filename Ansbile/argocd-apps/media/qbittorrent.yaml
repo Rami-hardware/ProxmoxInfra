@@ -89,8 +89,12 @@ spec:
             requests:
               memory: "256Mi"
               cpu: "200m"
+            # 2Gi, not 1Gi: libtorrent 2.x mmaps downloaded pieces and seeding
+            # keeps those pages resident; with no host memory pressure the
+            # working set rides ~900Mi+ while seeding and OOMs a 1Gi cgroup
+            # (media VM has ~5.4Gi free — see ContainerNearMemoryLimit 2026-09-30).
             limits:
-              memory: "1Gi"
+              memory: "2Gi"
               cpu: "1000m"
       volumes:
         - name: config

@@ -81,6 +81,13 @@ spec:
       serviceAccountName: prometheus
       nodeSelector:
         kubernetes.io/hostname: monitoring-server
+      # prom/prometheus v3 runs as nobody (65534); keep that explicit so the
+      # hostPath TSDB volume (see prometheus role: prometheus_data_dir) stays
+      # readable/writable. fsGroup is not honoured for hostPath volumes, so the
+      # dir ownership on the host is managed by the prometheus ansible role.
+      securityContext:
+        runAsUser: 65534
+        runAsGroup: 65534
       containers:
         - name: prometheus
           image: prom/prometheus:latest

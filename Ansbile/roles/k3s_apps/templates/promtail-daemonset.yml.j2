@@ -82,6 +82,8 @@ spec:
             - name: pods
               mountPath: /var/log/pods
               readOnly: true
+            - name: positions
+              mountPath: /var/lib/promtail
           resources:
             requests:
               memory: "128Mi"
@@ -102,6 +104,10 @@ spec:
         - name: pods
           hostPath:
             path: /var/log/pods
+        - name: positions
+          hostPath:
+            path: /var/lib/promtail
+            type: DirectoryOrCreate
 ---
 apiVersion: v1
 kind: Service

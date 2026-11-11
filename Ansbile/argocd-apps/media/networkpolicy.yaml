@@ -65,8 +65,17 @@ spec:
     - Ingress
   ingress:
     - from:
+        # LAN hosts (blackbox-exporter, direct browser access).
         - ipBlock:
             cidr: 192.168.10.0/24
+        # Flannel node IPs: cross-node traffic from the hostNetwork
+        # ingress-nginx controller is masqueraded to the source node's
+        # flannel IP (10.42.x.0) by kube-proxy before calico evaluates
+        # policy, so a bare LAN CIDR rejects it (observed as 502s from
+        # nginx for tracearr). Without this, anything from a node IP
+        # crossing nodes hits default-deny.
+        - ipBlock:
+            cidr: 10.42.0.0/16
 ---
 # qBittorrent's BitTorrent port must stay reachable from the internet
 # (peers connect via the router's forwarded hostPort 6881).

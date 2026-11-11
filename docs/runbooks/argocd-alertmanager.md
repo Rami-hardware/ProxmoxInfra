@@ -16,8 +16,18 @@ curl -s http://192.168.10.203:30302/alertmanager   # alert-forwarder reachable?
 ```
 
 ## Notes
-- ArgoCD self-heal + prune is ON: if live state drifted, diff in the UI before
-  force-syncing — manual kubectl changes will be reverted by design.
+- ArgoCD sync policy on the apps: `automated: {prune: true, selfHeal: false}` —
+  auto-sync fires on NEW git revisions, but live drift (manual kubectl edits)
+  is NOT auto-reverted and shows up as OutOfSync until git catches up.
+- ArgoCDApplicationOutOfSync where live is the DESIRED state (e.g. a hotfix
+  applied via kubectl): fix is to get the change into git and push — a
+  kubectl-revert of live re-breaks the cluster, and pushing any unrelated
+  commit to the app dir first triggers an automated sync of the OLD manifest.
+- ArgoCDApplicationUnhealthy with health=Progressing right after an Image
+  Updater deploy is expected: big images pull for minutes (tracearr ~900MB
+  pulled for ~3m on 2026-10-04). The rule's `for: 10m` filters these out —
+  a firing alert means the rollout is genuinely stuck. Check pod events:
+  `sudo k3s kubectl get events -n <app-ns> --sort-by=.lastTimestamp`.
 - Alertmanager down = NO notifications from ANY rule (silent failure mode).
   The dead-man's switch is the designed backstop for exactly this alert.
 - Notifications failing -> check the alert-forwarder pod and the Discord

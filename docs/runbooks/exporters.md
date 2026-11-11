@@ -11,6 +11,11 @@ BlackboxExporterDown
   dead torrents or tracker/network issues (check port forwarding).
 - scraparr: per-arr health — Sonarr/Radarr queues are app-side
   (Activity > Queue); Prowlarr indexer failures = indexers rate-limiting you.
+- ScraparrBazarrProviderDegraded: fires only after a provider reports a bad
+  status (other than Good/DownloadLimitExceeded) continuously for 20m. Check
+  `bazarr_provider_status` in Prometheus to see which provider/status; if it's
+  already Good again, the provider self-healed. Quota throttles
+  (DownloadLimitExceeded) are excluded by design — Bazarr auto-retries.
 - Intel GPU: sustained >90% engine busy or power draw = check active Jellyfin
   transcodes; the iGPU idles at ~100% RC6 residency.
 - cert-manager: `kubectl describe certificate -A` and CertificateRequest events.
