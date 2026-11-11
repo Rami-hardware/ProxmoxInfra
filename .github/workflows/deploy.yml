@@ -167,6 +167,46 @@ jobs:
           ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml --vault-password-file ~/.vault_pass
 
 
+      # ── Cloudflare (Terraform/cloudflare) ───────────────────────────────────
+      # Unlike the Proxmox module, CI applies this one: zone settings and cache
+      # rules are safe to reconcile automatically, and dashboard edits get
+      # reverted to what is in git. Same destroy/replace guard as the VM plan.
+      # Runs after Ansible so a Cloudflare API problem never blocks a server
+      # deploy (it still fails the job).
+      - name: Ensure Terraform state namespace exists
+        run: |
+          k3s kubectl create namespace terraform --dry-run=client -o yaml | k3s kubectl apply -f -
+
+      - name: Cloudflare plan
+        id: cf_plan
+        working-directory: Terraform/cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DNS_API_TOKEN }}
+        run: |
+          terraform init -input=false
+          set +e
+          terraform plan -input=false -no-color -detailed-exitcode -out=cfplan
+          EXIT_CODE=$?
+          set -e
+          if [ $EXIT_CODE -eq 1 ]; then
+            echo "Cloudflare plan failed."
+            exit 1
+          fi
+          echo "has_changes=$([ $EXIT_CODE -eq 2 ] && echo true || echo false)" >> $GITHUB_OUTPUT
+
+      - name: Cloudflare apply
+        if: steps.cf_plan.outputs.has_changes == 'true' && github.ref_name == 'main'
+        working-directory: Terraform/cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DNS_API_TOKEN }}
+        run: |
+          if terraform show -no-color cfplan | grep -qE "will be destroyed|must be replaced"; then
+            echo "ERROR: Destroy or replace detected in the Cloudflare plan — blocking."
+            terraform show -no-color cfplan | grep -E "will be destroyed|must be replaced"
+            exit 1
+          fi
+          terraform apply -input=false cfplan
+
       - name: Cleanup secrets
         if: always()
         uses: ./.github/actions/cleanup-secrets

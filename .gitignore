@@ -1,8 +1,10 @@
 # Terraform — local init artifacts. NOTE: Terraform/terraform.tfstate is
 # deliberately TRACKED (no remote backend; state lives in git). Never ignore it.
 Terraform/.terraform/
+Terraform/cloudflare/.terraform/
 *.tfstate.backup
 tfplan
+cfplan
 
 # CI runner leftovers (Trivy results are written next to the checkout)
 trivy-results.json

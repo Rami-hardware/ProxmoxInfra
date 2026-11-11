@@ -51,3 +51,4 @@ runs:
         }
         seed registry.terraform.io bpg proxmox 0.70.1 "https://github.com/bpg/terraform-provider-proxmox/releases/download/v0.70.1/terraform-provider-proxmox_0.70.1_linux_amd64.zip"
         seed registry.terraform.io telmate proxmox 2.9.14 "https://github.com/Telmate/terraform-provider-proxmox/releases/download/v2.9.14/terraform-provider-proxmox_2.9.14_linux_amd64.zip"
+        seed registry.terraform.io cloudflare cloudflare 5.28.1 "https://github.com/cloudflare/terraform-provider-cloudflare/releases/download/v5.28.1/terraform-provider-cloudflare_5.28.1_linux_amd64.zip"

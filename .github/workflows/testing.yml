@@ -71,6 +71,12 @@ jobs:
         working-directory: Terraform
         run: terraform validate
 
+      - name: Terraform validate (Cloudflare)
+        working-directory: Terraform/cloudflare
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate
+
       # ── Ansible ──────────────────────────────────────────────────────────────
       - name: Install Ansible lint in virtualenv
         run: |
