@@ -338,22 +338,6 @@
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   changed_when: true
 
-# The old DDNS updater kept darkestserver.com's A record on the home IP
-# (unproxied). With the tunnel no public record needs the home IP, so its
-# timer is stopped and disabled. Its files in /opt/cloudflare-ddns are left
-# for the owner to delete (the script holds a plaintext API token).
-- name: Check for the old Cloudflare DDNS timer
-  ansible.builtin.stat:
-    path: /etc/systemd/system/cf-ddns.timer
-  register: k3s_apps_cf_ddns_timer
-
-- name: Stop and disable the old Cloudflare DDNS timer
-  ansible.builtin.systemd:
-    name: cf-ddns.timer
-    state: stopped
-    enabled: false
-  when: k3s_apps_cf_ddns_timer.stat.exists
-
 # ── ArgoCD via Helm ────────────────────────────────────────────────────────────
 # NodePort exposes argocd-server so the gateway's nginx (nginx_services_local
 # in group_vars/gateway-vm.yml) can proxy argocd.homelab.lan to it, same
