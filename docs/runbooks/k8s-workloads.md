@@ -25,4 +25,4 @@ sudo k3s kubectl describe pvc -n <ns> <pvc>
 
 ## Note
 After any node reboot expect ~2-3 min of churn (pods restart, metrics-server
-and calico settle). Alerts that survive 10+ minutes are real.
+settles). Alerts that survive 10+ minutes are real.

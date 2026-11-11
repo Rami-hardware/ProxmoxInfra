@@ -493,7 +493,7 @@ groups:
 
       # The trailing `and` guards against containers with no memory limit:
       # cAdvisor reports limit=0 there, so the division is +Inf and the alert
-      # phantom-fires on every unlimited system pod (calico, metallb, argocd...).
+      # phantom-fires on every unlimited system pod (metallb, argocd...).
       - alert: ContainerNearMemoryLimit
         expr: (container_memory_working_set_bytes{job="kubelet-cadvisor",container!="",image!=""} / container_spec_memory_limit_bytes{job="kubelet-cadvisor",container!="",image!=""} > 0.9) and (container_spec_memory_limit_bytes{job="kubelet-cadvisor",container!="",image!=""} > 0)
         for: 15m

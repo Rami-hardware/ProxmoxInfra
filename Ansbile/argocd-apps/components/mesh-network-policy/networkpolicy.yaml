@@ -1,0 +1,77 @@
+---
+# Default-deny ingress, then explicit allows. Egress stays open.
+#
+# Enforced by k3s's built-in kube-router network policy controller. Rules
+# match on IP and port, so with Istio ambient:
+#   - mesh traffic (pod to pod) arrives on HBONE port 15008 from the source
+#     pod's IP, so a namespace rule must not be limited to app ports;
+#     per-service rules belong in Istio AuthorizationPolicy instead.
+#   - kubelet probes to ambient pods come from 169.254.7.127 (istio-cni SNAT).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-same-namespace
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+---
+# monitoring: Prometheus scrapes every pod. istio-system: Tempo's metrics
+# generator remote-writes to Prometheus.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-from-monitoring-and-istio
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: istio-system
+---
+# Traffic that starts outside the pod network: ingress-nginx (hostNetwork),
+# NodePorts, hostPorts, promtail, kubelet probes. A node reaches a pod from
+# its cni0 address (10.42.N.1, same node) or its flannel.1 address
+# (10.42.N.0, other node), so each node's 10.42.N.0/31 is listed, never the
+# whole 10.42.0.0/16 (that would let every pod in the cluster in).
+# Add a /31 here when a node joins (kubectl get node -o jsonpath='{..podCIDR}').
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-from-nodes-and-lan
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - ipBlock:
+            cidr: 192.168.10.0/24 # LAN clients and node IPs (hostPort keeps the client IP)
+        - ipBlock:
+            cidr: 10.42.0.0/31 # gateway-server
+        - ipBlock:
+            cidr: 10.42.1.0/31 # media-server
+        - ipBlock:
+            cidr: 10.42.2.0/31 # git-k3s-server
+        - ipBlock:
+            cidr: 10.42.3.0/31 # monitoring-server
+        - ipBlock:
+            cidr: 169.254.7.127/32 # Istio ambient kubelet probes

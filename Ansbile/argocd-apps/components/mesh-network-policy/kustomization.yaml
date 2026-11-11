@@ -1,0 +1,9 @@
+---
+# Ingress NetworkPolicies shared by the namespaces in the Istio ambient mesh
+# (media, monitoring, network). No namespace is set here: ArgoCD puts them in
+# the Application's destination namespace.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - networkpolicy.yaml

@@ -11,11 +11,6 @@ k3s_apps_ingress_nodes:
 # Tempo keeps its trace data on this node's local disk.
 k3s_apps_tempo_node: git-k3s-server
 
-# Calico runs in policy-only mode: flannel keeps the dataplane, Calico provides
-# only NetworkPolicy enforcement. This is the git tag used to fetch
-# manifests/calico-policy-only.yaml, so it must be a real Calico release tag.
-k3s_apps_calico_version: "v3.32.1"
-
 # Public domain proxied by Cloudflare. Its wildcard cert (Let's Encrypt,
 # DNS-01) is ingress-nginx's default certificate.
 k3s_apps_public_domain: darkestserver.com

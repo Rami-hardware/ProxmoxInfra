@@ -662,50 +662,41 @@
   loop_control:
     loop_var: k3s_node
 
-# ── Calico (policy-only) ─────────────────────────────────────────────────────
-# Networking stays with k3s's built-in flannel; Calico is installed purely as
-# the NetworkPolicy engine, so there is no k3s restart and no pod-network
-# outage.
-#
-# This deliberately does NOT use the tigera-operator Helm chart: the operator's
-# Installation CRD has no policy-only mode (cni.type only accepts
-# Calico/GKE/AmazonVPC/AzureVNET, all of which install a dataplane) and it
-# would fight flannel. The upstream calico-policy-only manifest is the
-# supported path — it sets CALICO_NETWORKING_BACKEND=none and
-# CALICO_MANAGE_CNI=false, so it never touches flannel's CNI config.
-#
-# canal.yaml is NOT usable here either: it ships its own flannel daemonset
-# pinned to 10.244.0.0/16, which collides with k3s's flannel and pod CIDR.
-- name: Download Calico policy-only manifest
-  ansible.builtin.get_url:
-    url: "https://raw.githubusercontent.com/projectcalico/calico/{{ k3s_apps_calico_version }}/manifests/calico-policy-only.yaml"
-    dest: "{{ k3s_apps_manifest_dir }}/calico-policy-only.yml"
-    mode: '0644'
+# ── NetworkPolicy engine ─────────────────────────────────────────────────────
+# k3s's built-in kube-router controller enforces NetworkPolicy. Calico used to
+# be installed in policy-only mode as well, but its rules only match cali*
+# interfaces and flannel's pods use veth*, so it never enforced anything.
+# Remove it if an older run installed it.
+- name: Check for the old Calico policy-only manifest
+  ansible.builtin.stat:
+    path: "{{ k3s_apps_manifest_dir }}/calico-policy-only.yml"
+  register: k3s_apps_calico_manifest
 
-- name: Apply Calico policy-only manifest
+- name: Remove Calico policy-only
   ansible.builtin.command:
-    cmd: k3s kubectl apply --server-side --force-conflicts -f {{ k3s_apps_manifest_dir }}/calico-policy-only.yml
+    cmd: >
+      k3s kubectl delete -f {{ k3s_apps_manifest_dir }}/calico-policy-only.yml
+      --ignore-not-found --wait=true --timeout=300s
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  when: k3s_apps_calico_manifest.stat.exists
   changed_when: true
 
-- name: Wait for calico-node to be ready
-  ansible.builtin.command:
-    cmd: >
-      k3s kubectl rollout status daemonset/calico-node
-      -n kube-system --timeout=300s
-  environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-  changed_when: false
+- name: Remove the old Calico policy-only manifest
+  ansible.builtin.file:
+    path: "{{ k3s_apps_manifest_dir }}/calico-policy-only.yml"
+    state: absent
 
-- name: Wait for calico-kube-controllers to be ready
+# Hand-applied 2026-09-28 and never in git, so ArgoCD can't prune it. It
+# allowed all of 10.42.0.0/16 (every pod) into media; the mesh policies in
+# argocd-apps/components/mesh-network-policy replace it.
+- name: Remove the interim allow-all-pods NetworkPolicy in media
   ansible.builtin.command:
-    cmd: >
-      k3s kubectl rollout status deployment/calico-kube-controllers
-      -n kube-system --timeout=300s
+    cmd: k3s kubectl delete networkpolicy allow-flannel-crossnode-interim -n media --ignore-not-found
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-  changed_when: false
+  register: k3s_apps_interim_np
+  changed_when: "'deleted' in k3s_apps_interim_np.stdout"
 
 # ── Homarr ────────────────────────────────────────────────────────────────────
 # Installed from the upstream Helm chart rather than a hand-written manifest.

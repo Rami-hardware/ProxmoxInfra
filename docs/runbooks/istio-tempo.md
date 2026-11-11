@@ -31,6 +31,14 @@ sudo k3s kubectl logs -n istio-system deploy/tempo --tail=30
 - Ingress traffic goes straight to the pod (ingress-nginx is hostNetwork and
   outside the mesh), so it is plain text from the ingress and not traced by
   Istio. PeerAuthentication stays PERMISSIVE for that reason.
+- NetworkPolicy (default-deny ingress) covers the three mesh namespaces,
+  from `argocd-apps/components/mesh-network-policy`; k3s's kube-router
+  enforces it. Allowed in: same namespace, `monitoring` and `istio-system`,
+  the LAN, each node's `10.42.N.0/31` (ingress-nginx, NodePorts, promtail)
+  and `169.254.7.127` (ambient kubelet probes). Symptom of a missing allow:
+  ingress 502 or a connection timeout, often after adding a node (add its
+  /31) or a new caller namespace. Quick test from outside the allowed set:
+  `kubectl -n default run np-probe --image=busybox:1.36 --rm -i --restart=Never -- nc -z -w 5 <pod-ip> <port>`.
 - Out of the mesh on purpose (`istio.io/dataplane-mode: none`):
   speedtest-exporter, blackbox-exporter-public.
 - Roll a namespace back to sidecars: `kubectl label ns <ns>

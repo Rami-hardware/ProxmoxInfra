@@ -5,6 +5,9 @@ kind: Kustomization
 resources:
   - adguard-home.yaml
 
+components:
+  - ../components/mesh-network-policy
+
 # argocd-image-updater rewrites entries here (newTag/digest) when it detects
 # a new image on the registry side — this is the write-back target.
 images:
