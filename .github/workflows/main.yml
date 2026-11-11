@@ -66,7 +66,7 @@ jobs:
       PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
       RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
       OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
-      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      CF_DNS_API_TOKEN: ${{ secrets.CF_DNS_API_TOKEN }}
   security:
     name: Security Scan
     needs: Deploy

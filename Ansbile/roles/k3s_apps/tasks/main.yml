@@ -288,20 +288,22 @@
 # One publicly trusted cert, served by ingress-nginx as its default certificate,
 # so the same *.{{ k3s_apps_public_domain }} URL works through Cloudflare (Full
 # strict) and directly on the LAN (split-horizon DNS in the adguard role).
-# DNS-01 via the Cloudflare API; cert-manager checks propagation against public
-# resolvers only (extraArgs above), since local DNS answers this zone itself.
+# DNS-01 via the Cloudflare API with CF_DNS_API_TOKEN (Zone.DNS edit on this
+# zone only — CF_API_TOKEN belongs to the Cloudflare exporter). cert-manager
+# checks propagation against public resolvers only (extraArgs above), since
+# local DNS answers this zone itself.
 - name: Create Cloudflare API token secret for cert-manager
   ansible.builtin.shell:
     cmd: |
       set -o pipefail
       k3s kubectl create secret generic cloudflare-api-token \
-        --from-literal=api-token="$CF_API_TOKEN" \
+        --from-literal=api-token="$CF_DNS_API_TOKEN" \
         --namespace=cert-manager \
         --dry-run=client -o yaml | k3s kubectl apply -f -
     executable: /bin/bash
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-    CF_API_TOKEN: "{{ lookup('env', 'CF_API_TOKEN') }}"
+    CF_DNS_API_TOKEN: "{{ lookup('env', 'CF_DNS_API_TOKEN') }}"
   no_log: true
   changed_when: true
 
