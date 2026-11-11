@@ -39,14 +39,11 @@ hosts:
       systemd_units: [AdGuardHome.service, adguard-exporter.service, k3s-agent.service]
     media-server:
       systemd_units: [nginx.service, smbd.service, nmbd.service, k3s-agent.service]
-      docker_containers: [docker_exporter]
     monitoring-server:
       systemd_units: [unbound.service, k3s-agent.service]
-      docker_containers: []
     git-k3s-server:
       # k3s.service (control plane) and the Actions runner are deliberately absent.
       systemd_units: [iperf3.service]
-      docker_containers: []
 
 remediation:
   enabled: true                    # false = read-only mode (also: touch <state_dir>/DISABLE_REMEDIATION)
