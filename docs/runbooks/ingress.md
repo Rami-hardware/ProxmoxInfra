@@ -39,11 +39,11 @@ curl -sk -o /dev/null -w '%{http_code}
   EVERY new route from going live. Find the offending ingress in controller
   logs and fix or delete it.
 - High 5xx with healthy pods = upstream app errors; follow the app's logs.
-- IngressAppLatencyHigh: open Grafana -> "Request path latency" and compare
-  the panels for that host. *App time* ~= *Total time* means the app is slow
-  (ingress adds ~0); check its pod CPU/memory and logs. A high *Network hop*
-  (upstream connect) means the node or pod network: check the node and
-  flannel. Seerr is the known slow one (p95 ~2s): its discover, movie and
+- IngressAppLatencyHigh: open Grafana -> "Homelab — Network, mesh & DNS",
+  Ingress row, and compare *App time p95* with *Connect time p95* for that
+  host. High app time = the app is slow (ingress adds ~0); check its pod
+  CPU/memory and logs. High connect time = the node or pod network: check
+  the node and flannel. Seerr is the known slow one (p95 ~2s): its discover, movie and
   tv pages call the TMDB API live, several calls per page at ~160-300ms
   each (measured 2026-11-11); local endpoints like /api/v1/request/count
   answer in ~0.1s. Not a network or ingress problem.

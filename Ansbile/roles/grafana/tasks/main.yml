@@ -44,3 +44,20 @@
     src: dashboards/
     dest: "{{ grafana_provisioning_dir | dirname }}/dashboards/"
     mode: '0644'
+
+# copy only adds files; a dashboard removed from the repo must also leave the
+# host, or Grafana keeps provisioning it.
+- name: Find provisioned dashboard files
+  ansible.builtin.find:
+    paths: "{{ grafana_provisioning_dir | dirname }}/dashboards"
+    patterns: "*.json"
+  register: grafana_provisioned_dashboards
+
+- name: Remove dashboards that are no longer in the repo
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ grafana_provisioned_dashboards.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  when: (item.path | basename) not in (lookup('ansible.builtin.fileglob', role_path ~ '/files/dashboards/*.json', wantlist=True) | map('basename') | list)

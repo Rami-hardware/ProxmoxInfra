@@ -69,7 +69,7 @@ k3s kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data
 
 | App                  | URL                                | Port  | Notes                              |
 | :------------------- | :--------------------------------- | :---- | :--------------------------------- |
-| Grafana              | <https://grafana.homelab.lan>      | 3000  | Dashboards                         |
+| Grafana              | <https://grafana.homelab.lan>      | 3000  | Dashboards (home: Homelab — Overview) |
 | Prometheus           | <https://prometheus.homelab.lan>   | 9090  | Metrics collection, 30d retention  |
 | Loki                 | —                                  | 3100  | Log aggregation                    |
 | Alertmanager         | <https://alertmanager.homelab.lan> | 9093  | Alert routing                      |

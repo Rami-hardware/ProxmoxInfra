@@ -1,6 +1,7 @@
 # SLO burn alerts — what they mean and what to do
 
 SLOs (14-day window): local sites 99.5%, public sites 99.5%, DNS 99.9%.
+Dashboard: Grafana -> "Homelab — SLO & SLA" (budget left, burn rates, per-service SLA).
 
 ## Burn-rate pattern
 - **Fast burn (14.4x over 1h AND 5m)** -> something is properly down NOW.

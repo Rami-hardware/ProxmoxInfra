@@ -740,7 +740,7 @@ groups:
       # Latency SLO for the request path: p95 time an app takes to answer at the
       # ingress (upstream response). The ingress itself adds ~0, so this is the
       # app's own latency. Ignores hosts with < 1 request/min (too few samples).
-      # Dashboard: "Request path latency".
+      # Dashboard: "Homelab — Network, mesh & DNS" (Ingress row).
       - alert: IngressAppLatencyHigh
         expr: >-
           (histogram_quantile(0.95, sum by (le, host) (rate(nginx_ingress_controller_response_duration_seconds_bucket[15m]))) > 1)
@@ -751,7 +751,7 @@ groups:
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/ingress.md"
           summary: "{{ $labels.host }} p95 app latency {{ humanizeDuration $value }}"
-          description: "The app behind this host has answered slower than 1s at p95 for 30m (measured at ingress-nginx as upstream response time). Open the Request path latency dashboard to see whether it is the app or the network hop."
+          description: "The app behind this host has answered slower than 1s at p95 for 30m (measured at ingress-nginx as upstream response time). Open the Homelab — Network, mesh & DNS dashboard (app time vs connect time) to see whether it is the app or the network hop."
 
   # Ported from Grafana UI rules (group 'Istio evaluation') — rule names renamed to alert: CamelCase.
   - name: istio

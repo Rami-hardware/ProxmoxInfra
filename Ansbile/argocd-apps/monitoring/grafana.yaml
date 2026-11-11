@@ -82,6 +82,9 @@ spec:
               value: "/opt/docker/grafana"
             - name: GF_FEATURE_TOGGLES_ENABLE
               value: "kubernetesDashboards=false"
+            # Landing page: the provisioned overview (roles/grafana).
+            - name: GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH
+              value: "/opt/docker/grafana/provisioning/dashboards/overview.json"
           volumeMounts:
             - name: config
               mountPath: /opt/docker/grafana

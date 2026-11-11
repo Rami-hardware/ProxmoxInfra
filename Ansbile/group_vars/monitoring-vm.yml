@@ -171,6 +171,20 @@ prometheus_scrape_jobs:
       - source_labels: [__meta_kubernetes_pod_name]
         target_label: pod
 
+  # Cloudflare Tunnel connectors: edge connections, requests and errors on
+  # the public path.
+  - name: cloudflared
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names: [cloudflared]
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_container_port_name]
+        action: keep
+        regex: metrics
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+
   # ztunnel (Istio ambient, one per node): L4 traffic and mTLS metrics,
   # istio_tcp_* with connection_security_policy.
   - name: ztunnel
