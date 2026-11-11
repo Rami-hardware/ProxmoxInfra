@@ -22,3 +22,46 @@ spec:
           port: 6881
         - protocol: UDP
           port: 6881
+---
+# Egress: media apps may talk to each other, cluster DNS, istio-system (the
+# waypoint needs istiod and Tempo) and the internet (indexers, TMDB, torrent
+# peers, subtitle and metadata providers) but nothing else on private
+# ranges: not the LAN, Proxmox, the router or other namespaces. A
+# compromised app (or a bad download) can't scan or reach the home network.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: egress-internet-and-cluster-basics
+  namespace: media
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector: {}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: istio-system
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 100.64.0.0/10
+              - 169.254.0.0/16

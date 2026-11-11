@@ -4,6 +4,7 @@ kind: Kustomization
 
 resources:
   - adguard-home.yaml
+  - networkpolicy.yaml
 
 components:
   - ../components/mesh-network-policy
