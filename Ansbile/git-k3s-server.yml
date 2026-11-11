@@ -2,8 +2,6 @@
 - name: Configure K3s server and deploy apps
   hosts: git-k3s-server
   become: true
-  vars_files:
-    - group_vars/vault.yml
   roles:
     - common
     # Docker daemon — used by the CI runner for image builds.

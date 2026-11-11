@@ -1,4 +1,7 @@
+# Scraparr runs in k3s (Ansbile/argocd-apps/media/scraparr.yaml) and reads this
+# config through a hostPath mount, so a restart is needed to pick up changes.
 - name: Restart Scraparr
-  community.docker.docker_compose_v2:
-    project_src: "{{ scraparr_dir }}"
-    state: restarted
+  ansible.builtin.command:
+    cmd: k3s kubectl rollout restart deployment/scraparr -n media
+  delegate_to: git-k3s-server
+  changed_when: true

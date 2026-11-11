@@ -1,40 +1,18 @@
-docker_apps_enabled:
-  - promtail
-  - node-exporter
-
 service_tcp_ports:
-  - 80
-  - 3000
-  - 8081
-  - 12345
-  - 3001
-  - 9000
-  - 443
-  - 53
-  - 9080
+  - 53     # AdGuard DNS
+  - 80     # HTTP
+  - 443    # HTTPS
+  - 3000   # Grafana NodePort
+  - 8081   # AdGuard UI
+  - 9080   # Promtail metrics
 
-# NOTE: AdGuardHome does NOT run as a docker container here — it is a pinned
-# systemd service managed by the `adguard` role (binary at /opt/adguardhome).
-# It was removed from docker_apps_enabled: a host-network container would
-# fight the service for port 53.
+# AdGuardHome runs as a pinned systemd service managed by the `adguard` role
+# (binary at /opt/adguardhome), not in a container: it owns port 53.
 adguard_config_path: "/opt/adguardhome/conf/AdGuardHome.yaml"
 adguard_conf_dir: "/opt/adguardhome/conf"
 adguard_work_dir: "/opt/adguardhome/work"
 adguard_ui_port: 8081
 fallback_dns: 1.1.1.1
-
-# Configuration for Promtail
-promtail_var_path: "/var/log:/var/log"
-promtail_config_path: "{{ docker_compose_dir }}/promtail-config.yml:/etc/promtail/config.yml"
-
-# Configuration for Watchtower
-watchtower_run: /var/run/docker.sock:/var/run/docker.sock
-
-# Configuration for fail2ban
-fail2ban_var_path: "/var/log:/var/log:ro"
-fail2ban_data_path: "{{ docker_apps_compose_dir }}/fail2ban:/data"
-
-timezone: UTC
 
 nginx_services:
   - name: jellyfin

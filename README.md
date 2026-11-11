@@ -122,7 +122,7 @@ Gateway also runs: **AdGuard Home** (systemd service — DNS :53, UI :8081; see 
 
 ### Ansible
 
-- All modules use FQCN (`ansible.builtin.*`, `community.docker.*`)
+- All modules use FQCN (`ansible.builtin.*`, `community.general.*`)
 - All configs rendered from Jinja2 templates — no inline hardcoded content
 - IPs reference `hostvars[host]['ansible_host']` from inventory — single source of truth
 - Secrets stored in Ansible Vault

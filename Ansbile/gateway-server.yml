@@ -1,14 +1,9 @@
+---
 - name: Deploy to Gateway Server
   hosts: gateway-server
   become: true
-
   roles:
     - common
-    # - dns
-    # - docker_setup
-    # - promtail
-    # - docker_apps
     - adguard
     - nginx_config
     - ufw
-    # - k3s_agent

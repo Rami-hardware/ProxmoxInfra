@@ -457,6 +457,3 @@ grafana_datasources:
     type: tempo
     url: "http://{{ hostvars['git-k3s-server']['ansible_host'] }}:30320"
     default: false
-
-# ── Promtail ──────────────────────────────────────────────────────────────────
-promtail_config_dir: /opt/services/promtail

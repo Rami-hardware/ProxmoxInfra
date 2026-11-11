@@ -63,27 +63,12 @@ jobs:
       # (first setup) or after state corruption. Run manually if needed:
       #   terraform import 'module.proxmox_vms["NAME"].proxmox_virtual_environment_vm.vm' pve/VMID
 
-      # Clean up stale state entries from past renames/typos. Without this,
-      # Terraform reads the old key as "deleted" and the new one as "new" —
-      # i.e. destroy + recreate a live VM. Forgetting the stale entries makes
-      # the rename a no-op instead. `|| true` keeps the step green once an
-      # entry is already gone, which is the steady state.
-      - name: Cleanup stale Terraform state entries
-        working-directory: Terraform
-        env:
-          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-          TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
-          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-        run: |
-          for stale in monitor game dev securtiy; do
-            terraform state rm "module.proxmox_vms[\"$stale\"].proxmox_virtual_environment_vm.vm" 2>/dev/null || true
-          done
-
-      # Detects drift between code and the live Proxmox server. Uses
-      # -detailed-exitcode, which splits the normal 0/1 into three states:
-      #   0 = no changes      -> skip apply
+      # Detects drift between code and the live Proxmox server. CI never
+      # applies — changes are applied by hand. Uses -detailed-exitcode, which
+      # splits the normal 0/1 into three states:
+      #   0 = no changes      -> nothing to report
       #   1 = plan errored    -> fail the job
-      #   2 = changes pending -> run apply
+      #   2 = changes pending -> show the plan and block on destroys
       # `set +e` is required because a bare exit 2 would otherwise trip the
       # shell's implicit -e and kill the step before the code is inspected.
       # (This is also why terraform_wrapper is disabled in the setup step —
@@ -105,10 +90,10 @@ jobs:
             exit 1
           elif [ $EXIT_CODE -eq 2 ]; then
             echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "Changes detected — will apply."
+            echo "Changes detected — apply manually."
           else
             echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "No changes — skipping apply."
+            echo "No changes."
           fi
 
       - name: Fail if any VM would be destroyed
@@ -123,20 +108,6 @@ jobs:
             exit 1
           fi
           echo "No destroys detected — safe to proceed."
-
-      #- name: Terraform apply
-      #  if: steps.plan.outputs.has_changes == 'true'
-      #  working-directory: Terraform
-      #  env:
-      #    TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-      #    TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
-      #    TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-     #  run: |
-      #    terraform apply -auto-approve -parallelism=1 \
-      #      -target='module.proxmox_vms["gateway"]' \
-      #      -target='module.proxmox_vms["media"]' \
-      #      -target='module.proxmox_vms["monitoring"]' \
-      #      -target='module.proxmox_vms["security"]'
 
       # ── Ansible ──────────────────────────────────────────────────────────────
       - name: Install system dependencies

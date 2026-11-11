@@ -8,5 +8,3 @@
     - loki
     - alertmanager
     - grafana
-    - promtail
-    # - k3s_agent
