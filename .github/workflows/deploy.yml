@@ -102,7 +102,9 @@ jobs:
         if: steps.plan.outputs.has_changes == 'true'
         working-directory: Terraform
         run: |
-          terraform show tfplan > plan_output.txt
+          # -no-color: Terraform colours the action words, and the escape codes
+          # inside "will be destroyed" made the grep below never match.
+          terraform show -no-color tfplan > plan_output.txt
           cat plan_output.txt
           if grep -qE "will be destroyed|must be replaced" plan_output.txt; then
             echo "ERROR: Destroy or replace detected — blocking pipeline."

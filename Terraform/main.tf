@@ -16,3 +16,10 @@ module "proxmox_vms" {
   disks          = lookup(each.value, "disks", [])
   ssh_public_key = var.ssh_public_key
 }
+
+# The monitoring VM (vmid 511) was renamed from the "monitor" key. Without
+# this, the plan destroys the live VM and creates a new one.
+moved {
+  from = module.proxmox_vms["monitor"]
+  to   = module.proxmox_vms["monitoring"]
+}
