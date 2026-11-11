@@ -4,6 +4,8 @@
 # LAN clients search homelab.lan, so a *.homelab.lan wildcard turned any
 # failed lookup (e.g. github.com during an AdGuard restart) into
 # github.com.homelab.lan -> ingress -> certificate error.
+# Only apps with a web UI, plus tempo (its /ready endpoint is probed) and ca
+# (http://ca.homelab.lan/ca.crt, the homelab CA for devices to trust).
 # A new app with an ingress needs its name added here.
 local_dns_ingress_ip: 192.168.10.210
 
@@ -14,13 +16,9 @@ local_dns_lan_names:
   - argocd
   - bazarr
   - ca
-  - f1hls
   - grafana
   - homarr
-  - homepage
-  - jaeger
   - jellyfin
-  - portnote
   - prometheus
   - prowlarr
   - qbittorrent
@@ -28,7 +26,6 @@ local_dns_lan_names:
   - seerr
   - server
   - sonarr
-  - tdarr
   - tempo
   - tracearr
 

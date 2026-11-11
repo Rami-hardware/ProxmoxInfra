@@ -201,15 +201,6 @@
   changed_when: true
   delegate_to: git-k3s-server
 
-# ── Remove legacy ca-dist resources from cluster ─────────────────────────────
-- name: Remove legacy ca-dist k8s resources (renamed to ca-cert)
-  ansible.builtin.command: >
-    k3s kubectl delete --ignore-not-found
-    deployment/ca-dist service/ca-dist ingress/ca-dist configmap/local-ca-cert
-    -n network
-  delegate_to: git-k3s-server
-  changed_when: false
-
 # ── Publish CA cert to a world-readable path for easy scp/curl ───────────────
 - name: Publish CA cert to world-readable path
   ansible.builtin.copy:

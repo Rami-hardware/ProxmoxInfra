@@ -20,3 +20,9 @@ adguard_rewrite_domains: >-
 # under the search domain, including failed lookups like github.com.homelab.lan.
 adguard_rewrites_removed:
   - "*.homelab.lan"
+  # Apps retired from the cluster (backends were down).
+  - "f1hls.homelab.lan"
+  - "homepage.homelab.lan"
+  - "jaeger.homelab.lan"
+  - "portnote.homelab.lan"
+  - "tdarr.homelab.lan"
