@@ -1,21 +1,44 @@
 global:
   resolve_timeout: {{ alertmanager_resolve_timeout }}
 
+# Severity decides how loud an alert is (alert-forwarder formats it):
+#   critical: Discord with @here, reminded every hour while it fires.
+#   warning:  Discord without a mention, grouped, reminded twice a day.
+#   Watchdog: always firing; its notifications are the heartbeat that an
+#             external check (healthchecks.io) expects. If they stop, the
+#             monitoring path itself is down and healthchecks.io emails.
 route:
-  receiver: 'webhook'
+  receiver: discord
+  group_by: ['alertname', 'severity']
   group_wait: {{ alertmanager_group_wait }}
   group_interval: {{ alertmanager_group_interval }}
   repeat_interval: {{ alertmanager_repeat_interval }}
+  routes:
+    - matchers: ['alertname = "Watchdog"']
+      receiver: {{ 'heartbeat' if alertmanager_heartbeat_url else 'blackhole' }}
+      group_wait: 0s
+      group_interval: 1m
+      repeat_interval: 1m
+    - matchers: ['severity = "critical"']
+      receiver: discord
+      group_wait: 10s
+      repeat_interval: {{ alertmanager_critical_repeat_interval }}
 
 receivers:
-  - name: 'webhook'
+  - name: discord
     webhook_configs:
       - url: '{{ alertmanager_webhook_url }}'
         send_resolved: true
+  - name: blackhole
+{% if alertmanager_heartbeat_url %}
+  - name: heartbeat
+    webhook_configs:
+      - url: '{{ alertmanager_heartbeat_url }}'
+        send_resolved: false
+{% endif %}
 
+# A critical alert silences the warning of the same name on the same target.
 inhibit_rules:
-  - source_match:
-      severity: 'critical'
-    target_match:
-      severity: 'warning'
-    equal: ['alertname', 'dev', 'instance']
+  - source_matchers: ['severity = "critical"']
+    target_matchers: ['severity = "warning"']
+    equal: ['alertname', 'instance']

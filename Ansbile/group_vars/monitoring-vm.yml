@@ -109,6 +109,14 @@ prometheus_scrape_jobs:
         regex: "{{ hostvars['monitoring-server']['ansible_host'] }}:.*"
         target_label: instance
         replacement: "monitoring-server"
+    # On k3s the kubelet endpoint also serves the embedded API server and
+    # etcd metrics: ~60k series of request-latency histograms that no rule
+    # or dashboard uses. Dropped at scrape time (about 45% of all series).
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: "(apiserver|etcd|apiextensions|aggregator)_.*"
+        action: drop
+
   - name: scraparr
     targets: ["{{ hostvars['media-server']['ansible_host'] }}:7100"]
     relabel_configs:
@@ -455,28 +463,22 @@ prometheus_scrape_jobs:
 loki_config_dir: /opt/docker/loki
 loki_http_port: 3100
 
-# ── Alertmanager ──────────────────────────────────────────────────────────────
-alertmanager_config_dir: /opt/docker/alertmanager
-alertmanager_webhook_url: "http://192.168.10.203:30302/alertmanager"
-alertmanager_resolve_timeout: 5m
-alertmanager_group_wait: 30s
-alertmanager_group_interval: 5m
-alertmanager_repeat_interval: 3h
-
 # ── Grafana ───────────────────────────────────────────────────────────────────
 grafana_data_dir: /opt/docker/grafana
 grafana_provisioning_dir: /opt/docker/grafana/provisioning/datasources
 
+# Cluster Service names: Grafana runs in the mesh, so these calls are mTLS
+# and keep working if a pod moves to another node.
 grafana_datasources:
   - name: Prometheus
     type: prometheus
-    url: http://192.168.10.203:9090
+    url: http://prometheus.monitoring.svc.cluster.local:9090
     default: true
   - name: Loki
     type: loki
-    url: http://192.168.10.203:3100
+    url: http://loki.monitoring.svc.cluster.local:3100
     default: false
   - name: Tempo
     type: tempo
-    url: "http://{{ hostvars['git-k3s-server']['ansible_host'] }}:30320"
+    url: http://tempo-query.istio-system.svc.cluster.local:3200
     default: false

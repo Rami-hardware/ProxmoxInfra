@@ -32,10 +32,12 @@ function sweepFixNotes() {
   }
 }
 
-// Send one chunk to Discord, respecting Discord's rate limit (429 + retry_after)
-async function sendToDiscord(chunk, attempt = 1) {
+// Send one chunk to Discord, respecting Discord's rate limit (429 + retry_after).
+// Mentions are off unless asked for, so alert text can never ping anyone.
+async function sendToDiscord(chunk, attempt = 1, mention = false) {
   try {
-    await axios.post(DISCORD_WEBHOOK_URL, { content: chunk }, {
+    const allowed_mentions = { parse: mention ? ['everyone'] : [] };
+    await axios.post(DISCORD_WEBHOOK_URL, { content: chunk, allowed_mentions }, {
       headers: { 'Content-Type': 'application/json' },
       timeout: 5000
     });
@@ -46,7 +48,7 @@ async function sendToDiscord(chunk, attempt = 1) {
       const retryAfterMs = Math.min((error.response.data?.retry_after || 1) * 1000, 10_000);
       console.warn(`Discord rate limited (attempt ${attempt}), retrying in ${retryAfterMs}ms`);
       await sleep(retryAfterMs);
-      return sendToDiscord(chunk, attempt + 1);
+      return sendToDiscord(chunk, attempt + 1, mention);
     }
 
     console.error('Failed to send chunk to Discord:', error.response?.data || error.message);
@@ -62,14 +64,26 @@ app.post('/alertmanager', async (req, res) => {
     return res.status(400).send('No alerts to process');
   }
 
-  const messages = alerts.map(alert => {
+  // Severity sets how loud a message is (see roles/alertmanager): firing
+  // criticals get @here; warnings and resolutions are plain. Anything without a
+  // warning/critical severity (e.g. the Watchdog heartbeat) is not posted.
+  const posted = alerts.filter(a => ['critical', 'warning'].includes(a.labels?.severity));
+  if (!posted.length) {
+    return res.status(200).send('Nothing to post');
+  }
+  const mention = posted.some(a => a.status === 'firing' && a.labels?.severity === 'critical');
+
+  const messages = posted.map(alert => {
     const summary = alert.annotations?.summary || alert.labels?.alertname || 'No summary';
     const status = alert.status || 'unknown';
+    const icon = status === 'resolved' ? '✅' : alert.labels.severity === 'critical' ? '🔴' : '🟡';
     const description = alert.annotations?.description || '';
     const note = status === 'resolved' ? fixNotes.get(alert.fingerprint) : undefined;
     const body = note ? note.notes : description;
-    return `**Alert:** ${summary}\nStatus: ${status}\n${body}`;
+    const runbook = alert.annotations?.runbook_url ? `\nRunbook: <${alert.annotations.runbook_url}>` : '';
+    return `${icon} **${summary}** (${alert.labels.severity}, ${status})\n${body}${runbook}`;
   });
+  if (mention) messages[0] = `@here ${messages[0]}`;
 
   // Chunk messages to stay under Discord's 2000 char limit per message
   const chunks = [];
@@ -87,13 +101,13 @@ app.post('/alertmanager', async (req, res) => {
   // Respond to Alertmanager immediately — don't make it wait on Discord's rate limit.
   // Alertmanager's own retry-on-failure logic isn't useful here anyway (it gives up
   // after 1 attempt), so we ack receipt and handle delivery async.
-  res.status(200).send(`Accepted ${alerts.length} alert(s), forwarding ${chunks.length} chunk(s)`);
+  res.status(200).send(`Accepted ${posted.length} alert(s), forwarding ${chunks.length} chunk(s)`);
 
   let sent = 0;
   let failed = 0;
-  for (const chunk of chunks) {
+  for (const [i, chunk] of chunks.entries()) {
     try {
-      await sendToDiscord(chunk);
+      await sendToDiscord(chunk, 1, mention && i === 0);
       sent++;
     } catch (error) {
       failed++;

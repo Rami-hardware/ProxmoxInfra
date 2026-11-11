@@ -5,7 +5,7 @@ AlertmanagerDown, AlertmanagerConfigReloadFailed, AlertmanagerNotificationsFaili
 AlertmanagerNotificationRequestsFailingAtTheHTTPLevel, AlertmanagerHighNotificationLatency,
 AlertmanagerClusterUnhealthy, AlertmanagerFailedPeersInCluster,
 AlertmanagerInvalidAlertsBeingReceived, AlertmanagerAggregationGroupCreationFailures,
-AlertmanagerSilenceGCErrors
+AlertmanagerSilenceGCErrors, Watchdog
 
 ## Diagnosis
 ```bash
@@ -16,6 +16,18 @@ curl -s http://192.168.10.203:30302/alertmanager   # alert-forwarder reachable?
 ```
 
 ## Notes
+- **How loud an alert is** (roles/alertmanager, alert-forwarder):
+  critical -> Discord with @here, repeated hourly; warning -> Discord without
+  a mention, grouped by alertname, repeated every 12h; resolved -> plain.
+  Severity `none` is never posted.
+- **Dead man's switch:** `Watchdog` always fires. Alertmanager sends it to
+  healthchecks.io (check `homelab-alertmanager`, period 5m, grace 5m) every
+  minute. If healthchecks.io emails "DOWN", the alert path itself is broken
+  (Prometheus, Alertmanager or monitoring-server); Discord will be silent, so
+  check those first. The ping URL is the `HEALTHCHECKS_PING_URL` secret.
+- **CI deploys silence warnings** (not criticals) for up to 45 minutes and lift
+  the silence when Ansible ends. See active silences:
+  `curl -s http://192.168.10.203:9093/api/v2/silences | jq '.[] | select(.status.state=="active")'`
 - ArgoCD sync policy on the apps: `automated: {prune: true, selfHeal: false}` —
   auto-sync fires on NEW git revisions, but live drift (manual kubectl edits)
   is NOT auto-reverted and shows up as OutOfSync until git catches up.

@@ -1,7 +1,14 @@
 ---
 alertmanager_config_dir: /opt/docker/alertmanager
-alertmanager_webhook_url: "http://192.168.10.203:30302/alertmanager"
+alertmanager_webhook_url: "http://{{ hostvars['monitoring-server']['ansible_host'] }}:30302/alertmanager"
 alertmanager_resolve_timeout: 5m
 alertmanager_group_wait: 30s
 alertmanager_group_interval: 5m
-alertmanager_repeat_interval: 3h
+# Warnings: remind twice a day while still firing. Criticals: every hour.
+alertmanager_repeat_interval: 12h
+alertmanager_critical_repeat_interval: 1h
+# healthchecks.io ping URL (GitHub secret HEALTHCHECKS_PING_URL). Empty means
+# the Watchdog heartbeat is dropped instead of sent.
+alertmanager_heartbeat_url: "{{ lookup('env', 'HEALTHCHECKS_PING_URL') }}"
+# Alertmanager's API, used to reload it after a config change.
+alertmanager_api_url: "http://{{ hostvars['monitoring-server']['ansible_host'] }}:9093"

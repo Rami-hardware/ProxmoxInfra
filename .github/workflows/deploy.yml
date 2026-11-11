@@ -19,6 +19,8 @@ on:
         required: false
       DISCORD_WEBHOOK_URL:
         required: true
+      HEALTHCHECKS_PING_URL:
+        required: false
       SONARR_API_KEY:
         required: true
       BAZARR_API_KEY:
@@ -35,6 +37,9 @@ jobs:
   Deploy:
     name: Deploy Infrastructure Code
     runs-on: self-hosted
+    env:
+      # Alertmanager API (NodePort on monitoring-server), for deploy silences.
+      ALERTMANAGER_URL: http://192.168.10.203:9093
     timeout-minutes: 60
     environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || 'development' }}
 
@@ -148,6 +153,22 @@ jobs:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
           ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
 
+      # Deploys restart pods and briefly fail probes, which used to page as
+      # warnings. Silence warnings (not criticals) while Ansible runs; the next
+      # step removes the silence, and it expires by itself after 45 minutes.
+      - name: Silence warning alerts during the deploy
+        id: am_silence
+        continue-on-error: true
+        run: |
+          now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          end=$(date -u -d '+45 minutes' +%Y-%m-%dT%H:%M:%SZ)
+          id=$(curl -sf -X POST "$ALERTMANAGER_URL/api/v2/silences" -H 'Content-Type: application/json' \
+            -d "{\"matchers\":[{\"name\":\"severity\",\"value\":\"warning\",\"isRegex\":false,\"isEqual\":true}],
+                 \"startsAt\":\"$now\",\"endsAt\":\"$end\",\"createdBy\":\"github-actions\",
+                 \"comment\":\"CI deploy ${{ github.run_id }}\"}" | jq -r .silenceID)
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          echo "Silenced warnings until $end (silence $id)"
+
       - name: Run Ansible playbooks
         env:
           ANSIBLE_VAULT_PASSWORD_FILE: ~/.vault_pass
@@ -161,12 +182,18 @@ jobs:
           RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
           OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
           CF_DNS_API_TOKEN: ${{ secrets.CF_DNS_API_TOKEN }}
+          HEALTHCHECKS_PING_URL: ${{ secrets.HEALTHCHECKS_PING_URL }}
         run: |
           source venv/bin/activate
           ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --vault-password-file ~/.vault_pass
           ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml --vault-password-file ~/.vault_pass
           ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml --vault-password-file ~/.vault_pass
           ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml --vault-password-file ~/.vault_pass
+
+      - name: Remove the deploy silence
+        if: always() && steps.am_silence.outputs.id != ''
+        continue-on-error: true
+        run: curl -sf -X DELETE "$ALERTMANAGER_URL/api/v2/silence/${{ steps.am_silence.outputs.id }}"
 
 
       # ── Cloudflare (Terraform/cloudflare) ───────────────────────────────────

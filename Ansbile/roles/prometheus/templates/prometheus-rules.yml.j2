@@ -5,6 +5,21 @@
 # touch it, hence the raw block.
 {% raw %}
 groups:
+  # Dead man's switch: always firing. Alertmanager sends it to healthchecks.io
+  # every minute; when those pings stop (Prometheus, Alertmanager or the
+  # monitoring node down), healthchecks.io notifies by email. Never shown in
+  # Discord.
+  - name: meta
+    rules:
+      - alert: Watchdog
+        expr: vector(1)
+        labels:
+          severity: none
+        annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/argocd-alertmanager.md"
+          summary: "Alerting pipeline heartbeat (always firing)"
+          description: "Not a problem. Its absence at healthchecks.io means alerting is down."
+
   # AdGuard DNS itself — the one true liveness check for the whole pod DNS
   # chain (pods → CoreDNS → AdGuard). Probed directly at :53 by the blackbox
   # dns module; NOERROR-ratio alerts are unreliable because AdGuard answers
@@ -443,9 +458,9 @@ groups:
 
       - alert: KubeNodeNotReady
         expr: (kube_node_status_condition{condition="Ready", status="true"}) == 0
-        for: 1m
+        for: 5m
         labels:
-          severity: warning
+          severity: critical
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/k8s-workloads.md"
           summary: "Node {{ $labels.node }} is NotReady"
@@ -607,7 +622,7 @@ groups:
         expr: '(1 - slo:availability:1h{scope="public"}) / 0.005 > 14.4 and (1 - slo:availability:5m{scope="public"}) / 0.005 > 14.4'
         for: 5m
         labels:
-          severity: warning
+          severity: critical
           slo: public-sites
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/slo.md"

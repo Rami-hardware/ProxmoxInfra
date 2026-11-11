@@ -1,0 +1,8 @@
+---
+# Alertmanager re-reads config.yml on /-/reload; without this a config change
+# only took effect at the next pod restart.
+- name: Reload Alertmanager
+  ansible.builtin.uri:
+    url: "{{ alertmanager_api_url }}/-/reload"
+    method: POST
+    status_code: 200
