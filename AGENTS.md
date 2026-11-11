@@ -54,7 +54,7 @@ terraform plan -input=false -no-color -detailed-exitcode -out=tfplan
 - **No moving image tags** (`:latest`, `:alpine`) in Ansible templates: pin a version (bump it on purpose). ArgoCD apps may use `:latest` in `kustomization.yaml` only because Image Updater pins the digest in `.argocd-source-*.yaml`. alert-forwarder deploys the `:<commit sha>` CI just built.
 - **IPs referenced via `hostvars[host]['ansible_host']`** from inventory — single source of truth, never hardcode IPs.
 - Command/shell tasks need explicit `changed_when` / `failed_when`.
-- Alerting: all Prometheus-evaluated rules live in `roles/prometheus/templates/prometheus-rules.yml.j2` (Alertmanager → alert-forwarder → Discord). LogQL rules live in `roles/loki/templates/loki-rules.yml.j2`, evaluated by Loki's ruler. Grafana keeps NO alert rules — never add alerts in the Grafana UI.
+- Alerting: all Prometheus-evaluated rules live in `roles/prometheus/templates/prometheus-rules.yml.j2` (Alertmanager → alert-forwarder → Discord). Log-based alerts live there too (group `logs`): Loki's ruler only runs LogQL **recording** rules (`roles/loki/templates/loki-rules.yml.j2`, metrics named `log:*`) and remote-writes them to Prometheus. Loki itself sends no alerts. Grafana keeps NO alert rules — never add alerts in the Grafana UI.
 - SRE docs: SLOs (99.5% local/public, 99.9% DNS, 14d window) with multiwindow burn-rate alerts live in the rules file; every alert carries a `runbook_url` into `docs/runbooks/`. DR: `docs/rebuild.md`. Incidents: `docs/incident-template.md`. Keep runbooks updated after incidents.
 
 ### Commands

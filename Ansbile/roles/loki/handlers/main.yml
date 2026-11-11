@@ -1,0 +1,6 @@
+---
+# Loki reads config.yml only at startup (rule files are re-read on their own).
+- name: Restart Loki
+  ansible.builtin.command: k3s kubectl -n monitoring rollout restart deployment/loki
+  delegate_to: git-k3s-server
+  changed_when: true

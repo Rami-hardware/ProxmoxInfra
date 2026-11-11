@@ -20,6 +20,65 @@ groups:
           summary: "Alerting pipeline heartbeat (always firing)"
           description: "Not a problem. Its absence at healthchecks.io means alerting is down."
 
+  # Log-based alerts. Loki's ruler turns the log queries into metrics
+  # (roles/loki/templates/loki-rules.yml.j2) and remote-writes them here.
+  - name: logs
+    rules:
+      - alert: LogErrorRateSpike
+        expr: log:error_lines:count5m > 20
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
+          summary: "Error rate spike in {{ $labels.namespace }}/{{ $labels.container }}"
+          description: "{{ humanize $value }} log lines containing 'error' in the last 5m. Check the container logs in Grafana Explore."
+
+      - alert: TLSOrCertificateErrorInLogs
+        expr: log:tls_error_lines:count15m > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
+          summary: "TLS/certificate errors in {{ $labels.namespace }}/{{ $labels.container }} logs"
+          description: "{{ $value }} certificate/TLS error lines in 15m. Check certificate validity and upstream TLS handshakes."
+
+      - alert: SonarrRadarrDownloadFailures
+        expr: log:media_import_failures:count15m > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
+          summary: "Download failures in {{ $labels.container }}"
+          description: "{{ $value }} 'failed to import' / 'download failed' log lines in 15m. Check Activity > Queue in Sonarr/Radarr."
+
+      # No log lines means no series at all (not 0), hence absent_over_time.
+      # Under Loki the old "count < 1" form could never fire.
+      - alert: TempoLogsSilent
+        expr: absent_over_time(log:tempo_lines:count10m[10m]) and on() count(log:lines:count5m) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
+          summary: "No logs from Tempo in 10+ minutes"
+          description: "Tempo normally logs continuously and has gone silent: likely crashed or hung rather than idle. Check the tempo pod in istio-system."
+
+      # The log metrics themselves stopped arriving: promtail, Loki, the
+      # ruler or its remote write to Prometheus is broken, so every log
+      # alert above is blind.
+      - alert: LogPipelineBroken
+        expr: absent_over_time(log:lines:count5m[15m])
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
+          summary: "No log metrics from Loki for 15 minutes"
+          description: "Prometheus receives no log:lines:count5m from Loki's ruler. Check promtail, the Loki pod and its ruler remote write (Loki logs: 'remote write')."
+
   # AdGuard DNS itself — the one true liveness check for the whole pod DNS
   # chain (pods → CoreDNS → AdGuard). Probed directly at :53 by the blackbox
   # dns module; NOERROR-ratio alerts are unreliable because AdGuard answers

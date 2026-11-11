@@ -34,6 +34,7 @@
     dest: "{{ loki_config_dir }}/config.yml"
     mode: '0644'
     force: true
+  notify: Restart Loki
 
 - name: Ensure Loki rules directory exists
   ansible.builtin.file:

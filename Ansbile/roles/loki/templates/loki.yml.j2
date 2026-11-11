@@ -41,14 +41,19 @@ compactor:
   retention_enabled: true
   delete_request_store: filesystem
 
-# LogQL alerting — rules rendered to /opt/docker/loki/rules (mounted at
-# /etc/loki/rules) by roles/loki; alerts go to the same Alertmanager →
-# alert-forwarder → Discord chain as the Prometheus rules.
+# LogQL recording rules — rendered to /opt/docker/loki/rules (mounted at
+# /etc/loki/rules) by roles/loki. Results are remote-written to Prometheus,
+# which owns the log alerts (no alerting from Loki itself).
 ruler:
   enable_api: true
   rule_path: /loki/rules
-  alertmanager_url: http://{{ hostvars['monitoring-server']['ansible_host'] }}:9093
-  enable_alertmanager_v2: true
+  wal:
+    dir: /loki/ruler-wal
+  remote_write:
+    enabled: true
+    clients:
+      prometheus:
+        url: http://prometheus.monitoring.svc.cluster.local:9090/api/v1/write
   ring:
     kvstore:
       store: inmemory

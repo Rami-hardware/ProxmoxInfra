@@ -5,7 +5,7 @@ LokiIngesterWALDiskUsageHigh, LokiWALDiskFullFailures, LokiIngesterChunkFlushFai
 LokiQuerySchedulerQueueBackingUp, LokiRateStoreRefreshFailures, LokiRingMemberUnhealthy,
 LokiCompactorNotRunningRetentionFailing, LokiProcessDown, PromtailDroppedLogEntries,
 PromtailDroppedBytes, PromtailBatchRetriesClimbing, PromtailRequestErrors,
-PromtailProcessExporterDown, LogErrorRateSpike, TLSOrCertificateErrorInLogs,
+PromtailProcessExporterDown, LogErrorRateSpike, TLSOrCertificateErrorInLogs, LogPipelineBroken,
 SonarrRadarrDownloadFailures, TempoLogsSilent
 
 ## Diagnosis
@@ -25,3 +25,13 @@ sudo k3s kubectl logs -n monitoring -l app=promtail --tail=30 | grep -i error
   playbook as any disk alert.
 - Log-based alerts (error spike, TLS errors, Sonarr/Radarr failures) come from
   Loki's RULER (loki-rules.yml.j2), not Prometheus.
+
+## Notes
+- **Log alerts are Prometheus alerts** (group `logs` in prometheus-rules).
+  Loki's ruler evaluates the LogQL as recording rules every minute
+  (`log:lines:count5m`, `log:error_lines:count5m`, ...) and remote-writes them
+  to Prometheus. Query them there, e.g. `topk(5, log:error_lines:count5m)`.
+- **LogPipelineBroken**: `log:lines:count5m` stopped arriving. Check, in order:
+  promtail pods, the Loki pod, Loki logs for `remote write` errors, and
+  Prometheus' remote-write receiver (`--web.enable-remote-write-receiver`).
+  While it fires, every log alert is blind.
