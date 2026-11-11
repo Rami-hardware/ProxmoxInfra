@@ -86,14 +86,16 @@ controller:
     # trusting a client's own subnet here makes nginx read a header the
     # client itself can spoof/omit, which is what caused every LAN request
     # to misreport as 192.168.10.200 instead of the real client IP.
-    # The pod network (10.42.0.0/16) is trusted too: Cloudflare Tunnel traffic
-    # arrives from the cloudflared pods, which pass the visitor's IP in
-    # X-Forwarded-For. Trade-off: another pod calling the ingress could set
-    # its own X-Forwarded-For (media can't reach it: its egress blocks private
-    # ranges; today only blackbox-exporter calls the ingress from a pod).
+    # Cloudflare Tunnel traffic arrives from the cloudflared pods, which pass
+    # the visitor's IP in X-Forwarded-For. On the way to the ingress its source
+    # becomes the pod IP (same node) or the sending node's IP (other node), so
+    # the pod network and the k3s node IPs are trusted too, but not the rest
+    # of the LAN. Trade-off: another pod calling the ingress could set its own
+    # X-Forwarded-For (media can't reach it: its egress blocks private ranges;
+    # today only blackbox-exporter calls the ingress from a pod).
     enable-real-ip: "true"
     forwarded-for-header: "X-Forwarded-For"
-    proxy-real-ip-cidr: "10.42.0.0/16,173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22"
+    proxy-real-ip-cidr: "{{ k3s_apps_ingress_trusted_nodes | map('extract', hostvars, 'ansible_host') | join(',') }},10.42.0.0/16,173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22"
     # Tracing: one span per request (with upstream timing) sent to Tempo over
     # OTLP gRPC. Traffic is <1 req/s, so every request is kept. Incoming
     # trace headers from clients are ignored, so outside callers can't

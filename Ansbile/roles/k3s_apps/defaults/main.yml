@@ -24,6 +24,13 @@ k3s_apps_public_cert_name: darkestserver-wildcard
 # different nodes keep the public sites up when one node or pod restarts.
 k3s_apps_cloudflared_version: "2026.10.7"
 k3s_apps_cloudflared_replicas: 2
+# Nodes whose IP may carry Cloudflare Tunnel traffic to the ingress (any
+# node can run a cloudflared pod), trusted for X-Forwarded-For.
+k3s_apps_ingress_trusted_nodes:
+  - git-k3s-server
+  - media-server
+  - monitoring-server
+  - gateway-server
 
 # Istio chart version (base, istiod, cni, ztunnel must match) and the
 # Gateway API release it was built against (istio/istio go.mod).
