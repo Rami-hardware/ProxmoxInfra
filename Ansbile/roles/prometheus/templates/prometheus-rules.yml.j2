@@ -706,6 +706,22 @@ groups:
           summary: "ingress-nginx-controller unreachable"
           description: "Prometheus can't scrape the ingress controller. This likely means external access to every service behind it (Jellyfin, Grafana, ArgoCD, the *arr stack, etc.) is down. Check the controller pod status immediately."
 
+      # Latency SLO for the request path: p95 time an app takes to answer at the
+      # ingress (upstream response). The ingress itself adds ~0, so this is the
+      # app's own latency. Ignores hosts with < 1 request/min (too few samples).
+      # Dashboard: "Request path latency".
+      - alert: IngressAppLatencyHigh
+        expr: >-
+          (histogram_quantile(0.95, sum by (le, host) (rate(nginx_ingress_controller_response_duration_seconds_bucket[15m]))) > 1)
+          and on (host) (sum by (host) (rate(nginx_ingress_controller_request_duration_seconds_count[15m])) > 1/60)
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/ingress.md"
+          summary: "{{ $labels.host }} p95 app latency {{ humanizeDuration $value }}"
+          description: "The app behind this host has answered slower than 1s at p95 for 30m (measured at ingress-nginx as upstream response time). Open the Request path latency dashboard to see whether it is the app or the network hop."
+
   # Ported from Grafana UI rules (group 'Istio evaluation') — rule names renamed to alert: CamelCase.
   - name: istio
     rules:
