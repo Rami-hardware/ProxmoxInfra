@@ -189,6 +189,9 @@ spec:
     metadata:
       labels:
         app: blackbox-exporter-public
+        # No Istio sidecar: it needs cluster DNS to reach istiod, which this
+        # pod deliberately lacks, and Envoy in the path would skew latency.
+        sidecar.istio.io/inject: "false"
     spec:
       serviceAccountName: blackbox-exporter
       nodeSelector:
