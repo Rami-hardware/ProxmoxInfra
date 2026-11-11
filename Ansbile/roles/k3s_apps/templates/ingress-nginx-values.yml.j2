@@ -7,6 +7,11 @@ controller:
 
   priorityClassName: system-cluster-critical
 
+  # Served for any TLS host without its own secretName — the public ingresses
+  # rely on this (see the "Let's Encrypt wildcard" tasks).
+  extraArgs:
+    default-ssl-certificate: "ingress-nginx/{{ k3s_apps_public_cert_name }}-tls"
+
   image:
     tag: "v1.12.1"
 

@@ -29,6 +29,8 @@ on:
         required: true
       OVERSEERR_API_KEY:
         required: true
+      CF_API_TOKEN:
+        required: true
 jobs:
   Deploy:
     name: Deploy Infrastructure Code
@@ -156,6 +158,7 @@ jobs:
           PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
           RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
           OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         run: |
           source venv/bin/activate
           ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --vault-password-file ~/.vault_pass

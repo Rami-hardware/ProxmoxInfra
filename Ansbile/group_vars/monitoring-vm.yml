@@ -350,6 +350,7 @@ prometheus_scrape_jobs:
   #   __param_target  → the URL blackbox should probe
   #   instance        → the URL, so dashboards/alerts label by site
   #   __address__     → the blackbox exporter (where the scrape actually goes)
+  # blackbox-exporter-public (:9116) resolves via public DNS — see its manifest.
   - name: blackbox-public
     metrics_path: /probe
     params:
@@ -364,7 +365,7 @@ prometheus_scrape_jobs:
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
-        replacement: "{{ hostvars['monitoring-server']['ansible_host'] }}:9115"
+        replacement: "{{ hostvars['monitoring-server']['ansible_host'] }}:9116"
       - target_label: scope
         replacement: public
 

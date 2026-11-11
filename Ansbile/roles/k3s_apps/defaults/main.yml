@@ -9,6 +9,11 @@ k3s_apps_ingress_nginx_ip: "192.168.10.210"
 # manifests/calico-policy-only.yaml, so it must be a real Calico release tag.
 k3s_apps_calico_version: "v3.32.1"
 
+# Public domain proxied by Cloudflare. Its wildcard cert (Let's Encrypt,
+# DNS-01) is ingress-nginx's default certificate.
+k3s_apps_public_domain: darkestserver.com
+k3s_apps_public_cert_name: darkestserver-wildcard
+
 # Namespaces that should have Istio sidecar injection enabled. Labelled
 # directly with kubectl on every run so the label survives ArgoCD re-syncs.
 k3s_apps_istio_injected_namespaces:
