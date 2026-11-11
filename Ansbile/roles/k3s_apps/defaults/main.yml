@@ -3,6 +3,13 @@ k3s_apps_manifest_dir: /opt/k3s/manifests
 k3s_apps_falco_config_dir: /opt/falco
 k3s_apps_metallb_ip_range: "192.168.10.210-192.168.10.220"
 k3s_apps_ingress_nginx_ip: "192.168.10.210"
+# Nodes that each run one ingress-nginx replica (hostNetwork: ports 80/443
+# must be free on them).
+k3s_apps_ingress_nodes:
+  - git-k3s-server
+  - monitoring-server
+# Tempo keeps its trace data on this node's local disk.
+k3s_apps_tempo_node: git-k3s-server
 
 # Calico runs in policy-only mode: flannel keeps the dataplane, Calico provides
 # only NetworkPolicy enforcement. This is the git tag used to fetch

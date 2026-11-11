@@ -129,11 +129,19 @@ prometheus_scrape_jobs:
     relabel_configs:
       - target_label: instance
         replacement: host-node
+  # One target per controller pod (hostNetwork, so the pod IP is the node IP),
+  # labelled with the node it runs on. Follows k3s_apps_ingress_nodes.
   - name: ingress-nginx
-    targets: ["{{ hostvars['git-k3s-server']['ansible_host'] }}:10254"]
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names: [ingress-nginx]
     relabel_configs:
-      - target_label: instance
-        replacement: git-k3s-server
+      - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component, __meta_kubernetes_pod_container_port_number]
+        action: keep
+        regex: controller;10254
+      - source_labels: [__meta_kubernetes_pod_node_name]
+        target_label: instance
   - name: istio-mesh
     metrics_path: /stats/prometheus
     kubernetes_sd_configs:

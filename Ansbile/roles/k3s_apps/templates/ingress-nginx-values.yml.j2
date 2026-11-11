@@ -1,9 +1,30 @@
 ---
 controller:
-  replicaCount: 1
+  # One replica per node in k3s_apps_ingress_nodes. With hostNetwork each pod
+  # owns 80/443 on its node, and externalTrafficPolicy: Local makes MetalLB
+  # announce the LoadBalancer IP only from a node with a Ready pod, so if one
+  # node goes down the IP moves to the other.
+  replicaCount: {{ k3s_apps_ingress_nodes | length }}
 
-  nodeSelector:
-    kubernetes.io/hostname: {{ ingress_nginx_node | default('git-k3s-server') }}
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values: {{ k3s_apps_ingress_nodes | to_json }}
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+              app.kubernetes.io/instance: ingress-nginx
+              app.kubernetes.io/component: controller
+
+  # Keeps one replica serving during node drains.
+  minAvailable: 1
 
   priorityClassName: system-cluster-critical
 
@@ -68,10 +89,14 @@ controller:
         prometheus.io/scrape: "true"
         prometheus.io/port: "10254"
 
-  # hostNetwork + hostPort means only one pod can bind 80/443 on this node at
-  # a time — RollingUpdate's overlap deadlocks the new pod in Pending.
+  # hostNetwork + hostPort means only one pod can bind 80/443 per node, so a
+  # surge pod would sit in Pending. Replace one pod at a time instead; the
+  # other replica keeps serving while it restarts.
   updateStrategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
 
   hostNetwork: true
 

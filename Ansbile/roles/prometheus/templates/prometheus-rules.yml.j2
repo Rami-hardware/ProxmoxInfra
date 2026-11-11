@@ -703,8 +703,8 @@ groups:
           severity: warning
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/ingress.md"
-          summary: "ingress-nginx-controller unreachable"
-          description: "Prometheus can't scrape the ingress controller. This likely means external access to every service behind it (Jellyfin, Grafana, ArgoCD, the *arr stack, etc.) is down. Check the controller pod status immediately."
+          summary: "ingress-nginx-controller on {{ $labels.instance }} unreachable"
+          description: "Prometheus can't scrape the ingress controller on {{ $labels.instance }}. The other replica keeps serving; if this fires for both nodes, every site behind the ingress is down. Check the controller pods."
 
       # Latency SLO for the request path: p95 time an app takes to answer at the
       # ingress (upstream response). The ingress itself adds ~0, so this is the

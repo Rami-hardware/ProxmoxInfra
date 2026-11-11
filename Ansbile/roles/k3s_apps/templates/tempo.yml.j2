@@ -85,7 +85,7 @@ spec:
         app: tempo
     spec:
       nodeSelector:
-        kubernetes.io/hostname: {{ ingress_nginx_node | default('git-k3s-server') }}
+        kubernetes.io/hostname: {{ k3s_apps_tempo_node }}
       containers:
         - name: tempo
           image: grafana/tempo:2.6.1

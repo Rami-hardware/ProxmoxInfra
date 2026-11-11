@@ -14,8 +14,15 @@ curl -sk -o /dev/null -w '%{http_code}
 ```
 
 ## Notes
-- Controller runs on git-k3s-server with MetalLB announcing 192.168.10.210
-  (layer2). A git-k3s reboot = brief ingress outage + a burst of probe alerts.
+- Two controller replicas (hostNetwork), one each on git-k3s-server and
+  monitoring-server (`k3s_apps_ingress_nodes`). MetalLB announces
+  192.168.10.210 (layer2) from one node with a Ready pod; if that node dies the
+  IP moves to the other within a few seconds. IngressControllerDown fires per
+  node, so one alert = degraded, not down.
+- See which node holds the IP:
+  `sudo k3s kubectl get servicel2statuses -A -o custom-columns=SVC:.status.serviceName,NODE:.status.node`
+- Restart with no downtime: `sudo k3s kubectl -n ingress-nginx rollout restart deploy/ingress-nginx-controller`
+  (one pod at a time).
 - Config reload failed = an ingress with a bad annotation/config is blocking
   EVERY new route from going live. Find the offending ingress in controller
   logs and fix or delete it.
