@@ -4,6 +4,7 @@
   become: true
   roles:
     - common
+    - unbound
     - k3s_agent
     - prometheus
     - loki

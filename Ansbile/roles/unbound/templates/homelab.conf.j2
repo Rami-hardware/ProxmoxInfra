@@ -1,0 +1,25 @@
+# {{ ansible_managed }}
+server:
+  # Secondary resolver — resilience when the gateway/AdGuard is down.
+  interface: {{ ansible_host }}
+  access-control: 127.0.0.0/8 allow
+  access-control: 192.168.10.0/24 allow
+
+  # static: only the names below exist; anything else under homelab.lan is
+  # NXDOMAIN (a redirect zone answered every name, see local_dns.yml).
+  local-zone: "{{ local_dns_lan_domain }}." static
+  local-data: "{{ local_dns_lan_domain }}. 86400 IN A {{ local_dns_ingress_ip }}"
+{% for name in local_dns_lan_names %}
+  local-data: "{{ name }}.{{ local_dns_lan_domain }}. 86400 IN A {{ local_dns_ingress_ip }}"
+{% endfor %}
+  local-data-ptr: "{{ local_dns_ingress_ip }} {{ local_dns_lan_domain }}"
+
+  # transparent: these names are answered locally (split-horizon), every
+  # other name in the zone resolves normally through public DNS.
+  local-zone: "{{ local_dns_public_domain }}." transparent
+{% for name in local_dns_public_names %}
+  local-data: "{{ name }}.{{ local_dns_public_domain }}. 300 IN A {{ local_dns_ingress_ip }}"
+{% endfor %}
+
+remote-control:
+  control-enable: no

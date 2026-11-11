@@ -1,0 +1,22 @@
+---
+# Secondary LAN resolver and CoreDNS's tertiary upstream: full recursion plus
+# the same local names AdGuard answers (group_vars/all/local_dns.yml), so the
+# two never disagree when a client switches between them.
+- name: Install unbound
+  ansible.builtin.apt:
+    name: unbound
+    state: present
+
+- name: Template unbound homelab config
+  ansible.builtin.template:
+    src: homelab.conf.j2
+    dest: "{{ unbound_conf_path }}"
+    mode: '0644'
+    validate: unbound-checkconf %s
+  notify: Restart unbound
+
+- name: Ensure unbound is running
+  ansible.builtin.systemd:
+    name: unbound
+    state: started
+    enabled: true

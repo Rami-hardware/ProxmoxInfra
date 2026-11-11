@@ -93,13 +93,15 @@
       options edns0
       nameserver {{ fallback_dns }}
 
+# Only the http: section's address. No owner/mode here: the permission tasks
+# below set 0600, and setting 0700 here flipped the mode on every run, which
+# restarted AdGuard (and dropped LAN DNS) on every deploy.
 - name: Change AdGuard web UI port
   ansible.builtin.replace:
-    owner: 1000
-    group: 1000
-    mode: '0700'
     path: "{{ adguard_config_path }}"
-    regexp: '^(\s*)address:.*'
+    after: '^http:'
+    before: '^users:'
+    regexp: '^(\s+)address:.*'
     replace: '\1address: 0.0.0.0:{{ adguard_ui_port }}'
   notify: Restart AdGuardHome
 
@@ -151,8 +153,9 @@
 
 # ── DNS rewrites (split-horizon) ──────────────────────────────────────────────
 # Managed through the API, not the YAML: AdGuard rewrites its own config file
-# and would overwrite edits made while it runs. Adds missing entries only, so
-# a rewrite added by hand in the UI is left alone.
+# and would overwrite edits made while it runs. Adds the managed entries and
+# deletes the ones in adguard_rewrites_removed; any other rewrite added by
+# hand in the UI is left alone. New records are added before old ones go.
 - name: List AdGuard DNS rewrites
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ adguard_ui_port }}/control/rewrite/list"
@@ -176,15 +179,33 @@
     force_basic_auth: true
     body_format: json
     body:
-      domain: "{{ item.domain }}"
-      answer: "{{ item.answer }}"
-  loop: "{{ adguard_rewrites }}"
+      domain: "{{ item }}"
+      answer: "{{ adguard_rewrite_answer }}"
+  loop: "{{ adguard_rewrite_domains }}"
   loop_control:
-    label: "{{ item.domain }} -> {{ item.answer }}"
+    label: "{{ item }} -> {{ adguard_rewrite_answer }}"
   when: >-
     adguard_rewrite_list.json is defined
     and adguard_rewrite_list.json
-    | selectattr('domain', 'equalto', item.domain)
-    | selectattr('answer', 'equalto', item.answer)
+    | selectattr('domain', 'equalto', item)
+    | selectattr('answer', 'equalto', adguard_rewrite_answer)
     | list | length == 0
+  changed_when: true
+
+- name: Delete retired AdGuard DNS rewrites
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ adguard_ui_port }}/control/rewrite/delete"
+    method: POST
+    url_username: "{{ adguard_api_username }}"
+    url_password: "{{ adguard_api_password }}"
+    force_basic_auth: true
+    body_format: json
+    body:
+      domain: "{{ item.domain }}"
+      answer: "{{ item.answer }}"
+  loop: >-
+    {{ adguard_rewrite_list.json | default([])
+       | selectattr('domain', 'in', adguard_rewrites_removed) | list }}
+  loop_control:
+    label: "{{ item.domain }} -> {{ item.answer }}"
   changed_when: true

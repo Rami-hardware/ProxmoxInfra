@@ -14,13 +14,6 @@ adguard_work_dir: "/opt/adguardhome/work"
 adguard_ui_port: 8081
 fallback_dns: 1.1.1.1
 
-# Split-horizon DNS: both zones resolve to the ingress-nginx MetalLB IP
-# (k3s_apps_ingress_nginx_ip) for LAN clients. Outside the LAN,
-# *.darkestserver.com still resolves to Cloudflare.
-adguard_rewrites:
-  - { domain: "*.homelab.lan", answer: "192.168.10.210" }
-  - { domain: "*.darkestserver.com", answer: "192.168.10.210" }
-
 nginx_services:
   - name: jellyfin
     ip: 192.168.10.201

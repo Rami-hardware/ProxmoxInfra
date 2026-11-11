@@ -1,0 +1,43 @@
+---
+# Names that LAN DNS (AdGuard on the gateway, Unbound on monitoring) answers
+# with the ingress-nginx MetalLB IP. One explicit record per app, no wildcard:
+# LAN clients search homelab.lan, so a *.homelab.lan wildcard turned any
+# failed lookup (e.g. github.com during an AdGuard restart) into
+# github.com.homelab.lan -> ingress -> certificate error.
+# A new app with an ingress needs its name added here.
+local_dns_ingress_ip: 192.168.10.210
+
+local_dns_lan_domain: homelab.lan
+local_dns_lan_names:
+  - adguard
+  - alertmanager
+  - argocd
+  - bazarr
+  - ca
+  - f1hls
+  - grafana
+  - homarr
+  - homepage
+  - jaeger
+  - jellyfin
+  - portnote
+  - prometheus
+  - prowlarr
+  - qbittorrent
+  - radarr
+  - seerr
+  - server
+  - sonarr
+  - tdarr
+  - tempo
+  - tracearr
+
+# Split-horizon for the public domain: LAN clients reach these apps directly
+# instead of through Cloudflare. AdGuard uses a *.darkestserver.com wildcard
+# (not in the search path, so safe); Unbound lists these names explicitly.
+# Keep in sync with nginx_services in group_vars/gateway-vm.yml.
+local_dns_public_domain: darkestserver.com
+local_dns_public_names:
+  - adguard
+  - jellyfin
+  - seerr

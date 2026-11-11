@@ -10,5 +10,13 @@ adguard_download_base: https://github.com/AdGuardTeam/AdGuardHome/releases/downl
 adguard_api_username: "{{ lookup('env', 'ADGUARD_EXPORTER_USERNAME') }}"
 adguard_api_password: "{{ lookup('env', 'ADGUARD_EXPORTER_PASSWORD') }}"
 
-# DNS rewrites ensured on every run. Entries are only added, never removed.
-adguard_rewrites: []
+# DNS rewrites ensured on every run (names from group_vars/all/local_dns.yml).
+adguard_rewrite_answer: "{{ local_dns_ingress_ip }}"
+adguard_rewrite_domains: >-
+  {{ local_dns_lan_names | map('regex_replace', '$', '.' ~ local_dns_lan_domain) | list
+     + ['*.' ~ local_dns_public_domain] }}
+
+# Rewrites deleted if present. The *.homelab.lan wildcard answered any name
+# under the search domain, including failed lookups like github.com.homelab.lan.
+adguard_rewrites_removed:
+  - "*.homelab.lan"
