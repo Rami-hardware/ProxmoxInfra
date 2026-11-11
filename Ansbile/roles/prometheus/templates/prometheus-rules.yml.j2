@@ -352,15 +352,19 @@ groups:
           summary: "CoreDNS p99 latency at {{ humanize $value }}s for zone {{ $labels.zone }}"
           description: "DNS resolution is taking unusually long. Check upstream health and CoreDNS pod resource usage (CPU throttling is a common cause)."
 
-      - alert: CoreDNSCacheHitRatioDropping
-        expr: (sum(rate(coredns_cache_hits_total[5m])) / (sum(rate(coredns_cache_hits_total[5m])) + sum(rate(coredns_cache_misses_total[5m]))) * 100) < 50
-        for: 1m
+      # Absolute misses (queries CoreDNS must send upstream), not the hit
+      # ratio: since Istio ambient, ztunnel answers in-cluster names itself,
+      # so CoreDNS lost most of its easy cache hits and the ratio fell from
+      # ~80% to ~47% with no change in upstream load (~3.5 misses/s).
+      - alert: CoreDNSCacheMissesHigh
+        expr: sum(rate(coredns_cache_misses_total[5m])) > 20
+        for: 15m
         labels:
           severity: warning
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/dns.md"
-          summary: "CoreDNS cache hit ratio at {{ humanize $value }}%"
-          description: "Cache effectiveness has dropped, meaning more queries are hitting upstream/kubernetes API. Could indicate cache eviction pressure or unusually diverse query patterns."
+          summary: "CoreDNS sending {{ humanize $value }} uncached queries/s upstream"
+          description: "Normal is ~3-4/s. A pod looping on DNS lookups or a burst of unique names (e.g. a crawler) is the usual cause; check coredns_dns_requests_total by type and which pods query most."
 
       - alert: CoreDNSKubernetesAPIClientErrors
         expr: (sum(rate(coredns_kubernetes_rest_client_requests_total{code=~"5.."}[5m]))) > 0

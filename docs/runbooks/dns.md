@@ -3,7 +3,7 @@
 Covers: AdGuardDNSDown, AdGuardProtectionDisabled, AdGuardQueriesStopped,
 AdGuardExporterDown, CoreDNSDown, CoreDNSForwardHealthBroken, CoreDNSPanics,
 CoreDNSReloadFailures, CoreDNSForwardMaxConcurrentRejects, CoreDNSHighRequestLatency,
-CoreDNSCacheHitRatioDropping, CoreDNSKubernetesAPIClientErrors, CoreDNSDNSResponseErrors,
+CoreDNSCacheMissesHigh, CoreDNSKubernetesAPIClientErrors, CoreDNSDNSResponseErrors,
 SlowDNSResolution
 
 ## The DNS chain
