@@ -6,6 +6,8 @@
     - common
     # Docker daemon — used by the CI runner for image builds.
     - docker_setup
+    # Weekly cleanup after the hand-installed GitHub Actions runner.
+    - ci_runner
     - dns
     - k3s_server
     - k3s_apps

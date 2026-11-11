@@ -1,0 +1,9 @@
+[Unit]
+Description=Weekly CI runner disk cleanup
+
+[Timer]
+OnCalendar=Sun 04:30
+Persistent=true
+
+[Install]
+WantedBy=timers.target

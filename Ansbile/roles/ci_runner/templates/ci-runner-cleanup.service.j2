@@ -1,0 +1,6 @@
+[Unit]
+Description=Remove old GitHub runner versions and dangling CI images
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/ci-runner-cleanup

@@ -1,0 +1,4 @@
+---
+# The GitHub Actions runner itself is installed by hand (config.sh); this role
+# only cleans up after it.
+ci_runner_dir: /home/github/actions-runner
