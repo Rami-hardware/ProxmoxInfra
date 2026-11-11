@@ -75,7 +75,7 @@ Top-level `media-app.yaml` / `monitoring-app.yaml` / `network-app.yaml` are the 
 
 - `kustomization.yaml` — `resources:` list + `images:` block with `newTag` (the Image Updater write-back target).
 - One plain multi-doc YAML per app (Namespace + PV + PVC + Deployment + Service/NodePort pattern — see `jellyfin.yaml`).
-- To add an app: create its YAML, list it in that dir's `kustomization.yaml`. Apps needing secrets would use the Ansible `k3s_apps_list` generic template, but that list is currently **empty** (all apps moved to ArgoCD; `adguard-exporter` was removed — stuck `ImagePullBackOff`).
+- To add an app: create its YAML, list it in that dir's `kustomization.yaml`.
 
 Excluded from ansible-lint via root `.ansible-lint` (`exclude_paths: [Ansbile/argocd-apps/]`).
 

@@ -1,12 +1,2 @@
 ---
 prometheus_retention_time: 30d
-
-k3s_apps_list:
-  # seerr, jellyfin, bazarr, radarr, prowlarr, qbittorrent, flaresolverr,
-  # scraparr, sonarr are now managed by ArgoCD — see Ansbile/argocd-apps/media/
-  # grafana, prometheus, loki, alertmanager, speedtest-exporter,
-  # intel-gpu-exporter, qbittorrent-exporter are now managed by ArgoCD — see
-  # Ansbile/argocd-apps/monitoring/
-  # adguard-home is now managed by ArgoCD — see Ansbile/argocd-apps/network/
-  # adguard-exporter removed — was stuck ImagePullBackOff/rollout timeout
-  []

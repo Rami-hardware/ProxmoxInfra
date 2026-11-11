@@ -96,31 +96,7 @@
     state: directory
     mode: '0755'
 
-# Runs on each app's target node — only apps with a config_path (i.e. not skip_pv)
-# loop_control loop_var avoids Ansible resolving delegate_to before item is bound
-- name: Ensure app config directories exist on target nodes
-  ansible.builtin.file:
-    path: "{{ app.config_path }}"
-    state: directory
-    mode: '0755'
-  delegate_to: "{{ app.target_node }}"
-  loop: "{{ k3s_apps_list | selectattr('config_path', 'defined') | list }}"
-  loop_control:
-    loop_var: app
-    label: "{{ app.name }}"
-
-# Create host directories for extra_volumes that explicitly set create_host_dir: true
-- name: Ensure extra volume host directories exist on target nodes
-  ansible.builtin.file:
-    path: "{{ item.1.host_path }}"
-    state: directory
-    mode: '0755'
-  delegate_to: "{{ item.0.target_node }}"
-  loop: "{{ k3s_apps_list | selectattr('extra_volumes', 'defined') | list | subelements('extra_volumes') }}"
-  loop_control:
-    label: "{{ item.0.name }}: {{ item.1.host_path }}"
-  when: item.1.create_host_dir | default(false)
-
+# ── Cluster monitoring workloads (owned by Ansible, not ArgoCD) ─────────────
 # Prometheus RBAC — allows scraping kubelet /metrics/cadvisor
 - name: Template Prometheus RBAC manifest
   ansible.builtin.template:
@@ -135,31 +111,20 @@
     dest: "{{ k3s_apps_manifest_dir }}/kube-state-metrics.yml"
     mode: '0644'
 
-# node-exporter runs as a DaemonSet on all nodes (media, monitoring, git-k3s-server)
-# Delete old Deployment if it exists — it was previously managed by the generic app template
-- name: Remove node-exporter Deployment if present (replaced by DaemonSet)
-  ansible.builtin.command:
-    cmd: k3s kubectl delete deployment node-exporter -n monitoring --ignore-not-found
-  changed_when: false
-
 - name: Template node-exporter DaemonSet manifest
   ansible.builtin.template:
     src: node-exporter-daemonset.yml.j2
     dest: "{{ k3s_apps_manifest_dir }}/node-exporter.yml"
     mode: '0644'
 
-# promtail runs as a DaemonSet — deploy config to all K3s nodes and ensure /opt/promtail exists
+# promtail reads its config from /opt/promtail on every node (hostPath)
 - name: Ensure promtail config directory exists on K3s nodes
   ansible.builtin.file:
     path: /opt/promtail
     state: directory
     mode: '0755'
   delegate_to: "{{ k3s_node }}"
-  loop:
-    - media-server
-    - monitoring-server
-    - git-k3s-server
-    - gateway-server
+  loop: "{{ k3s_apps_nodes }}"
   loop_control:
     loop_var: k3s_node
 
@@ -169,18 +134,9 @@
     dest: /opt/promtail/config.yml
     mode: '0644'
   delegate_to: "{{ k3s_node }}"
-  loop:
-    - media-server
-    - monitoring-server
-    - git-k3s-server
-    - gateway-server
+  loop: "{{ k3s_apps_nodes }}"
   loop_control:
     loop_var: k3s_node
-
-- name: Remove promtail Deployment if present (replaced by DaemonSet)
-  ansible.builtin.command:
-    cmd: k3s kubectl delete deployment promtail -n monitoring --ignore-not-found
-  changed_when: false
 
 - name: Template promtail DaemonSet manifest
   ansible.builtin.template:
@@ -188,134 +144,26 @@
     dest: "{{ k3s_apps_manifest_dir }}/promtail.yml"
     mode: '0644'
 
-# Remove manifests for apps that were deleted from k3s_apps_list
-# ingress-nginx is now managed by Helm — delete old manifest file if it exists
-- name: Remove old ingress-nginx manifest (now managed by Helm)
-  ansible.builtin.file:
-    path: "{{ k3s_apps_manifest_dir }}/ingress-nginx.yml"
-    state: absent
-
-# alert-forwarder is now managed by Helm — delete old manifest file if it exists
-- name: Remove old alert-forwarder manifest (now managed by Helm)
-  ansible.builtin.file:
-    path: "{{ k3s_apps_manifest_dir }}/alert-forwarder.yml"
-    state: absent
-
-# Apps migrated to ArgoCD — remove their stale manifest files so the
-# "Apply K3s app manifests one by one" loop below stops re-applying them.
-- name: Remove stale manifests for apps migrated to ArgoCD
-  ansible.builtin.file:
-    path: "{{ k3s_apps_manifest_dir }}/{{ item }}.yml"
-    state: absent
-  loop: "{{ k3s_apps_argocd_managed_names }}"
-
-- name: Find existing app manifests on disk
-  ansible.builtin.find:
-    paths: "{{ k3s_apps_manifest_dir }}"
-    patterns: "*.yml"
-  register: k3s_apps_existing_manifests
-
-- name: Delete resources and manifest for removed apps
+- name: Apply cluster monitoring manifests
   ansible.builtin.command:
-    cmd: "k3s kubectl delete -f {{ item.path }} --ignore-not-found"
-  loop: "{{ k3s_apps_existing_manifests.files }}"
-  when: >
-    (item.path | basename | splitext)[0] not in
-    (k3s_apps_list | map(attribute='name') | list) + k3s_apps_helm_managed_names
+    cmd: "k3s kubectl apply --server-side --force-conflicts -f {{ k3s_apps_manifest_dir }}/{{ item }}.yml"
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  loop:
+    - prometheus-rbac
+    - kube-state-metrics
+    - node-exporter
+    - promtail
   changed_when: true
 
-- name: Remove stale manifest files
-  ansible.builtin.file:
-    path: "{{ item.path }}"
-    state: absent
-  loop: "{{ k3s_apps_existing_manifests.files }}"
-  when: >
-    (item.path | basename | splitext)[0] not in
-    (k3s_apps_list | map(attribute='name') | list) + k3s_apps_helm_managed_names
-
-# Single template for all apps — item.* variables drive the output
-- name: Template app manifests
-  ansible.builtin.template:
-    src: app.yml.j2
-    dest: "{{ k3s_apps_manifest_dir }}/{{ item.name }}.yml"
-    mode: '0644'
-  loop: "{{ k3s_apps_list }}"
-
-# Check current PV — delete if path changed OR namespace changed OR PV is Released
-# Only apps with a config_path have a PV to check
-- name: Check current PV state
-  ansible.builtin.command:
-    cmd: >
-      k3s kubectl get pv {{ item.name }}-config-pv
-      -o jsonpath={.spec.hostPath.path},{.spec.claimRef.namespace},{.status.phase}
-  register: k3s_apps_pv_check
-  failed_when: false
-  changed_when: false
-  loop: "{{ k3s_apps_list | selectattr('config_path', 'defined') | list }}"
-
-- name: Delete PVC when PV needs to be recreated
-  ansible.builtin.shell:
-    cmd: |
-      for ns in $(k3s kubectl get namespaces -o jsonpath='{.items[*].metadata.name}'); do
-        k3s kubectl delete pvc {{ item.item.name }}-config-pvc -n "$ns" --ignore-not-found
-      done
-  loop: "{{ k3s_apps_pv_check.results }}"
-  loop_control:
-    label: "{{ item.item.name }}"
-  when:
-    - item.rc is defined and item.rc == 0
-    - >
-      item.stdout.split(',')[0] != item.item.config_path or
-      item.stdout.split(',')[1] != item.item.namespace or
-      item.stdout.split(',')[2] == 'Released'
-  changed_when: false
-
-- name: Delete PV when PV needs to be recreated
-  ansible.builtin.command:
-    cmd: "k3s kubectl delete pv {{ item.item.name }}-config-pv --ignore-not-found"
-  loop: "{{ k3s_apps_pv_check.results }}"
-  loop_control:
-    label: "{{ item.item.name }}"
-  when:
-    - item.rc is defined and item.rc == 0
-    - >
-      item.stdout.split(',')[0] != item.item.config_path or
-      item.stdout.split(',')[1] != item.item.namespace or
-      item.stdout.split(',')[2] == 'Released'
-  changed_when: false
-
-- name: Show K3s cluster nodes
-  ansible.builtin.command:
-    cmd: "k3s kubectl get nodes -o wide"
-  changed_when: false
-
-- name: Find manifests to apply
-  ansible.builtin.find:
-    paths: "{{ k3s_apps_manifest_dir }}"
-    patterns: "*.yml"
-  register: k3s_apps_manifests_to_apply
-  when: k3s_apps_list | length > 0
-
-- name: Apply K3s app manifests one by one
-  ansible.builtin.command:
-    cmd: "k3s kubectl apply --server-side --force-conflicts -f {{ item.path }}"
-  loop: "{{ k3s_apps_manifests_to_apply.files | default([]) }}"
-  loop_control:
-    label: "{{ item.path | basename }}"
-  changed_when: true
-  when: k3s_apps_list | length > 0
-
-# Re-assert Istio injection labels directly with kubectl label, as the final word
-# on namespace labels. Multiple app manifests each declaring the same Namespace
-# object via server-side apply can lose ownership of the labels field to
-# whichever applier ran last without it — a direct label call always wins.
-# Newly added namespaces (e.g. dev) don't exist until ArgoCD's first sync
-# creates them from the app manifest, so create any missing ones first.
+# ── Namespaces ────────────────────────────────────────────────────────────────
+# ArgoCD creates the app namespaces on first sync; create any that are missing
+# so the Istio injection label below can always be applied.
 - name: Ensure managed namespaces exist
   ansible.builtin.command:
     cmd: "k3s kubectl create namespace {{ item }}"
   register: k3s_apps_ns_create_result
-  loop: "{{ k3s_apps_istio_injected_namespaces | default([]) }}"
+  loop: "{{ k3s_apps_istio_injected_namespaces }}"
   changed_when: k3s_apps_ns_create_result.rc == 0
   failed_when: >-
     k3s_apps_ns_create_result.rc != 0
@@ -324,67 +172,8 @@
 - name: Ensure Istio injection label on managed namespaces
   ansible.builtin.command:
     cmd: "k3s kubectl label namespace {{ item }} istio-injection=enabled --overwrite"
-  loop: "{{ k3s_apps_istio_injected_namespaces | default([]) }}"
+  loop: "{{ k3s_apps_istio_injected_namespaces }}"
   changed_when: true
-
-# Force a rollout restart so ProgressDeadlineExceeded from prior failed runs doesn't
-# cause an immediate 0-second failure on the next run.
-- name: Restart deployments that have exceeded their progress deadline
-  ansible.builtin.shell:
-    cmd: |
-      set -o pipefail
-      STATUS=$(k3s kubectl rollout status deployment/{{ item.name }} -n {{ item.namespace }} --timeout=5s 2>&1 || true)
-      if echo "$STATUS" | grep -q "exceeded its progress deadline"; then
-        k3s kubectl rollout restart deployment/{{ item.name }} -n {{ item.namespace }}
-      fi
-    executable: /bin/bash
-  loop: "{{ k3s_apps_list }}"
-  loop_control:
-    label: "{{ item.name }}"
-  changed_when: false
-
-- name: Wait for app deployments to be ready
-  ansible.builtin.command:
-    cmd: "k3s kubectl rollout status deployment/{{ item.name }} -n {{ item.namespace }} --timeout=300s"
-  changed_when: false
-  loop: "{{ k3s_apps_list }}"
-  register: k3s_apps_rollout
-  ignore_errors: true
-
-- name: Show pod status for failed deployments
-  ansible.builtin.command:
-    cmd: "k3s kubectl get pods -n {{ item.item.namespace }} -l app={{ item.item.name }} -o wide"
-  when: item.failed | default(false)
-  loop: "{{ k3s_apps_rollout.results }}"
-  loop_control:
-    label: "{{ item.item.name }}"
-  changed_when: false
-
-- name: Show pod events for failed deployments
-  ansible.builtin.command:
-    cmd: "k3s kubectl get events -n {{ item.item.namespace }} --field-selector involvedObject.name={{ item.item.name }} --sort-by='.lastTimestamp'"
-  when: item.failed | default(false)
-  loop: "{{ k3s_apps_rollout.results }}"
-  loop_control:
-    label: "{{ item.item.name }}"
-  changed_when: false
-
-- name: Describe pods for failed deployments
-  ansible.builtin.command:
-    cmd: "k3s kubectl describe pods -n {{ item.item.namespace }} -l app={{ item.item.name }}"
-  when: item.failed | default(false)
-  loop: "{{ k3s_apps_rollout.results }}"
-  loop_control:
-    label: "{{ item.item.name }}"
-  changed_when: false
-
-- name: Fail if any deployment did not become ready
-  ansible.builtin.fail:
-    msg: "Deployment '{{ item.item.name }}' in namespace '{{ item.item.namespace }}' failed to become ready. See describe output above."
-  when: item.failed | default(false)
-  loop: "{{ k3s_apps_rollout.results }}"
-  loop_control:
-    label: "{{ item.item.name }}"
 
 # ── cert-manager via Helm ────────────────────────────────────────────────────
 - name: Deploy cert-manager via Helm
@@ -675,20 +464,6 @@
     HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
     HELM_REPOSITORY_CACHE: /etc/helm/cache
   changed_when: true
-
-# ── Remove Jaeger (replaced by Tempo) ─────────────────────────────────────────
-- name: Remove old Jaeger resources
-  ansible.builtin.command:
-    cmd: "k3s kubectl delete -f {{ k3s_apps_manifest_dir }}/jaeger.yml --ignore-not-found"
-  environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-  changed_when: true
-  failed_when: false
-
-- name: Remove old Jaeger manifest file
-  ansible.builtin.file:
-    path: "{{ k3s_apps_manifest_dir }}/jaeger.yml"
-    state: absent
 
 # ── Tempo (tracing backend) ───────────────────────────────────────────────────
 - name: Template Tempo manifest

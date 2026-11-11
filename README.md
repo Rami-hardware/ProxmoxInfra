@@ -77,7 +77,7 @@ k3s kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data
 | qBittorrent Exporter | —                                  | 17871 | qBittorrent metrics for Prometheus |
 | Intel GPU Exporter   | —                                  | 8082  | Arc GPU utilization metrics        |
 
-AdGuard Home runs on the gateway itself as a **pinned systemd service** (`adguard` role, binary at `/opt/adguardhome`, DNS on :53, UI on 8081) — it is the network's authoritative DNS and the K3s pod-DNS upstream. The `adguard-home` pod in the `network` namespace (hostNetwork) serves the proxied UI; it was removed from `k3s_apps_list`/`docker_apps_enabled` — the exporter was dropped (stuck `ImagePullBackOff`) and DNS liveness is now covered by the `blackbox-dns` probe + `AdGuardDNSDown` alert instead.
+AdGuard Home runs on the gateway itself as a **pinned systemd service** (`adguard` role, binary at `/opt/adguardhome`, DNS on :53, UI on 8081) — it is the network's authoritative DNS and the K3s pod-DNS upstream. The `adguard-home` pod in the `network` namespace (hostNetwork) serves the proxied UI; DNS liveness is now covered by the `blackbox-dns` probe + `AdGuardDNSDown` alert instead.
 
 ### Network (192.168.10.200) — K3s worker, namespace: `network` — ArgoCD-managed
 
@@ -129,49 +129,9 @@ Gateway also runs: **AdGuard Home** (systemd service — DNS :53, UI :8081; see 
 - Role variable naming follows `<role_name>_` prefix convention
 - Owns cluster bootstrap (K3s, Helm-based infra, DaemonSets) — no longer owns app rollout for `media`/`monitoring`/`network` namespaces, see [GitOps with ArgoCD](#gitops-with-argocd)
 
-### K3s App Pattern (Ansible-managed apps only)
+### Cluster workloads owned by Ansible
 
-Apps still in `k3s_apps_list` (currently **empty** — all apps moved to ArgoCD; the generic mechanism is kept for any future app that needs it) render through one generic template (`app.yml.j2`) — Namespace + PV + PVC + Deployment + NodePort Service — from an entry in `group_vars/git-k3s-server-vm.yml`:
-
-```yaml
-k3s_apps_list:
-  - name: myapp
-    namespace: media
-    image: myrepo/myapp:latest
-    port: 8080
-    node_port: 8080
-    target_node: media-server
-    config_path: /opt/myapp
-    config_mount: /config
-    replicas: 1
-    env:
-      - { name: TZ, value: "Asia/Riyadh" }
-    memory_request: "128Mi"
-    memory_limit: "512Mi"
-    cpu_request: "100m"
-    cpu_limit: "500m"
-```
-
-New apps that don't need secrets should go into ArgoCD instead — add a manifest under `Ansbile/argocd-apps/<media|monitoring|network>/`, list it in that directory's `kustomization.yaml`, and it's live on next sync.
-
-**Supported flags:**
-
-| Flag              | Description                                                      |
-| :---------------- | :--------------------------------------------------------------- |
-| `skip_pv`         | Skip PV/PVC creation for stateless apps                          |
-| `gpu`             | Mount `/dev/dri` + privileged for Intel Arc GPU access           |
-| `privileged`      | Run container as privileged (no GPU mount)                       |
-| `host_pid`        | Enable `hostPID: true`                                           |
-| `host_network`    | Enable `hostNetwork: true`                                       |
-| `external_ip`     | Bind Service to a specific host IP via `externalIPs`             |
-| `service_account` | Attach a named ServiceAccount to the pod                         |
-| `dns_policy`      | Override DNS policy (e.g. `None` for custom nameservers)         |
-| `dns_nameservers` | Custom nameservers when `dns_policy: None`                       |
-| `args`            | Container CLI arguments                                          |
-| `extra_volumes`   | Additional hostPath volume mounts                                |
-| `extra_ports`     | Additional Service + hostPort entries (e.g. qBittorrent BT port) |
-
-**Special manifests deployed outside the generic template:**
+Apps live in ArgoCD (`Ansbile/argocd-apps/<media|monitoring|network>/`). The `k3s_apps` role only owns cluster-wide pieces, rendered from these templates and applied on every run:
 
 | Template                         | Type        | Description                                     |
 | :------------------------------- | :---------- | :---------------------------------------------- |
