@@ -6,6 +6,12 @@
     mode: '0644'
   notify: Restart apt-daily-upgrade timer
 
+- name: Ensure journald drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/journald.conf.d
+    state: directory
+    mode: '0755'
+
 - name: Cap systemd-journal size (default 10% of root fs is too much on small VMs)
   ansible.builtin.template:
     src: journald-size-cap.conf.j2
