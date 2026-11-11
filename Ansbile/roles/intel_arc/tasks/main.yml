@@ -1,37 +1,23 @@
-- name: Ensure universe repo is enabled
-  ansible.builtin.apt_repository:
-    repo: "deb http://archive.ubuntu.com/ubuntu {{ ansible_distribution_release }} universe"
-    state: present
-    filename: "archive_ubuntu_com_universe"  # prevent duplicates
+# Host side of Intel Arc passthrough on the media VM: VA-API drivers and tools
+# from the Ubuntu archive, plus render-node access. Jellyfin runs in k3s and
+# brings its own userspace drivers, so the host only needs /dev/dri working.
 
-- name: Add Intel Linux Graphics repo key
-  ansible.builtin.apt_key:
-    url: https://repositories.intel.com/graphics/intel-graphics.key
-    state: present
+# A universe-only list added by an earlier version of this role duplicates
+# what ubuntu.sources already ships and makes every apt update warn.
+- name: Remove duplicate universe apt source
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/archive_ubuntu_com_universe.list
+    state: absent
 
-
-- name: Add Intel Linux Graphics repository
-  ansible.builtin.apt_repository:
-    repo: >
-      deb [signed-by=/usr/share/keyrings/intel-graphics-archive-keyring.gpg]
-      https://repositories.intel.com/graphics/ubuntu {{ ansible_distribution_release }} main
-    state: present
-  when: ansible_distribution_release in ["jammy", "focal", "noble"]
-
-
-- name: Update apt cache
-  ansible.builtin.apt:
-    update_cache: true
-
-- name: Install Intel Arc packages
+- name: Install Intel GPU packages
   ansible.builtin.apt:
     name: "{{ intel_arc_packages }}"
     state: present
-  when: ansible_distribution_release in ["jammy", "focal", "noble"]
-
+    update_cache: true
+    cache_valid_time: 3600
 
 - name: Add media user to video and render groups
   ansible.builtin.user:
     name: media
-    groups: "video,render"
+    groups: video,render
     append: true

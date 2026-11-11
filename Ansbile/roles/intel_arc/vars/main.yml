@@ -1,13 +1,5 @@
 intel_arc_packages:
-  - intel-media-va-driver-non-free
-  - libze-intel-gpu1
-  - libze1
-  - intel-metrics-discovery
-  - intel-opencl-icd
-  - clinfo
-  - intel-gsc
-  - libvpl2
-  - libvpl-tools
-  - libva-glx2
+  - intel-media-va-driver
   - va-driver-all
   - vainfo
+  - intel-gpu-tools

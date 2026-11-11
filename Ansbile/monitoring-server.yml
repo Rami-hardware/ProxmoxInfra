@@ -4,6 +4,7 @@
   become: true
   roles:
     - common
+    - k3s_agent
     - prometheus
     - loki
     - alertmanager

@@ -7,3 +7,4 @@
     - adguard
     - nginx_config
     - ufw
+    - k3s_agent

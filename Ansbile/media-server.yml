@@ -4,4 +4,6 @@
   become: true
   roles:
     - common
+    - intel_arc
+    - k3s_agent
     - scraparr
