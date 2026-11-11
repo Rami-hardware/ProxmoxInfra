@@ -161,6 +161,10 @@
     force_basic_auth: true
     return_content: true
   register: adguard_rewrite_list
+  # Read-only, so it also runs under --check; skipped where CI provides no
+  # AdGuard credentials (the Testing job).
+  check_mode: false
+  when: adguard_api_username | length > 0
   no_log: true
 
 - name: Add missing AdGuard DNS rewrites
@@ -178,7 +182,8 @@
   loop_control:
     label: "{{ item.domain }} -> {{ item.answer }}"
   when: >-
-    adguard_rewrite_list.json
+    adguard_rewrite_list.json is defined
+    and adguard_rewrite_list.json
     | selectattr('domain', 'equalto', item.domain)
     | selectattr('answer', 'equalto', item.answer)
     | list | length == 0
