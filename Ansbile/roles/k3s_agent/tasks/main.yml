@@ -21,16 +21,24 @@
     name: curl
     state: present
 
+- name: Check if K3s is already installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+  register: k3s_agent_binary
+
+# Only needed for a first install. get.k3s.io is slow from here, so fetching
+# it on every run made the whole deploy fail on a read timeout.
 - name: Download K3s install script
   ansible.builtin.get_url:
     url: https://get.k3s.io
     dest: /usr/local/bin/k3s-install.sh
     mode: '0755'
-
-- name: Check if K3s is already installed
-  ansible.builtin.stat:
-    path: /usr/local/bin/k3s
-  register: k3s_agent_binary
+    timeout: 60
+  register: k3s_agent_install_script
+  until: k3s_agent_install_script is succeeded
+  retries: 3
+  delay: 10
+  when: not k3s_agent_binary.stat.exists
 
 - name: Read K3s token from server
   ansible.builtin.slurp:

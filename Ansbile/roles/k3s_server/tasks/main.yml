@@ -57,11 +57,23 @@
     state: present
 
 # ── K3s Install ───────────────────────────────────────────────────────────────
+- name: Check if K3s is already installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+  register: k3s_server_binary
+
+# Only needed for a first install (see the same task in k3s_agent).
 - name: Download K3s install script
   ansible.builtin.get_url:
     url: https://get.k3s.io
     dest: /usr/local/bin/k3s-install.sh
     mode: '0755'
+    timeout: 60
+  register: k3s_server_install_script
+  until: k3s_server_install_script is succeeded
+  retries: 3
+  delay: 10
+  when: not k3s_server_binary.stat.exists
 
 - name: Install K3s server if not already installed
   ansible.builtin.command:
