@@ -16,6 +16,7 @@ resources:
   - tracearr-timescale.yaml
   - tracearr-redis.yaml
   - networkpolicy.yaml
+  - authorization-policy.yaml
 
 components:
   - ../components/mesh-network-policy

@@ -1,0 +1,213 @@
+---
+# Which workload may call which Service in media, by Istio identity
+# (ServiceAccount), enforced by the media waypoint. Applies to traffic sent
+# to a Service name; ingress-nginx and Prometheus reach pods directly and are
+# covered by the NetworkPolicies (components/mesh-network-policy) instead.
+#
+# Built from the waypoint's istio_requests_total / istio_tcp_* by source and
+# destination (2026-11-11) plus each app's configured links. A new caller
+# gets "RBAC: access denied" (HTTP 403) until it is added here.
+#
+# istio.io/dry-run: policies are evaluated and logged but not enforced.
+# Check would-be denials before removing it:
+#   kubectl -n media exec deploy/waypoint -- pilot-agent request GET stats | grep shadow_denied
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: sonarr
+  namespace: media
+  annotations:
+    istio.io/dry-run: "true"
+spec:
+  targetRefs:
+    - kind: Service
+      group: ""
+      name: sonarr
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/media/sa/prowlarr
+              - cluster.local/ns/media/sa/seerr
+              - cluster.local/ns/media/sa/bazarr
+              - cluster.local/ns/media/sa/scraparr
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: radarr
+  namespace: media
+  annotations:
+    istio.io/dry-run: "true"
+spec:
+  targetRefs:
+    - kind: Service
+      group: ""
+      name: radarr
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/media/sa/prowlarr
+              - cluster.local/ns/media/sa/seerr
+              - cluster.local/ns/media/sa/bazarr
+              - cluster.local/ns/media/sa/scraparr
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: prowlarr
+  namespace: media
+  annotations:
+    istio.io/dry-run: "true"
+spec:
+  targetRefs:
+    - kind: Service
+      group: ""
+      name: prowlarr
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/media/sa/sonarr
+              - cluster.local/ns/media/sa/radarr
+              - cluster.local/ns/media/sa/scraparr
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: qbittorrent
+  namespace: media
+  annotations:
+    istio.io/dry-run: "true"
+spec:
+  targetRefs:
+    - kind: Service
+      group: ""
+      name: qbittorrent
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/media/sa/sonarr
+              - cluster.local/ns/media/sa/radarr
+              - cluster.local/ns/monitoring/sa/qbittorrent-exporter
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: flaresolverr
+  namespace: media
+  annotations:
+    istio.io/dry-run: "true"
+spec:
+  targetRefs:
+    - kind: Service
+      group: ""
+      name: flaresolverr
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/media/sa/prowlarr
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: jellyfin
+  namespace: media
+  annotations:
+    istio.io/dry-run: "true"
+spec:
+  targetRefs:
+    - kind: Service
+      group: ""
+      name: jellyfin
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/media/sa/tracearr
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: seerr
+  namespace: media
+  annotations:
+    istio.io/dry-run: "true"
+spec:
+  targetRefs:
+    - kind: Service
+      group: ""
+      name: seerr
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/media/sa/scraparr
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: bazarr
+  namespace: media
+  annotations:
+    istio.io/dry-run: "true"
+spec:
+  targetRefs:
+    - kind: Service
+      group: ""
+      name: bazarr
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/media/sa/scraparr
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: tracearr-timescale
+  namespace: media
+  annotations:
+    istio.io/dry-run: "true"
+spec:
+  targetRefs:
+    - kind: Service
+      group: ""
+      name: tracearr-timescale
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/media/sa/tracearr
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: tracearr-redis
+  namespace: media
+  annotations:
+    istio.io/dry-run: "true"
+spec:
+  targetRefs:
+    - kind: Service
+      group: ""
+      name: tracearr-redis
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/media/sa/tracearr
