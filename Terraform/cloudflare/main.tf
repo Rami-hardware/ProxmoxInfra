@@ -12,22 +12,40 @@ resource "cloudflare_zone_setting" "zero_rtt" {
   value      = "on"
 }
 
-# Zone-level cache rules (one ruleset per zone for this phase).
+locals {
+  jellyfin_host = "jellyfin.${var.zone_name}"
+  # Jellyfin's web bundles: versioned by a ?<hash> query string (part of the
+  # cache key). index.html is not matched.
+  jellyfin_web_assets = "starts_with(http.request.uri.path, \"/web/\") and http.request.uri.path.extension in {\"js\" \"css\" \"woff\" \"woff2\"}"
+}
+
+# The zone's single ruleset for this phase. It existed before this module
+# (created in the dashboard as "default"), hence the import block below.
 resource "cloudflare_ruleset" "cache" {
   zone_id = data.cloudflare_zone.this.id
-  name    = "Cache rules"
+  name    = "default"
   kind    = "zone"
   phase   = "http_request_cache_settings"
 
   rules = [
     {
-      # Jellyfin's web bundles are versioned by a ?<hash> query string (part of
-      # the cache key), but the origin only sends max-age=14400, so the edge
-      # revalidates with the origin every 4 h. Keep them for 30 days at the
-      # edge and 7 days in the browser. index.html is not matched.
+      # Video streams (.mp4 is a default cached extension), the API and
+      # per-user images never go into the edge cache. Replaces the dashboard
+      # rule, whose full_uri pattern lacked the scheme and never matched.
+      description = "Jellyfin: bypass cache except web assets"
+      enabled     = true
+      expression  = "(http.host eq \"${local.jellyfin_host}\" and not (${local.jellyfin_web_assets}))"
+      action      = "set_cache_settings"
+      action_parameters = {
+        cache = false
+      }
+    },
+    {
+      # The origin only sends max-age=14400, so the edge revalidated these
+      # every 4 h. Keep them 30 days at the edge and 7 days in the browser.
       description = "Jellyfin web assets: long edge and browser TTL"
       enabled     = true
-      expression  = "(http.host eq \"jellyfin.${var.zone_name}\" and starts_with(http.request.uri.path, \"/web/\") and http.request.uri.path.extension in {\"js\" \"css\" \"woff\" \"woff2\"})"
+      expression  = "(http.host eq \"${local.jellyfin_host}\" and ${local.jellyfin_web_assets})"
       action      = "set_cache_settings"
       action_parameters = {
         cache = true
@@ -42,4 +60,9 @@ resource "cloudflare_ruleset" "cache" {
       }
     }
   ]
+}
+
+import {
+  to = cloudflare_ruleset.cache
+  id = "zones/46593646510004b325d04d011dcc49df/c3f2031260ef42fa99bb4aa88e0e9f9b"
 }
