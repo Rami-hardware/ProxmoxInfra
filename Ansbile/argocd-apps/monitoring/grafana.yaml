@@ -82,6 +82,11 @@ spec:
               value: "/opt/docker/grafana"
             - name: GF_FEATURE_TOGGLES_ENABLE
               value: "kubernetesDashboards=false"
+            # No alerting in Grafana: Prometheus evaluates every rule and
+            # Alertmanager notifies (roles/prometheus, roles/alertmanager).
+            # This turns off Grafana's own alert engine and its Alerting menu.
+            - name: GF_UNIFIED_ALERTING_ENABLED
+              value: "false"
             # Landing page: the provisioned overview (roles/grafana).
             - name: GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH
               value: "/opt/docker/grafana/provisioning/dashboards/overview.json"
