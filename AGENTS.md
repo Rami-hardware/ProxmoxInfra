@@ -43,7 +43,7 @@ terraform plan -input=false -no-color -detailed-exitcode -out=tfplan
 
 - Inventory: `inventory.ini` (groups = `gateway-vm`, `media-vm`, `monitoring-vm`, `git-k3s-server-vm`, `host-node`). Group names must match `group_vars/<group>.yml` filenames.
 - Playbooks: one per host (`gateway-server.yml`, `media-server.yml`, `monitoring-server.yml`, `git-k3s-server.yml`).
-- 19 roles under `Ansbile/roles/`. Deploy order in CI: gateway → monitoring → media → git-k3s.
+- 17 roles under `Ansbile/roles/`. Deploy order in CI: gateway → monitoring → media → git-k3s.
 - Secrets: `group_vars/all/vault.yml` is fully vault-encrypted (plain vars go in other files under `group_vars/all/`, e.g. `local_dns.yml`). Vault password via `--vault-password-file ~/.vault_pass` (CI writes it from `ANSIBLE_VAULT_PASSWORD` secret). Never commit plaintext secrets — CI's Trivy scan flags them.
 
 ### Conventions (enforced — match existing code)
