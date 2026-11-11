@@ -273,8 +273,8 @@
     {
       "id": 5,
       "type": "timeseries",
-      "title": "App time measured by the Istio sidecar, p95",
-      "description": "Inbound request duration at each workload's sidecar (reporter=destination).",
+      "title": "Service-to-Service time at the Istio waypoint, p95",
+      "description": "Request duration at the media namespace's waypoint proxy (reporter=waypoint): calls between apps, e.g. Seerr to Sonarr. Ingress traffic goes straight to the pod and is in the panels above.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -314,7 +314,7 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum by (le, destination_workload) (rate(istio_request_duration_milliseconds_bucket{reporter=\"destination\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum by (le, destination_workload) (rate(istio_request_duration_milliseconds_bucket{reporter=\"waypoint\"}[$__rate_interval])))",
           "legendFormat": "{{destination_workload}}",
           "refId": "A",
           "datasource": {

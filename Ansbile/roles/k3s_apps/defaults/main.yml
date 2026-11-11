@@ -21,12 +21,21 @@ k3s_apps_calico_version: "v3.32.1"
 k3s_apps_public_domain: darkestserver.com
 k3s_apps_public_cert_name: darkestserver-wildcard
 
-# Namespaces that should have Istio sidecar injection enabled. Labelled
-# directly with kubectl on every run so the label survives ArgoCD re-syncs.
-k3s_apps_istio_injected_namespaces:
+# Istio chart version (base, istiod, cni, ztunnel must match) and the
+# Gateway API release it was built against (istio/istio go.mod).
+k3s_apps_istio_version: "1.30.8"
+k3s_apps_gateway_api_version: v1.5.1
+
+# Namespaces in the Istio ambient mesh (ztunnel: mTLS between pods).
+# Labelled with kubectl on every run so the label survives ArgoCD re-syncs.
+k3s_apps_ambient_namespaces:
   - media
   - monitoring
   - network
+# Namespaces that also get a waypoint proxy, for L7 metrics
+# (istio_requests_total) and traces between their Services.
+k3s_apps_waypoint_namespaces:
+  - media
 
 # Every K3s node — promtail's hostPath config is deployed to each of these.
 k3s_apps_nodes:

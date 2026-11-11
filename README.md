@@ -95,7 +95,7 @@ Gateway also runs: **AdGuard Home** (systemd service — DNS :53, UI :8081; see 
 - **ArgoCD + ArgoCD Image Updater** — GitOps sync + auto image updates
 - **cert-manager** — TLS via internal CA (`homelab-ca-issuer`)
 - **ingress-nginx** — Kubernetes ingress controller (Helm-managed, LoadBalancer at `192.168.10.210`)
-- **Istio** (`istio-base` + `istiod`) — service mesh, sidecar injection on `media`, `monitoring`, `network` namespaces, traces to Tempo
+- **Istio** (`istio-base` + `istiod` + `istio-cni` + `ztunnel`) — ambient service mesh (no sidecars) on `media`, `monitoring`, `network`: mTLS between pods, a waypoint in `media` for L7 metrics and traces to Tempo
 - **kube-state-metrics** — Kubernetes object metadata exported to Prometheus
 
 ### Cluster-wide DaemonSets
@@ -209,7 +209,7 @@ App-level changes (editing anything under `Ansbile/argocd-apps/`) don't need a C
 
 ### Tracing
 
-- **Istio** sidecar injection on `media`, `monitoring`, `network` namespaces, 100% trace sampling to **Tempo** (replaces the earlier Jaeger setup)
+- **Istio** ambient mode on `media`, `monitoring`, `network` namespaces (ztunnel mTLS, `media` waypoint), 100% trace sampling to **Tempo** (replaces the earlier Jaeger setup)
 
 ### Grafana
 

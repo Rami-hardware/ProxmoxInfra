@@ -53,9 +53,6 @@ spec:
     metadata:
       labels:
         app: qbittorrent
-      annotations:
-        traffic.sidecar.istio.io/excludeInboundPorts: "6881"
-        traffic.sidecar.istio.io/excludeOutboundPorts: "6881"
     spec:
       serviceAccountName: qbittorrent
       nodeSelector:

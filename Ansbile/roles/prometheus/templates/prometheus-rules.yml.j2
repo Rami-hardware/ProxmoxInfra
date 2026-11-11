@@ -725,6 +725,18 @@ groups:
   # Ported from Grafana UI rules (group 'Istio evaluation') — rule names renamed to alert: CamelCase.
   - name: istio
     rules:
+      # Ambient mode: ztunnel (L4 proxy, mTLS) and istio-cni run on every
+      # node. Without them, mesh pods on that node can't start or talk.
+      - alert: IstioAmbientNodeAgentNotReady
+        expr: kube_daemonset_status_number_unavailable{namespace="istio-system", daemonset=~"ztunnel|istio-cni-node"} > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
+          summary: "{{ $labels.daemonset }} not ready on {{ $value }} node(s)"
+          description: "A node is missing a ready ztunnel or istio-cni pod. Mesh pods on that node lose traffic (ztunnel) or can't start (istio-cni). Check the DaemonSet pods in istio-system."
+
       - alert: IstioAgentCertificateExpiringSoon
         expr: (istio_agent_cert_expiry_seconds) < 10800
         for: 1m
@@ -733,7 +745,7 @@ groups:
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "Istio agent cert on {{ $labels.pod }} expires in {{ humanizeDuration $value }}"
-          description: "Workload certificate is close to expiry. This is usually auto-rotated by istiod, but if this alert keeps firing without the value resetting, cert rotation may be stuck — check istiod logs and sidecar connectivity to the control plane."
+          description: "Workload certificate is close to expiry. This is usually auto-rotated by istiod, but if this alert keeps firing without the value resetting, cert rotation may be stuck — check istiod logs and the proxy's connectivity to the control plane."
 
       - alert: IstioEnvoyProxyNotLive
         expr: (envoy_server_live) < 1
@@ -743,7 +755,7 @@ groups:
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "Envoy proxy down on {{ $labels.pod }}"
-          description: "The Envoy sidecar reports not-live. This pod's traffic (inbound and outbound through the mesh) may be broken. Check pod status and istio-proxy container logs."
+          description: "The Envoy proxy (waypoint) reports not-live. Service-to-Service traffic in its namespace may be broken. Check pod status and istio-proxy container logs."
 
       - alert: IstioEnvoyConnectionFailuresToXdsGrpc
         expr: (envoy_cluster_upstream_cx_connect_fail{cluster_name="xds-grpc"}) > 0
@@ -752,7 +764,7 @@ groups:
           severity: warning
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
-          summary: "Sidecar can't connect to istiod ({{ $labels.pod }})"
+          summary: "Proxy can't connect to istiod ({{ $labels.pod }})"
           description: "Envoy is failing to establish the xds-grpc connection to istiod, meaning this proxy won't receive config updates (routes, certs, policies). Check istiod pod health and network connectivity from this node."
 
       - alert: IstiodConnectionTerminations
@@ -763,9 +775,9 @@ groups:
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "Istiod connections terminating repeatedly on {{ $labels.pod }}"
-          description: "The sidecar's connection to istiod is being cut and re-established frequently — check for istiod restarts, resource pressure, or network instability between this pod and istiod."
+          description: "The proxy's connection to istiod is being cut and re-established frequently — check for istiod restarts, resource pressure, or network instability between this pod and istiod."
 
-      # Sustained misses on one sidecar only. Short host-wide CPU contention (CI full
+      # Sustained misses on one proxy only. Short host-wide CPU contention (CI full
       # redeploys starve every VM on the 12-core Proxmox host) causes 1-3 misses on
       # many pods at once and self-clears — that used to page on every push.
       # MegaMiss below still catches a genuinely stuck proxy immediately.
@@ -797,7 +809,7 @@ groups:
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "XDS proxy requests/responses out of sync on {{ $labels.pod }}"
-          description: "A sustained gap between XDS requests and responses suggests the sidecar isn't successfully completing config sync cycles with istiod."
+          description: "A sustained gap between XDS requests and responses suggests the proxy isn't successfully completing config sync cycles with istiod."
 
       - alert: IstioEnvoyTotalConnectionsAbnormallyHigh
         expr: (envoy_server_total_connections) > 1000
@@ -807,7 +819,7 @@ groups:
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "Envoy connection count elevated on {{ $labels.pod }}"
-          description: "Total connections on this sidecar are unusually high — check for a connection leak in the application or an unexpected traffic spike."
+          description: "Total connections on this proxy are unusually high — check for a connection leak in the application or an unexpected traffic spike."
 
       - alert: IstioEnvoyMemoryGrowingUnbounded
         expr: (envoy_server_memory_allocated) > 200000000
@@ -817,7 +829,7 @@ groups:
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "Envoy memory usage high on {{ $labels.pod }}"
-          description: "Sidecar memory allocation is climbing past the expected baseline — check for a memory leak or whether sidecar resource limits need adjusting."
+          description: "Proxy memory allocation is climbing past the expected baseline — check for a memory leak or whether proxy resource limits need adjusting."
 
   # Ported from Grafana UI rules (group 'ArgoCD evaluation') — rule names renamed to alert: CamelCase.
   - name: argocd
@@ -1196,7 +1208,7 @@ groups:
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/istio-tempo.md"
           summary: "Tempo unreachable"
-          description: "Prometheus can't scrape Tempo. New traces from Istio/Envoy sidecars will fail to be ingested, and existing traces won't be queryable in Grafana."
+          description: "Prometheus can't scrape Tempo. New traces from the Istio waypoints will fail to be ingested, and existing traces won't be queryable in Grafana."
 
   # Ported from Grafana UI rules (group 'Intel GPU evaluation') — rule names renamed to alert: CamelCase.
   - name: intel-gpu
