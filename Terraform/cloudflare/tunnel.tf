@@ -55,3 +55,31 @@ output "tunnel_token" {
   value     = data.cloudflare_zero_trust_tunnel_cloudflared_token.homelab.token
   sensitive = true
 }
+
+# Public names point at the tunnel. These CNAMEs existed before Terraform
+# (pointing at the apex A record kept by the old DDNS script); imported once.
+resource "cloudflare_dns_record" "tunnel" {
+  for_each = toset(local.tunnel_hostnames)
+
+  zone_id = data.cloudflare_zone.this.id
+  name    = "${each.key}.${var.zone_name}"
+  type    = "CNAME"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.homelab.id}.cfargotunnel.com"
+  proxied = true
+  ttl     = 1
+}
+
+import {
+  to = cloudflare_dns_record.tunnel["jellyfin"]
+  id = "46593646510004b325d04d011dcc49df/d9ec0973a10c0d3a4afc87c874e00d76"
+}
+
+import {
+  to = cloudflare_dns_record.tunnel["seerr"]
+  id = "46593646510004b325d04d011dcc49df/3fec775d11317f1a03790ee24d3a6d4e"
+}
+
+import {
+  to = cloudflare_dns_record.tunnel["adguard"]
+  id = "46593646510004b325d04d011dcc49df/87d40aa12b8b2a781532a1da29ad378b"
+}
