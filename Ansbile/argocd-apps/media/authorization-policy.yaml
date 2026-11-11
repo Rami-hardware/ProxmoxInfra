@@ -125,6 +125,7 @@ spec:
         - source:
             principals:
               - cluster.local/ns/media/sa/tracearr
+              - cluster.local/ns/media/sa/seerr
 ---
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
