@@ -254,9 +254,14 @@ groups:
           summary: "{{ $labels.instance }} clock not synchronized"
           description: "NTP/chrony sync lost on {{ $labels.instance }}. Can cause cert validation issues and confusing log timestamps."
 
+      # Needs real volume too: on a quiet node (the gateway sends ~30 TCP
+      # segments/s) a handful of retransmits during a short blip read as
+      # 30-50% and fired this alert 171 times in a week while the link was fine.
       - alert: NodeTCPRetransmitRateHigh
-        expr: (rate(node_netstat_Tcp_RetransSegs{job="nodes"}[5m]) / rate(node_netstat_Tcp_OutSegs{job="nodes"}[5m]) * 100) > 5
-        for: 1m
+        expr: |
+          (rate(node_netstat_Tcp_RetransSegs{job="nodes"}[5m]) / rate(node_netstat_Tcp_OutSegs{job="nodes"}[5m]) * 100) > 5
+          and rate(node_netstat_Tcp_RetransSegs{job="nodes"}[5m]) > 1
+        for: 10m
         labels:
           severity: warning
         annotations:

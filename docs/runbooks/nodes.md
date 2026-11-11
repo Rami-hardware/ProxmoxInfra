@@ -37,3 +37,10 @@ sudo du -x -d1 -h / | sort -rh | head   # what's eating the disk
 ## Escalation
 If the VM is unreachable: Proxmox UI console -> check qm status; last resort
 stop/start from the host.
+
+- **rx_dropped on every node (~2 packets/s, identical everywhere)** is normal:
+  layer-2 broadcasts Linux has no handler for, e.g. IEEE 1905.1 topology
+  discovery from the TP-Link mesh/extender (`b8:fb:b3:…`) and a switch's
+  loop-detection frames. Only worry if one node's drops rise above the others.
+- NodeTCPRetransmitRateHigh needs both >5% retransmits and >1 retransmitted
+  segment/s for 10m; percentage alone was noise on the quiet gateway.
