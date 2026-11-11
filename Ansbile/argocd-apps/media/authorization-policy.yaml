@@ -8,17 +8,17 @@
 # destination (2026-11-11) plus each app's configured links. A new caller
 # gets "RBAC: access denied" (HTTP 403) until it is added here.
 #
-# istio.io/dry-run: policies are evaluated and logged but not enforced.
-# Check would-be denials before removing it:
-#   kubectl -n media exec deploy/waypoint -- pilot-agent request GET stats | grep shadow_denied
+# Ran in dry-run (istio.io/dry-run: "true") first: ~1000 real requests, 0
+# would-be denials. To test a change the same way, add that annotation and
+# watch: kubectl -n media exec deploy/waypoint -- pilot-agent request GET stats | grep shadow_denied
+# Denied requests show up as response_code 403 in istio_requests_total
+# (reporter="waypoint").
 ---
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
   name: sonarr
   namespace: media
-  annotations:
-    istio.io/dry-run: "true"
 spec:
   targetRefs:
     - kind: Service
@@ -39,8 +39,6 @@ kind: AuthorizationPolicy
 metadata:
   name: radarr
   namespace: media
-  annotations:
-    istio.io/dry-run: "true"
 spec:
   targetRefs:
     - kind: Service
@@ -61,8 +59,6 @@ kind: AuthorizationPolicy
 metadata:
   name: prowlarr
   namespace: media
-  annotations:
-    istio.io/dry-run: "true"
 spec:
   targetRefs:
     - kind: Service
@@ -82,8 +78,6 @@ kind: AuthorizationPolicy
 metadata:
   name: qbittorrent
   namespace: media
-  annotations:
-    istio.io/dry-run: "true"
 spec:
   targetRefs:
     - kind: Service
@@ -103,8 +97,6 @@ kind: AuthorizationPolicy
 metadata:
   name: flaresolverr
   namespace: media
-  annotations:
-    istio.io/dry-run: "true"
 spec:
   targetRefs:
     - kind: Service
@@ -122,8 +114,6 @@ kind: AuthorizationPolicy
 metadata:
   name: jellyfin
   namespace: media
-  annotations:
-    istio.io/dry-run: "true"
 spec:
   targetRefs:
     - kind: Service
@@ -141,8 +131,6 @@ kind: AuthorizationPolicy
 metadata:
   name: seerr
   namespace: media
-  annotations:
-    istio.io/dry-run: "true"
 spec:
   targetRefs:
     - kind: Service
@@ -160,8 +148,6 @@ kind: AuthorizationPolicy
 metadata:
   name: bazarr
   namespace: media
-  annotations:
-    istio.io/dry-run: "true"
 spec:
   targetRefs:
     - kind: Service
@@ -179,8 +165,6 @@ kind: AuthorizationPolicy
 metadata:
   name: tracearr-timescale
   namespace: media
-  annotations:
-    istio.io/dry-run: "true"
 spec:
   targetRefs:
     - kind: Service
@@ -198,8 +182,6 @@ kind: AuthorizationPolicy
 metadata:
   name: tracearr-redis
   namespace: media
-  annotations:
-    istio.io/dry-run: "true"
 spec:
   targetRefs:
     - kind: Service
