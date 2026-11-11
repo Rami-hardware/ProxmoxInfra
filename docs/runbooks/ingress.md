@@ -34,4 +34,7 @@ curl -sk -o /dev/null -w '%{http_code}
   the panels for that host. *App time* ~= *Total time* means the app is slow
   (ingress adds ~0); check its pod CPU/memory and logs. A high *Network hop*
   (upstream connect) means the node or pod network: check the node and
-  flannel. Seerr is the known slow one (SSR, p95 ~2s on the LAN).
+  flannel. Seerr is the known slow one (p95 ~2s): its discover, movie and
+  tv pages call the TMDB API live, several calls per page at ~160-300ms
+  each (measured 2026-11-11); local endpoints like /api/v1/request/count
+  answer in ~0.1s. Not a network or ingress problem.
