@@ -2,9 +2,8 @@
 
 Covers: LokiIngesterPushGRPCErrors, LokiHighRequestErrorRate5xx, LokiPushFailures,
 LokiIngesterWALDiskUsageHigh, LokiWALDiskFullFailures, LokiIngesterChunkFlushFailures,
-LokiQuerySchedulerQueueBackingUp, LokiRateStoreRefreshFailures, LokiRingMemberUnhealthy,
-LokiCompactorNotRunningRetentionFailing, LokiProcessDown, PromtailDroppedLogEntries,
-PromtailDroppedBytes, PromtailBatchRetriesClimbing, PromtailRequestErrors,
+LokiQuerySchedulerQueueBackingUp, LokiRateStoreRefreshFailures, LokiCompactorNotRunningRetentionFailing, LokiProcessDown, PromtailDroppedLogEntries,
+PromtailBatchRetriesClimbing, PromtailRequestErrors,
 PromtailProcessExporterDown, LogErrorRateSpike, TLSOrCertificateErrorInLogs, LogPipelineBroken,
 SonarrRadarrDownloadFailures, TempoLogsSilent
 

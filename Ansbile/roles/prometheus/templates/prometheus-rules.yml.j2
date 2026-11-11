@@ -103,7 +103,7 @@ groups:
         # within ~10s of sustained upstream breakage. Sustained AdGuard-down
         # is separately covered by AdGuardDNSDown above.
         expr: increase(coredns_forward_healthcheck_broken_total[10m]) > 25
-        for: 0m
+        for: 5m
         labels:
           severity: warning
         annotations:
@@ -136,20 +136,8 @@ groups:
 
       # The rules below replace the blackbox alert set that used to live only in
       # Grafana's UI (unversioned; its HTTP-status rule reached Discord with an
-      # unrendered title template). Ported 1:1 except SiteHTTPStatusError waits
-      # 2m instead of Grafana's 1m, to ride out ingress blips during ArgoCD
-      # rollouts. Thresholds that Grafana kept in its evaluator are part of the
+      # unrendered title template). Thresholds that Grafana kept in its evaluator are part of the
       # expr here, and $value/humanizeDuration replace Grafana's $values.A.
-      - alert: SiteHTTPStatusError
-        expr: probe_http_status_code{scope=~"local|public"} >= 400
-        for: 2m
-        labels:
-          severity: warning
-        annotations:
-          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/sites.md"
-          summary: "{{ $labels.instance }} returned HTTP {{ humanize $value }} (scope: {{ $labels.scope }})"
-          description: "Fires when a monitored site responds but with an HTTP error status (4xx/5xx). The service may be running but misconfigured, crashing internally, or behind a broken ingress rule."
-
       - alert: SiteRespondingSlowly
         expr: probe_duration_seconds > 3 and probe_success == 1
         for: 5m
@@ -172,7 +160,7 @@ groups:
 
       - alert: SlowDNSResolution
         expr: probe_dns_lookup_time_seconds > 1
-        for: 1m
+        for: 5m
         labels:
           severity: warning
         annotations:
@@ -305,7 +293,7 @@ groups:
 
       - alert: NodeClockNotSynced
         expr: (node_timex_sync_status{job="nodes"}) < 1
-        for: 1m
+        for: 15m
         labels:
           severity: warning
         annotations:
@@ -460,7 +448,7 @@ groups:
     rules:
       - alert: KubeDeploymentHasUnavailableReplicas
         expr: (count by (namespace, deployment) ( kube_deployment_status_condition{deployment!="kube-state-metrics", condition="Available", status="false"} == 1 ) ) > 0
-        for: 3m
+        for: 10m
         labels:
           severity: warning
         annotations:
@@ -468,19 +456,9 @@ groups:
           summary: "Deployment {{ $labels.deployment }} in {{ $labels.namespace }} has no available replicas"
           description: "Deployment {{ $labels.deployment }} Available condition is false — no replicas are serving traffic. Check kubectl -n {{ $labels.namespace }} describe deployment {{ $labels.deployment }} and pod events for scheduling, image pull, or crash issues."
 
-      - alert: KubeDeploymentSpecVsAvailableReplicaMismatch
-        expr: (kube_deployment_spec_replicas - kube_deployment_status_replicas_available) > 0
-        for: 3m
-        labels:
-          severity: warning
-        annotations:
-          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/k8s-workloads.md"
-          summary: "{{ $labels.deployment }} in {{ $labels.namespace }} has unavailable replicas"
-          description: "Deployment {{ $labels.deployment }} is not meeting its desired replica count. Check kubectl -n {{ $labels.namespace }} describe deployment {{ $labels.deployment }} and pod events for scheduling, image pull, or crash issues."
-
       - alert: KubePodCrashLooping
         expr: (increase(kube_pod_container_status_restarts_total[15m])) > 3
-        for: 1m
+        for: 5m
         labels:
           severity: warning
         annotations:
@@ -550,15 +528,6 @@ groups:
           summary: "Job {{ $labels.job_name }} in {{ $labels.namespace }} failed"
           description: "A Kubernetes Job has failed. Check kubectl -n {{ $labels.namespace }} logs job/{{ $labels.job_name }} for the failure reason."
 
-      - alert: KubeCronJobStale
-        expr: (time() - kube_cronjob_status_last_successful_time) > 86400
-        for: 1m
-        labels:
-          severity: warning
-        annotations:
-          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/k8s-workloads.md"
-          summary: "CronJob {{ $labels.cronjob }} hasn't succeeded in 24h+"
-          description: "Expected recurring job hasn't completed successfully. Check if the CronJob is suspended, or if recent job attempts are failing."
 
   # kubelet-local metrics: cadvisor (container runtime) + kubelet /metrics
   # (PVC usage) — both scraped over https with the node bearer token.
@@ -729,16 +698,6 @@ groups:
           summary: "nginx config reload failed"
           description: "The last configuration reload attempt failed — nginx is still serving the previous config. Any recent ingress changes (new hosts, TLS updates) are NOT live. Check controller logs for the specific syntax/config error."
 
-      - alert: IngressSSLCertificateExpiringSoon
-        expr: ((nginx_ingress_controller_ssl_expire_time_seconds - time()) / 86400) < 14
-        for: 1m
-        labels:
-          severity: warning
-        annotations:
-          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/ingress.md"
-          summary: "TLS cert for {{ $labels.host }} expires in {{ humanize $value }} days"
-          description: "Certificate served by ingress for {{ $labels.host }} is approaching expiry. If this is managed by cert-manager, check the Certificate/CertificateRequest resources for renewal failures."
-
       - alert: IngressOrphanedIngress
         expr: (nginx_ingress_controller_orphan_ingress) > 0
         for: 1m
@@ -751,7 +710,7 @@ groups:
 
       - alert: IngressHigh5xxRateFromUpstreams
         expr: (( sum(rate(nginx_ingress_controller_requests{status=~"5.."}[5m])) by (ingress) / sum(rate(nginx_ingress_controller_requests[5m])) by (ingress) * 100 ) and on (ingress) ( sum(increase(nginx_ingress_controller_requests{status=~"5.."}[5m])) by (ingress) > 2 )) > 5
-        for: 1m
+        for: 5m
         labels:
           severity: warning
         annotations:
@@ -864,7 +823,7 @@ groups:
 
       - alert: IstiodConnectionTerminations
         expr: (increase(istio_agent_istiod_connection_terminations[15m])) > 5
-        for: 1m
+        for: 15m
         labels:
           severity: warning
         annotations:
@@ -931,7 +890,7 @@ groups:
     rules:
       - alert: ArgoCDApplicationOutOfSync
         expr: argocd_app_info{sync_status!="Synced"} == 1
-        for: 1m
+        for: 15m
         labels:
           severity: warning
         annotations:
@@ -1005,26 +964,6 @@ groups:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/argocd-alertmanager.md"
           summary: "Alertmanager notification latency high for {{ $labels.integration }} (p99 {{ humanize $value }}s)"
           description: "Notifications are taking unusually long to send. Check whether the receiving endpoint is slow or rate-limiting."
-
-      - alert: AlertmanagerClusterUnhealthy
-        expr: (alertmanager_cluster_health_score) > 0
-        for: 1m
-        labels:
-          severity: warning
-        annotations:
-          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/argocd-alertmanager.md"
-          summary: "Alertmanager cluster degraded"
-          description: "Cluster health score is non-zero or peers have failed — only relevant if running multiple Alertmanager replicas. May cause duplicate or missed notifications if peers can't gossip alert state."
-
-      - alert: AlertmanagerFailedPeersInCluster
-        expr: (alertmanager_cluster_failed_peers) > 0
-        for: 1m
-        labels:
-          severity: warning
-        annotations:
-          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/argocd-alertmanager.md"
-          summary: "Alertmanager has failed cluster peers"
-          description: "Alertmanager gossip reports failed peers — only relevant if running multiple replicas. May cause duplicate or missed notifications if peers can't gossip alert state."
 
       - alert: AlertmanagerInvalidAlertsBeingReceived
         expr: (increase(alertmanager_alerts_invalid_total[15m])) > 0
@@ -1139,16 +1078,6 @@ groups:
           summary: "Loki rate store sync failures increasing"
           description: "The distributor is failing to sync stream rate info from ingesters, which can affect rate-limiting accuracy."
 
-      - alert: LokiRingMemberUnhealthy
-        expr: (loki_ring_members{state="Unhealthy"}) > 0
-        for: 1m
-        labels:
-          severity: warning
-        annotations:
-          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
-          summary: "Loki ring member {{ $labels.name }} unhealthy"
-          description: "A Loki component's ring membership is reporting unhealthy — that component may be crash-looping or network-partitioned from the rest of the cluster."
-
       - alert: LokiIngesterPushGRPCErrors
         expr: (sum(rate(loki_ingester_client_request_duration_seconds_count{operation="/logproto.Pusher/Push", status_code!="2xx"}[5m]))) > 0
         for: 1m
@@ -1184,7 +1113,7 @@ groups:
     rules:
       - alert: PromtailDroppedLogEntries
         expr: (increase(promtail_dropped_entries_total{reason="ingester_error"}[15m])) > 0
-        for: 1m
+        for: 10m
         labels:
           severity: warning
         annotations:
@@ -1192,19 +1121,9 @@ groups:
           summary: "Promtail dropping log entries to {{ $labels.host }}"
           description: "Promtail is failing to deliver log lines to Loki (ingester_error) and dropping them permanently after retries. Check Loki ingester health, disk space, and rate limits."
 
-      - alert: PromtailDroppedBytes
-        expr: (increase(promtail_dropped_bytes_total{reason="ingester_error"}[15m])) > 1000000
-        for: 1m
-        labels:
-          severity: warning
-        annotations:
-          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
-          summary: "Promtail dropped {{ humanize $value }} bytes of log data to {{ $labels.host }}"
-          description: "Promtail is failing to deliver log data to Loki (ingester_error) and discarding it after retries. Check Loki ingester health, disk space, and rate limits."
-
       - alert: PromtailBatchRetriesClimbing
         expr: (increase(promtail_batch_retries_total[15m])) > 5
-        for: 1m
+        for: 10m
         labels:
           severity: warning
         annotations:
@@ -1214,7 +1133,7 @@ groups:
 
       - alert: PromtailRequestErrors
         expr: (sum(rate(promtail_request_duration_seconds_count{status_code=~"4..|5.."}[5m])) by (host, status_code)) > 0
-        for: 1m
+        for: 10m
         labels:
           severity: warning
         annotations:
@@ -1266,7 +1185,7 @@ groups:
           description: "Traces aren't making it to long-term storage. Check the storage backend (local disk/S3) for space or connectivity issues."
 
       - alert: TempoCompactorFailures
-        expr: (sum(rate(tempo_compactor_errors_total[15m]))) > 0
+        expr: (sum(rate(tempodb_compaction_errors_total[15m]))) > 0
         for: 1m
         labels:
           severity: warning
@@ -1361,16 +1280,6 @@ groups:
   # Ported from Grafana UI rules (group 'qBittorrent Evaluation') — rule names renamed to alert: CamelCase.
   - name: qbittorrent
     rules:
-      - alert: QbitNotConnectedToBTNetwork
-        expr: (qbittorrent_connected) < 1
-        for: 1m
-        labels:
-          severity: warning
-        annotations:
-          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
-          summary: "qBittorrent disconnected from BitTorrent network"
-          description: "qBittorrent is running but not connected to the torrent network — likely a networking issue on the host or VPN/proxy interruption if one is configured."
-
       - alert: QbitTorrentsStuckInErrorState
         expr: (qbittorrent_torrents_count{status="error"}) > 0
         for: 1m
@@ -1498,87 +1407,82 @@ groups:
           summary: "scraparr exporter unreachable"
           description: "Prometheus can't scrape the scraparr exporter target — check that the container is running and the port is reachable."
 
-  # Ported from Grafana UI rules (group 'SMART Evaluation') — rule names renamed to alert: CamelCase.
+  # Disk health on the Proxmox host (4x SATA in ZFS + 1 NVMe). Data comes
+  # from the smartctl textfile collector on host-node (smartmon_*) and
+  # node-exporter's NVMe collector (nvme_*). The old rules read smartctl_*
+  # from a separate exporter that no longer runs, so they could never fire.
   - name: smart
     rules:
-      - alert: SMARTOverallStatusFailure
-        expr: (smartctl_device_smart_status{device=~"nvme0|sda|sdb|sdc|sdd"}) < 1
-        for: 1m
+      - alert: DiskSmartUnhealthy
+        expr: smartmon_device_smart_healthy < 1
+        for: 5m
         labels:
-          severity: warning
+          severity: critical
         annotations:
-          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/sites.md"
-          summary: "{{ $labels.device }} reports SMART FAILURE"
-          description: "smartctl_device_smart_status for {{ $labels.device }} is reporting a non-passing status. This is a strong signal of imminent drive failure — check zpool status and plan replacement/backup immediately."
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
+          summary: "{{ $labels.disk }} reports SMART failure"
+          description: "The drive's own self-assessment failed: a strong sign of imminent failure. Check zpool status, make sure backups are current and plan a replacement."
 
-      - alert: SmartReallocatedSectorsAppearing
-        expr: (smartctl_device_attribute{attribute_name="Reallocated_Sector_Ct", attribute_value_type="raw"}) > 0
-        for: 1m
+      - alert: DiskSectorProblems
+        expr: |
+          smartmon_reallocated_sector_ct_raw_value > 0
+          or smartmon_current_pending_sector_raw_value > 0
+          or smartmon_offline_uncorrectable_raw_value > 0
+        for: 5m
         labels:
           severity: warning
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
-          summary: "{{ $labels.device }} has {{ $labels.attribute_name }} > 0"
-          description: "A SMART attribute historically at 0 for {{ $labels.device }} has become nonzero, which typically indicates the onset of physical disk degradation. Recommend running a full SMART long self-test and reviewing zpool scrub results."
+          summary: "Bad sectors on {{ $labels.disk }}"
+          description: "{{ $labels.disk }} has reallocated, pending or uncorrectable sectors. Run a long self-test (smartctl -t long) and watch whether the count grows."
 
-      - alert: SmartCurrentPendingSector
-        expr: (smartctl_device_attribute{attribute_name="Current_Pending_Sector", attribute_value_type="raw"}) > 0
-        for: 1m
+      - alert: DiskTemperatureHigh
+        expr: smartmon_temperature_celsius_raw_value > 50 or nvme_temperature_celsius > 70
+        for: 15m
         labels:
           severity: warning
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
-          summary: "{{ $labels.device }} has {{ $labels.attribute_name }} > 0"
-          description: "A SMART attribute historically at 0 for {{ $labels.device }} has become nonzero, which typically indicates the onset of physical disk degradation. Recommend running a full SMART long self-test and reviewing zpool scrub results."
+          summary: "{{ $labels.disk }}{{ $labels.device }} at {{ $value }}°C"
+          description: "Sustained high drive temperature shortens its life. Check case airflow and fans."
 
-      - alert: SmartOfflineUncorrectableSectors
-        expr: (smartctl_device_attribute{attribute_name="Offline_Uncorrectable", attribute_value_type="raw"}) > 0
-        for: 1m
+      - alert: NVMeHealthWarning
+        expr: nvme_critical_warning > 0 or increase(nvme_media_errors_total[1h]) > 0
+        for: 5m
         labels:
           severity: warning
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
-          summary: "{{ $labels.device }} has {{ $labels.attribute_name }} > 0"
-          description: "A SMART attribute historically at 0 for {{ $labels.device }} has become nonzero, which typically indicates the onset of physical disk degradation. Recommend running a full SMART long self-test and reviewing zpool scrub results."
+          summary: "NVMe {{ $labels.device }} reports a health warning or media errors"
+          description: "The NVMe drive raised a critical-warning flag or logged media errors. Check smartctl -a and plan a replacement."
 
-      - alert: SmartDiskTemperatureHigh
-        expr: (smartctl_device_temperature{temperature_type="current"}) > 55
-        for: 1m
+      - alert: NVMeWearHigh
+        expr: nvme_percentage_used_ratio > 0.8
+        for: 1h
         labels:
           severity: warning
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
-          summary: "{{ $labels.device }} temperature at {{ humanize $value }}°C"
-          description: "Disk temperature exceeded the safe operating threshold. Sustained heat accelerates wear — check chassis airflow/fan health."
+          summary: "NVMe {{ $labels.device }} has used {{ $value | humanizePercentage }} of its rated life"
+          description: "Rated write endurance is nearly spent. Plan a replacement."
 
-      - alert: SmartNVMeMediaErrorsCriticalWarningFlags
-        expr: smartctl_device_media_errors{device="nvme0"} > 0 and smartctl_device_critical_warning{device="nvme0"} > 0
-        for: 1m
+      - alert: SmartDataStale
+        expr: time() - max by (disk) (smartmon_smartctl_run) > 7200
+        for: 15m
         labels:
           severity: warning
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
-          summary: "NVMe nvme0 logging media errors + critical warning flags"
-          description: "Both smartctl_device_media_errors and smartctl_device_critical_warning are > 0 on nvme0 — the device is logging media/reallocated errors and raised a critical warning. Plan for replacement."
+          summary: "No fresh SMART data for {{ $labels.disk }} in 2h"
+          description: "The smartctl textfile collector on the Proxmox host stopped updating, so every disk alert above is blind. Check its cron/timer on host-node."
 
-      - alert: SmartctlScrapeExitStatusFailure
-        expr: smartctl_device_smartctl_exit_status != 0
-        for: 1m
-        labels:
-          severity: warning
-        annotations:
-          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
-          summary: "smartctl failed to query {{ $labels.device }}"
-          description: "The smartctl_exporter couldn't successfully run smartctl against {{ $labels.device }} — could mean the disk dropped off the bus, a permissions issue, or a controller problem."
-
-  # Ported from Grafana UI rules (group 'ZFS alerts') — rule names renamed to alert: CamelCase.
   - name: zfs
     rules:
       - alert: ZfsPoolHealth
         expr: (zfs_pool_health{pool="tank"}) > 0
         for: 1m
         labels:
-          severity: warning
+          severity: critical
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "ZFS pool {{ $labels.pool }} health check failed (value={{ humanize $value }})"

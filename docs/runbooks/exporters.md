@@ -1,11 +1,15 @@
 # Hardware & app exporters — SMART / ZFS / scraparr / qBittorrent / GPU
 
-Covers: Smart*, Zfs*, Scraparr*, Qbit*, IntelGpu*, CertManagerCertNotReady,
+Covers: DiskSmartUnhealthy, DiskSectorProblems, DiskTemperatureHigh, NVMeHealthWarning,
+NVMeWearHigh, SmartDataStale, Zfs*, Scraparr*, Qbit*, IntelGpu*, CertManagerCertNotReady,
 BlackboxExporterDown
 
 ## Quick pointers
 - SMART (host disks): `smartctl -a /dev/sdX` on the Proxmox host; reallocated
   or pending sectors > 0 = plan replacement, run a long self-test.
+  Data: the smartctl textfile collector on host-node (`smartmon_*`, every few
+  minutes) and node-exporter's NVMe collector (`nvme_*`). SmartDataStale = that
+  collector stopped, so the disk alerts are blind until it runs again.
 - ZFS: `zpool status tank`, `zpool list` on the host. DEGRADED = act now.
 - qBittorrent: Web UI at 192.168.10.201:8080; stalled downloads usually mean
   dead torrents or tracker/network issues (check port forwarding).

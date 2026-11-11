@@ -1,7 +1,6 @@
 # Ingress — ingress-nginx alerts
 
-Covers: IngressControllerDown, IngressConfigReloadFailed, IngressSSLCertificateExpiringSoon,
-IngressOrphanedIngress, IngressHigh5xxRateFromUpstreams, IngressConnectionCountNearWorkerLimit,
+Covers: IngressControllerDown, IngressConfigReloadFailed, IngressOrphanedIngress, IngressHigh5xxRateFromUpstreams, IngressConnectionCountNearWorkerLimit,
 IngressAdmissionWebhookFailures, IngressAppLatencyHigh, CloudflareTunnelDown
 
 ## Diagnosis

@@ -3,7 +3,6 @@
 Covers: ArgoCDApplicationOutOfSync, ArgoCDApplicationUnhealthy, ArgoCDComponentsDown,
 AlertmanagerDown, AlertmanagerConfigReloadFailed, AlertmanagerNotificationsFailingToSend,
 AlertmanagerNotificationRequestsFailingAtTheHTTPLevel, AlertmanagerHighNotificationLatency,
-AlertmanagerClusterUnhealthy, AlertmanagerFailedPeersInCluster,
 AlertmanagerInvalidAlertsBeingReceived, AlertmanagerAggregationGroupCreationFailures,
 AlertmanagerSilenceGCErrors, Watchdog
 

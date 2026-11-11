@@ -1,8 +1,7 @@
 # Kubernetes workloads — deployments / pods / PVC / jobs
 
-Covers: KubeDeploymentHasUnavailableReplicas, KubeDeploymentSpecVsAvailableReplicaMismatch,
-KubePodCrashLooping, KubePodStuckInWaiting, KubePodInFailedPhase, KubeNodeNotReady,
-KubePVCNotBound, KubeJobFailed, KubeCronJobStale, KubePodOOMKilled,
+Covers: KubeDeploymentHasUnavailableReplicas, KubePodCrashLooping, KubePodStuckInWaiting, KubePodInFailedPhase, KubeNodeNotReady,
+KubePVCNotBound, KubeJobFailed, KubePodOOMKilled,
 ContainerNearMemoryLimit, KubePVCAlmostFull, KubePVCFillForecast7d, KubeletDown
 
 ## Diagnosis

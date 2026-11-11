@@ -1,7 +1,6 @@
 # Sites & SLO burn — HTTP probe alerts
 
-Covers: LocalServiceDown, PublicSiteDown, SiteHTTPStatusError,
-SiteRespondingSlowly, ExcessiveRedirects, CertExpiringSoon,
+Covers: LocalServiceDown, PublicSiteDown, SiteRespondingSlowly, ExcessiveRedirects, CertExpiringSoon,
 SpeedtestExporterDown, BlackboxExporterDown, SLOLocalSitesFastBurn,
 SLOLocalSitesSlowBurn, SLOPublicSitesFastBurn, SLOPublicSitesSlowBurn
 
