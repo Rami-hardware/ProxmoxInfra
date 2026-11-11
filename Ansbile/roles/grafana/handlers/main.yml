@@ -1,0 +1,7 @@
+---
+# Grafana reads provisioned datasources only at startup (dashboards are
+# picked up on their own).
+- name: Restart Grafana
+  ansible.builtin.command: k3s kubectl -n monitoring rollout restart deployment/grafana
+  delegate_to: git-k3s-server
+  changed_when: true

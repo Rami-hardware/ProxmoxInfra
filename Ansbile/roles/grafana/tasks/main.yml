@@ -16,6 +16,7 @@
     src: datasources.yml.j2
     dest: "{{ grafana_provisioning_dir }}/datasources.yml"
     mode: '0644'
+  notify: Restart Grafana
 
 - name: Set ownership of Grafana data directory to UID 472
   ansible.builtin.file:

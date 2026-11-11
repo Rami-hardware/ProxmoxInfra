@@ -9,7 +9,13 @@ datasources:
     access: proxy
     isDefault: {{ ds.default | default(false) | lower }}
     editable: false
+{# Alerting > Alert rules lists Prometheus' rules (read-only: all alerts are
+   defined in roles/prometheus) and hides Loki, whose ruler only records
+   metrics. #}
 {% if ds.type == 'prometheus' %}
+    jsonData:
+      manageAlerts: true
+{% elif ds.type == 'loki' %}
     jsonData:
       manageAlerts: false
 {% elif ds.type == 'tempo' %}
