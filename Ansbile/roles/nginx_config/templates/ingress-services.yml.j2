@@ -224,7 +224,9 @@ spec:
   tls:
     - hosts:
         - {{ svc.name }}.darkestserver.com
-      secretName: cloudflare-origin-tls
+      # No secretName: ingress-nginx serves its default certificate, the
+      # Let's Encrypt *.darkestserver.com wildcard, trusted by both Cloudflare
+      # and LAN browsers (split-horizon DNS).
   rules:
     - host: {{ svc.name }}.darkestserver.com
       http:

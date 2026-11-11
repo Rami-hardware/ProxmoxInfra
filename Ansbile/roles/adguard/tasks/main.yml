@@ -148,3 +148,38 @@
     group: 1000
     mode: '0600'
   loop: "{{ adguard_work_files.files }}"
+
+# ── DNS rewrites (split-horizon) ──────────────────────────────────────────────
+# Managed through the API, not the YAML: AdGuard rewrites its own config file
+# and would overwrite edits made while it runs. Adds missing entries only, so
+# a rewrite added by hand in the UI is left alone.
+- name: List AdGuard DNS rewrites
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ adguard_ui_port }}/control/rewrite/list"
+    url_username: "{{ adguard_api_username }}"
+    url_password: "{{ adguard_api_password }}"
+    force_basic_auth: true
+    return_content: true
+  register: adguard_rewrite_list
+  no_log: true
+
+- name: Add missing AdGuard DNS rewrites
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ adguard_ui_port }}/control/rewrite/add"
+    method: POST
+    url_username: "{{ adguard_api_username }}"
+    url_password: "{{ adguard_api_password }}"
+    force_basic_auth: true
+    body_format: json
+    body:
+      domain: "{{ item.domain }}"
+      answer: "{{ item.answer }}"
+  loop: "{{ adguard_rewrites }}"
+  loop_control:
+    label: "{{ item.domain }} -> {{ item.answer }}"
+  when: >-
+    adguard_rewrite_list.json
+    | selectattr('domain', 'equalto', item.domain)
+    | selectattr('answer', 'equalto', item.answer)
+    | list | length == 0
+  changed_when: true

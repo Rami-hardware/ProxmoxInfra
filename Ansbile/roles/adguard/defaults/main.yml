@@ -4,3 +4,11 @@
 adguard_version: "v0.107.79"
 adguard_install_dir: /opt/adguardhome
 adguard_download_base: https://github.com/AdGuardTeam/AdGuardHome/releases/download
+
+# AdGuard admin credentials for the HTTP API (same account the exporter uses;
+# supplied by CI from GitHub Actions secrets).
+adguard_api_username: "{{ lookup('env', 'ADGUARD_EXPORTER_USERNAME') }}"
+adguard_api_password: "{{ lookup('env', 'ADGUARD_EXPORTER_PASSWORD') }}"
+
+# DNS rewrites ensured on every run. Entries are only added, never removed.
+adguard_rewrites: []
