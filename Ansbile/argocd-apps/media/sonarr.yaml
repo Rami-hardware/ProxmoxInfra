@@ -91,7 +91,10 @@ spec:
               memory: "128Mi"
               cpu: "50m"
             limits:
-              memory: "768Mi"
+              # Imports copy across two NFS mounts (/downloads and /tv can't
+              # hardlink), and the NFS write-back sits in page cache charged to
+              # this container. 768Mi OOM-killed Sonarr mid-import (2026-11-11).
+              memory: "2Gi"
               cpu: "500m"
       volumes:
         - name: config
