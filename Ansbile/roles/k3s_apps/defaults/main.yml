@@ -20,6 +20,11 @@ k3s_apps_alert_forwarder_image_tag: "{{ lookup('env', 'GITHUB_SHA') | default('l
 k3s_apps_public_domain: darkestserver.com
 k3s_apps_public_cert_name: darkestserver-wildcard
 
+# Cloudflare Tunnel connector (templates/cloudflared.yml.j2). Two replicas on
+# different nodes keep the public sites up when one node or pod restarts.
+k3s_apps_cloudflared_version: "2026.10.7"
+k3s_apps_cloudflared_replicas: 2
+
 # Istio chart version (base, istiod, cni, ztunnel must match) and the
 # Gateway API release it was built against (istio/istio go.mod).
 k3s_apps_istio_version: "1.30.8"

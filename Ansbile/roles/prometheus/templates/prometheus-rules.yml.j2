@@ -700,6 +700,18 @@ groups:
           summary: "Ingress {{ $labels.ingress }} in {{ $labels.namespace }} failing config check"
           description: "This ingress's configuration is failing nginx's syntax test, meaning it likely isn't being applied. Check the ingress annotations/rules for errors."
 
+      # Cloudflare Tunnel connector: every public *.darkestserver.com request
+      # goes through it. One replica down is tolerated (2 replicas, PDB).
+      - alert: CloudflareTunnelDown
+        expr: (kube_deployment_status_replicas_available{namespace="cloudflared", deployment="cloudflared"} or on() vector(0)) < 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/ingress.md"
+          summary: "Cloudflare Tunnel has no ready connector"
+          description: "No cloudflared pod is ready, so every public *.darkestserver.com site is down (Cloudflare shows error 1033). Check the cloudflared pods and the cloudflared-token Secret."
+
       - alert: IngressControllerDown
         expr: (up{job="ingress-nginx"}) < 1
         for: 1m

@@ -2,7 +2,7 @@
 
 Covers: IngressControllerDown, IngressConfigReloadFailed, IngressSSLCertificateExpiringSoon,
 IngressOrphanedIngress, IngressHigh5xxRateFromUpstreams, IngressConnectionCountNearWorkerLimit,
-IngressAdmissionWebhookFailures, IngressAppLatencyHigh
+IngressAdmissionWebhookFailures, IngressAppLatencyHigh, CloudflareTunnelDown
 
 ## Diagnosis
 ```bash
@@ -14,6 +14,12 @@ curl -sk -o /dev/null -w '%{http_code}
 ```
 
 ## Notes
+- Public path: visitor -> Cloudflare -> Cloudflare Tunnel -> cloudflared
+  (namespace `cloudflared`, 2 replicas) -> ingress-nginx. No inbound port on
+  the router. Routes live in `Terraform/cloudflare/tunnel.tf`; CI writes the
+  connector token to the `cloudflared-token` Secret.
+  `kubectl -n cloudflared logs deploy/cloudflared` shows "Registered tunnel
+  connection" per edge link; Cloudflare error 1033 = no connector online.
 - Two controller replicas (hostNetwork), one each on git-k3s-server and
   monitoring-server (`k3s_apps_ingress_nodes`). MetalLB announces
   192.168.10.210 (layer2) from one node with a Ready pod; if that node dies the

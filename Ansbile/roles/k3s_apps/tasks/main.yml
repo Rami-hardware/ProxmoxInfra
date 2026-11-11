@@ -324,6 +324,20 @@
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   changed_when: false
 
+# ── Cloudflare Tunnel connector ──────────────────────────────────────────────
+- name: Template cloudflared manifest
+  ansible.builtin.template:
+    src: cloudflared.yml.j2
+    dest: "{{ k3s_apps_manifest_dir }}/cloudflared.yml"
+    mode: '0644'
+
+- name: Apply cloudflared manifest
+  ansible.builtin.command:
+    cmd: k3s kubectl apply -f {{ k3s_apps_manifest_dir }}/cloudflared.yml
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+
 # ── ArgoCD via Helm ────────────────────────────────────────────────────────────
 # NodePort exposes argocd-server so the gateway's nginx (nginx_services_local
 # in group_vars/gateway-vm.yml) can proxy argocd.homelab.lan to it, same

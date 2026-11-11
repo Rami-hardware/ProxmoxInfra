@@ -209,6 +209,28 @@ jobs:
           fi
           terraform apply -input=false cfplan
 
+      # cloudflared (k3s_apps role) reads its connector token from this Secret.
+      # Piped so the token never appears in the log or the process list.
+      - name: Store Cloudflare Tunnel token for cloudflared
+        if: github.ref_name == 'main'
+        working-directory: Terraform/cloudflare
+        run: |
+          terraform output -raw tunnel_token \
+            | k3s kubectl -n cloudflared create secret generic cloudflared-token \
+                --from-file=token=/dev/stdin --dry-run=client -o yaml \
+            | k3s kubectl apply -f -
+
+      # Temporary (tunnel migration): IDs and types of the records that move
+      # to the tunnel, so they can be imported into Terraform. No contents.
+      - name: List public DNS records
+        if: github.ref_name == 'main'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DNS_API_TOKEN }}
+        run: |
+          curl -sf -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/zones/46593646510004b325d04d011dcc49df/dns_records?per_page=100" \
+            | jq -r '.result[] | select(.type=="A" or .type=="AAAA" or .type=="CNAME") | "\(.id) \(.type) \(.name) proxied=\(.proxied)"'
+
       - name: Cleanup secrets
         if: always()
         uses: ./.github/actions/cleanup-secrets
