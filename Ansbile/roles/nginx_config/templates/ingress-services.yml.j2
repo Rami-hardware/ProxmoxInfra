@@ -96,12 +96,14 @@ spec:
 # ──────────────────────────────────────────────────────────────────────────────
 {% for svc in nginx_services_local %}
 {% set ns = svc.namespace | default('media') %}
-# {{ svc.name }} — headless service + endpoints → {{ svc.ip }}:{{ svc.port }}
+{% if svc.ip is defined %}
+{% set backend = svc.name ~ '-ext' %}
+# {{ svc.name }} — not a pod: headless service + endpoints → {{ svc.ip }}:{{ svc.port }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ svc.name }}-ext
+  name: {{ backend }}
   namespace: {{ ns }}
 spec:
   clusterIP: None
@@ -112,7 +114,7 @@ spec:
 apiVersion: v1
 kind: Endpoints
 metadata:
-  name: {{ svc.name }}-ext
+  name: {{ backend }}
   namespace: {{ ns }}
 subsets:
   - addresses:
@@ -120,6 +122,10 @@ subsets:
     ports:
       - port: {{ svc.port }}
         protocol: TCP
+{% else %}
+{% set backend = svc.service | default(svc.name) %}
+# {{ svc.name }} — routed to Service {{ ns }}/{{ backend }}:{{ svc.port }}
+{% endif %}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -163,7 +169,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ svc.name }}-ext
+                name: {{ backend }}
                 port:
                   number: {{ svc.port }}
 {% endfor %}
@@ -174,12 +180,14 @@ spec:
 {% for svc in nginx_services %}
 {% set svc_name = svc.k8s_service | default(svc.name) %}
 {% set ns = svc.namespace | default('media') %}
-# {{ svc.name }} — headless service + endpoints → {{ svc.ip }}:{{ svc.port }}
+{% if svc.ip is defined %}
+{% set backend = svc_name ~ '-ext' %}
+# {{ svc.name }} — not a pod: headless service + endpoints → {{ svc.ip }}:{{ svc.port }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ svc_name }}-ext
+  name: {{ backend }}
   namespace: {{ ns }}
 spec:
   clusterIP: None
@@ -190,7 +198,7 @@ spec:
 apiVersion: v1
 kind: Endpoints
 metadata:
-  name: {{ svc_name }}-ext
+  name: {{ backend }}
   namespace: {{ ns }}
 subsets:
   - addresses:
@@ -198,6 +206,10 @@ subsets:
     ports:
       - port: {{ svc.port }}
         protocol: TCP
+{% else %}
+{% set backend = svc.service | default(svc.name) %}
+# {{ svc.name }} — routed to Service {{ ns }}/{{ backend }}:{{ svc.port }}
+{% endif %}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -235,7 +247,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ svc_name }}-ext
+                name: {{ backend }}
                 port:
                   number: {{ svc.port }}
 {% endfor %}

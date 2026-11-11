@@ -14,9 +14,12 @@ adguard_work_dir: "/opt/adguardhome/work"
 adguard_ui_port: 8081
 fallback_dns: 1.1.1.1
 
+# Ingress routes. An entry with `ip` is not a pod (AdGuard on the gateway,
+# the Proxmox UI) and gets a headless -ext Service pointing at ip:port. Any
+# other entry is routed to the Kubernetes Service `service` (default: name)
+# on `port`, so ingress-nginx balances over ready pod endpoints directly.
 nginx_services:
   - name: jellyfin
-    ip: 192.168.10.201
     port: 8096
     disable_buffering: true
     streaming: true
@@ -27,7 +30,6 @@ nginx_services:
     cache_ttl: "7d"
 
   - name: seerr
-    ip: 192.168.10.201
     port: 5055
     namespace: media
 
@@ -40,7 +42,6 @@ nginx_services:
 nginx_services_local:
   - name: jellyfin
     namespace: media
-    ip: 192.168.10.201
     port: 8096
     disable_buffering: true
     streaming: true
@@ -50,43 +51,36 @@ nginx_services_local:
     cache_ttl: "7d"
 
   - name: seerr
-    ip: 192.168.10.201
     port: 5055
     namespace: media
 
   - name: radarr
-    ip: 192.168.10.201
     port: 7878
     namespace: media
     auth: false
 
   - name: sonarr
-    ip: 192.168.10.201
     port: 8989
     namespace: media
     auth: false
 
   - name: prowlarr
-    ip: 192.168.10.201
     port: 9696
     namespace: media
     auth: false
 
   - name: bazarr
-    ip: 192.168.10.201
     port: 6767
     namespace: media
     auth: false
 
   - name: qbittorrent
-    ip: 192.168.10.201
     port: 8080
     disable_buffering: true
     namespace: media
     auth: false
 
   - name: homarr
-    ip: 192.168.10.201
     port: 7575
     namespace: media
     auth: false
@@ -99,19 +93,16 @@ nginx_services_local:
     auth: false
 
   - name: grafana
-    ip: 192.168.10.203
     port: 3000
     namespace: monitoring
     auth: false
 
   - name: alertmanager
-    ip: 192.168.10.203
     port: 9093
     namespace: monitoring
     auth: false
 
   - name: prometheus
-    ip: 192.168.10.203
     port: 9090
     namespace: monitoring
     auth: false
@@ -124,19 +115,18 @@ nginx_services_local:
     backend_protocol: HTTPS
 
   - name: tempo
-    ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
-    port: 30320
+    service: tempo-query
+    port: 3200
     namespace: istio-system
     auth: false
 
   - name: argocd
-    ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
-    port: 30321
+    service: argocd-server
+    port: 80
     namespace: argocd
     auth: false
 
   - name: tracearr
-    ip: "{{ hostvars['git-k3s-server']['ansible_host'] }}"
-    port: 30324
+    port: 3000
     namespace: media
     auth: false

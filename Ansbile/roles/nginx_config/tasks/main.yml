@@ -201,6 +201,21 @@
   changed_when: true
   delegate_to: git-k3s-server
 
+# Routes that moved from a node-IP -ext Service to the app's own Service
+# leave their old headless -ext Service behind (apply never prunes). Runs
+# after the apply, so no ingress points at a deleted Service. Its Endpoints
+# go with it.
+- name: Remove -ext Services of routes that now use the app's Service
+  ansible.builtin.command: >
+    k3s kubectl delete service {{ item.k8s_service | default(item.name) }}-ext
+    -n {{ item.namespace | default('media') }} --ignore-not-found
+  loop: "{{ (nginx_services_local + nginx_services) | rejectattr('ip', 'defined') | list }}"
+  loop_control:
+    label: "{{ item.namespace | default('media') }}/{{ item.k8s_service | default(item.name) }}-ext"
+  register: nginx_config_ext_cleanup
+  changed_when: "'deleted' in nginx_config_ext_cleanup.stdout"
+  delegate_to: git-k3s-server
+
 # ── Publish CA cert to a world-readable path for easy scp/curl ───────────────
 - name: Publish CA cert to world-readable path
   ansible.builtin.copy:
