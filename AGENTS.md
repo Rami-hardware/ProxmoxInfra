@@ -8,7 +8,10 @@ Guidance for AI coding agents working in this repo.
 
 ## Repo Overview
 
-Homelab infra: Proxmox VMs provisioned with Terraform, configured with Ansible, apps deployed via GitOps (ArgoCD + Image Updater) on K3s. Branches: `main` / `staging` / `development` — CI runs on push to any of them, plus a monthly scheduled run (full redeploy; regenerates certs as a side effect).
+Homelab infra: Proxmox VMs provisioned with Terraform, configured with Ansible, apps deployed via GitOps (ArgoCD + Image Updater) on K3s. Branches: `main` / `staging` / `development` — CI runs on push to any of them, plus a monthly scheduled run on main (full redeploy; regenerates certs as a side effect). All three share one inventory, i.e. the real hosts:
+- `development` — developed code; CI tests it, **never deploys**.
+- `staging` — **canary**: deploys the changed playbooks from the staging branch to the real hosts. Watch it, then merge to `main`. Main's next run redeploys every host staging touched since main's last success (no-op if merged, revert if abandoned). Cloudflare apply and ArgoCD stay main-only.
+- `main` — production.
 
 ## Load-Bearing Quirks — DO NOT "FIX"
 
@@ -92,7 +95,8 @@ Self-hosted runner (small disk — has hit ENOSPC before; workflows prune docker
 - Runner has no registry access — Terraform providers install via filesystem mirror (`setup-terraform-mirror`), currently seeded for `bpg/proxmox 0.70.1` and `telmate/proxmox 2.9.14`. Bumping a provider requires updating the mirror action too.
 - `setup-terraform` uses `terraform_wrapper: false` — required for `-detailed-exitcode` to work.
 - `terraform apply` in `deploy.yml` is commented out on purpose (manual applies only).
-- `security.yml` runs Trivy fs (misconfig + secret) in a throwaway container; CVE scanning is disabled (`if: false`).
+- `security.yml` runs Trivy fs (misconfig + secret) in a throwaway container and **gates the deploy on secrets** (any secret finding fails the run; ~60 known misconfig findings stay informational). CVE scanning is disabled (`if: false`).
+- SSH host keys are pinned: Ansible in CI uses `StrictHostKeyChecking=yes` against `.github/ssh_known_hosts` (set by `setup-ssh-vault`). After rebuilding a VM, CI fails with "REMOTE HOST IDENTIFICATION HAS CHANGED" until you update its line (`ssh-keyscan -t ed25519 <ip>`, check the fingerprint against the VM console).
 - Discord notifications via webhook secrets.
 
 ## Alert Automation (`tools/alertops-mcp/`, `.claude/agents/alert-fixer.md`)

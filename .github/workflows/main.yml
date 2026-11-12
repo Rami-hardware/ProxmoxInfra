@@ -72,9 +72,13 @@ jobs:
       PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
       RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
       OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
+  # development = tested code only, never deployed. staging = canary: deploys
+  # the changed hosts from the staging branch; merge to main once it looks good
+  # (main's next run puts main's version back on any host staging touched).
   Deploy:
     name: Deploy Infrastructure Code
-    needs: [changes, testing]
+    needs: [changes, testing, security]
+    if: github.ref_name != 'development'
     uses: ./.github/workflows/deploy.yml
     with:
       gateway: ${{ needs.changes.outputs.gateway == 'true' }}
@@ -97,10 +101,9 @@ jobs:
       RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
       OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
       CF_DNS_API_TOKEN: ${{ secrets.CF_DNS_API_TOKEN }}
+  # Gates the deploy: a committed secret fails the run before anything ships.
   security:
     name: Security Scan
-    needs: Deploy
-    if: always()
     uses: ./.github/workflows/security.yml
     secrets:
       DISCORD_CI_ALERT_SEC_URL: ${{ secrets.DISCORD_CI_ALERT_SEC_URL }}

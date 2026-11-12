@@ -1,0 +1,10 @@
+# SSH host keys CI trusts (ed25519 only — OpenSSH then negotiates ed25519).
+# Ansible connects with StrictHostKeyChecking=yes against this file, so a
+# rebuilt VM fails the deploy until its key is updated here. Refresh after a
+# rebuild (compare the fingerprint with the VM console first):
+#   ssh-keyscan -t ed25519 192.168.10.<ip>
+192.168.10.200 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID4rnEXBTrD8HM9FY6ubfW47MtDwD4Cj7LxsJmgMZd8G
+192.168.10.201 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIguBE44dFYFM2789DlEWwViZ4ImytYV6UJmlB2i6MU2
+192.168.10.203 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILy/MHpClHU3ezvk2bSuIHez+qYZxPsQFC8cUlM41fqZ
+192.168.10.204 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIItcLWClD30oBN571AIP8EmXflOIqybJcTXQp3P9JKKT
+192.168.10.250 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPqXQwgs9ju1oHxVSOve8vH1iepgBwYSJEch+xniOWOu

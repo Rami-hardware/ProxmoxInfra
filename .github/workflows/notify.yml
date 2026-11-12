@@ -39,7 +39,12 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           # Discord embed colors: green=3066993, red=15158332, yellow=15844367, grey=9807270
-          if [ "$BUILD_RESULT" = "success" ] && [ "$TESTING_RESULT" = "success" ] && [ "$DEPLOY_RESULT" = "success" ] && [ "$SECURITY_RESULT" = "success" ]; then
+          # development never deploys, so a skipped deploy is expected there.
+          DEPLOY_OK=false
+          if [ "$DEPLOY_RESULT" = "success" ] || { [ "$BRANCH" = "development" ] && [ "$DEPLOY_RESULT" = "skipped" ]; }; then
+            DEPLOY_OK=true
+          fi
+          if [ "$BUILD_RESULT" = "success" ] && [ "$TESTING_RESULT" = "success" ] && $DEPLOY_OK && [ "$SECURITY_RESULT" = "success" ]; then
             STATUS="✅ Success"; COLOR=3066993
           elif [ "$BUILD_RESULT" = "cancelled" ] || [ "$TESTING_RESULT" = "cancelled" ] || [ "$DEPLOY_RESULT" = "cancelled" ] || [ "$SECURITY_RESULT" = "cancelled" ]; then
             STATUS="⏹️ Cancelled"; COLOR=9807270

@@ -1,5 +1,5 @@
 name: Setup SSH and Ansible Vault
-description: Writes the SSH private key and Ansible Vault password to disk for the runner.
+description: Writes the SSH private key and Ansible Vault password to disk for the runner, and pins Ansible to the committed SSH host keys.
 
 inputs:
   ssh-private-key:
@@ -23,3 +23,14 @@ runs:
         printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
         printf '%s\n' "$VAULT_PASSWORD" > ~/.vault_pass
         chmod 600 ~/.ssh/id_rsa ~/.vault_pass
+
+    # Verify host keys against the committed .github/ssh_known_hosts instead of
+    # trusting whatever answers on the IP. Defaults kept from ansible's own
+    # ssh_args (-C, ControlMaster/Persist) since setting this replaces them.
+    # Copied to RUNNER_TEMP because UserKnownHostsFile splits on spaces.
+    - name: Pin SSH host keys for Ansible
+      shell: bash
+      run: |
+        cp "$GITHUB_WORKSPACE/.github/ssh_known_hosts" "$RUNNER_TEMP/ssh_known_hosts"
+        echo "ANSIBLE_HOST_KEY_CHECKING=True" >> "$GITHUB_ENV"
+        echo "ANSIBLE_SSH_ARGS=-C -o ControlMaster=auto -o ControlPersist=60s -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$RUNNER_TEMP/ssh_known_hosts" >> "$GITHUB_ENV"

@@ -11,6 +11,11 @@
 # branch, not github.event.before: the concurrency group drops queued runs, so
 # a dropped push's changes would otherwise never deploy. A failed run does not
 # move the base, so the next run retries its changes.
+#
+# staging is a canary that deploys its own code to the hosts it changed. On
+# main, files that any staging run since main's last success differs on are
+# added too, so main puts its version back on hosts staging touched (a no-op
+# once staging is merged; a revert if staging was abandoned).
 set -euo pipefail
 
 declare -A want=([gateway]=false [monitoring]=false [media]=false [git_k3s]=false)
@@ -36,9 +41,12 @@ all() {
 
 [ "$GITHUB_EVENT_NAME" = push ] || all "$GITHUB_EVENT_NAME run deploys every host"
 
-base=$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" \
-  "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/workflows/main.yml/runs?branch=$GITHUB_REF_NAME&status=success&per_page=1" \
-  | jq -r '.workflow_runs[0].head_sha // empty') || base=""
+runs_api="$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/workflows/main.yml/runs"
+api() { curl -fsSG -H "Authorization: Bearer $GH_TOKEN" "$runs_api" "$@"; }
+
+read -r base base_time < <(api --data-urlencode "branch=$GITHUB_REF_NAME" \
+  --data-urlencode status=success --data-urlencode per_page=1 \
+  | jq -r '.workflow_runs[0] | "\(.head_sha // "") \(.created_at // "")"') || base=""
 
 [ -n "$base" ] || all "no previous successful run found on $GITHUB_REF_NAME"
 git cat-file -e "$base^{commit}" 2>/dev/null || all "last deployed commit $base is not in the clone"
@@ -47,6 +55,21 @@ git merge-base --is-ancestor "$base" "$GITHUB_SHA" || all "last deployed commit 
 echo "Changes since last successful run ($base):"
 changed=$(git diff --name-only "$base" "$GITHUB_SHA")
 echo "$changed"
+
+if [ "$GITHUB_REF_NAME" = main ]; then
+  # Any completed run counts: a failed staging deploy may still have changed hosts.
+  staging_shas=$(api --data-urlencode branch=staging --data-urlencode status=completed \
+    --data-urlencode "created=>=$base_time" --data-urlencode per_page=100 \
+    | jq -r '.workflow_runs[].head_sha' | sort -u) \
+    || all "could not list staging runs since $base_time"
+  for s in $staging_shas; do
+    git cat-file -e "$s^{commit}" 2>/dev/null || all "staging commit $s is not in the clone"
+    staged=$(git diff --name-only "$base" "$s")
+    echo "Files staging run $s may have deployed (vs $base):"
+    echo "$staged"
+    changed+=$'\n'"$staged"
+  done
+fi
 
 # Role lists mirror the playbooks. A role missing here falls through to the
 # Ansbile/* catch-all and deploys every host, so forgetting to update this is

@@ -105,7 +105,6 @@ jobs:
         run: |
           ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --check --diff --vault-password-file ~/.vault_pass
         env:
-          ANSIBLE_HOST_KEY_CHECKING: 'False'
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           SONARR_API_KEY: ${{ secrets.SONARR_API_KEY }}
           BAZARR_API_KEY: ${{ secrets.BAZARR_API_KEY }}

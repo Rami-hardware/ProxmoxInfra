@@ -185,7 +185,6 @@ jobs:
         if: inputs.gateway || inputs.monitoring || inputs.media || inputs.git_k3s
         env:
           ANSIBLE_VAULT_PASSWORD_FILE: ~/.vault_pass
-          ANSIBLE_HOST_KEY_CHECKING: 'False'
           ADGUARD_EXPORTER_PASSWORD: ${{ secrets.ADGUARD_EXPORTER_PASSWORD }}
           ADGUARD_EXPORTER_USERNAME: ${{ secrets.ADGUARD_EXPORTER_USERNAME }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}

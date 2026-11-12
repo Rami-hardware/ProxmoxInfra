@@ -37,7 +37,9 @@ jobs:
             /workspace
           sudo chown "$(id -u):$(id -g)" trivy-fs-results.json
 
+      # Discord being down must not block a deploy now that this job gates it.
       - name: Check findings and notify Discord
+        continue-on-error: true
         env:
           WEBHOOK: ${{ secrets.DISCORD_CI_ALERT_SEC_URL }}
         run: |
@@ -80,12 +82,24 @@ jobs:
           }
           EOF
 
+      # Misconfig findings stay informational (there are ~60 known ones); a
+      # secret in the repo fails the job, which blocks the deploy.
+      - name: Fail on committed secrets
+        run: |
+          jq -r '.Results[]? | .Target as $t | (.Secrets // [])[] | "\(.Severity) \(.RuleID) \($t):\(.StartLine)"' trivy-fs-results.json > secrets.txt
+          if [ -s secrets.txt ]; then
+            echo "::error::Secrets found in the repo — rotate them, then remove from git:"
+            cat secrets.txt
+            exit 1
+          fi
+          echo "No secrets found."
+
       # Runner has a small disk — the results file and the Trivy image itself
       # (pulled fresh each run) accumulate over time and can fill it.
       - name: Cleanup scan results and Trivy image
         if: always()
         run: |
-          rm -f trivy-fs-results.json
+          rm -f trivy-fs-results.json secrets.txt
           sudo docker rmi aquasec/trivy:0.70.0 || true
 
       # Scans every image actually running in the k3s cluster (not just what's on the
