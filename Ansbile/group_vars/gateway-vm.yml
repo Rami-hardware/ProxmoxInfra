@@ -5,6 +5,11 @@ service_tcp_ports:
   - 3000   # Grafana NodePort
   - 8081   # AdGuard UI
 
+# Reachable only from Prometheus (monitoring-server), see roles/ufw.
+ufw_prometheus_ports:
+  - 9618   # AdGuard exporter
+  - 12345  # Grafana Alloy (log agent) metrics
+
 # AdGuardHome runs as a pinned systemd service managed by the `adguard` role
 # (binary at /opt/adguardhome), not in a container: it owns port 53.
 adguard_config_path: "/opt/adguardhome/conf/AdGuardHome.yaml"

@@ -42,6 +42,26 @@
     port: "{{ item }}"
     proto: udp
   loop: "{{ service_udp_ports | default([]) }}"
+# Metrics ports only Prometheus may reach. Its scrapes of another node
+# arrive from monitoring-server's IP (source-NATed), not the pod network.
+- name: Allow Prometheus to scrape metrics ports
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+    src: "{{ hostvars['monitoring-server']['ansible_host'] }}"
+    comment: prometheus scrape
+  loop: "{{ ufw_prometheus_ports | default([]) }}"
+
+# Promtail's metrics port, open to anyone; Promtail was replaced by Alloy.
+- name: Remove the old Promtail port rules
+  community.general.ufw:
+    rule: allow
+    port: "9080"
+    proto: "{{ item }}"
+    delete: true
+  loop: [tcp, udp, any]
+
 - name: Allow Falco metrics scraping
   community.general.ufw:
     rule: allow
