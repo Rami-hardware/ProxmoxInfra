@@ -28,7 +28,7 @@ A fully automated homelab running on Proxmox, provisioned with Terraform, config
 
 App deployment is split across two mechanisms:
 
-- **Ansible** bootstraps the cluster itself — K3s, Helm repos, cert-manager, ingress-nginx, Istio, ArgoCD, ArgoCD Image Updater, and cluster-wide DaemonSets (node-exporter, Promtail, kube-state-metrics).
+- **Ansible** bootstraps the cluster itself — K3s, Helm repos, cert-manager, ingress-nginx, Istio, ArgoCD, ArgoCD Image Updater, and cluster-wide DaemonSets (node-exporter, Grafana Alloy, kube-state-metrics).
 - **ArgoCD** owns app deployment from here on. Three `Application` resources (`media`, `monitoring`, `network`) auto-sync from `Ansbile/argocd-apps/<name>/` on the `main` branch — editing an app means editing its YAML under `argocd-apps/`, committing, and pushing; ArgoCD picks it up automatically (self-heal + prune enabled, no manual `kubectl apply` needed).
 
 ### ArgoCD Image Updater
@@ -103,7 +103,7 @@ Gateway also runs: **AdGuard Home** (systemd service — DNS :53, UI :8081; see 
 | Component        | Nodes                                      | Description                            |
 | :--------------- | :----------------------------------------- | :------------------------------------- |
 | node-exporter    | media, monitoring, git-k3s-server, gateway | Host-level CPU / memory / disk metrics |
-| Promtail         | media, monitoring, git-k3s-server, gateway | Log shipping to Loki                   |
+| Grafana Alloy    | media, monitoring, git-k3s-server, gateway | Log shipping to Loki                   |
 | kubelet-cAdvisor | media, monitoring, git-k3s-server          | Container metrics via kubelet API      |
 
 ---
@@ -136,7 +136,7 @@ Apps live in ArgoCD (`Ansbile/argocd-apps/<media|monitoring|network>/`). The `k3
 | Template                         | Type        | Description                                     |
 | :------------------------------- | :---------- | :---------------------------------------------- |
 | `node-exporter-daemonset.yml.j2` | DaemonSet   | Runs on all K3s nodes                           |
-| `promtail-daemonset.yml.j2`      | DaemonSet   | Runs on all K3s nodes                           |
+| `alloy.yml.j2`                   | DaemonSet   | Grafana Alloy log agent on all K3s nodes        |
 | `kube-state-metrics.yml.j2`      | Deployment  | K8s object metadata on control plane            |
 | `prometheus-rbac.yml.j2`         | RBAC        | ServiceAccount + ClusterRole for kubelet scrape |
 | `tempo.yml.j2`                   | Deployment  | Tracing backend for Istio                       |
@@ -196,16 +196,16 @@ App-level changes (editing anything under `Ansbile/argocd-apps/`) don't need a C
 | `argocd-server`                 | ArgoCD server pod                  | API request metrics (built-in, no separate exporter)                               |
 | `argocd-repo-server`            | ArgoCD repo-server pod             | Git fetch / manifest generation metrics (built-in, no separate exporter)           |
 | `tempo`                         | Tempo pod                          | Trace ingestion metrics (built-in, no separate exporter)                           |
-| `promtail`                      | Promtail pods                      | Log pipeline health                                                                |
+| `alloy`                         | Alloy pods (log agent)             | Log pipeline health           |
 | `cert-manager`                  | cert-manager controller pod        | Certificate expiry (built-in metrics, no separate exporter)                        |
 | `alertmanager-internal`         | Alertmanager pod                   | Alertmanager's own health/notification metrics (built-in, no separate exporter)    |
 | `coredns`                       | CoreDNS pod (kube-system)          | DNS query rate/latency/errors (K3s ships the prometheus plugin enabled by default) |
 
-### Loki + Promtail
+### Loki + Grafana Alloy
 
-- Promtail runs as DaemonSet on all K3s nodes
-- `${NODE_NAME}` injected via downward API — each pod labels logs with its node name
-- Scrapes: K3s container logs (`/var/log/pods`), Docker container logs, system logs (`/var/log`)
+- Alloy runs as a DaemonSet on all K3s nodes (`roles/k3s_apps/templates/alloy.yml.j2`, config in `alloy-config.alloy.j2`)
+- Labels every line with `host`, `namespace`, `pod`, `container`, `job`
+- Reads: K3s container logs (`/var/log/pods`) and system logs (`/var/log/*.log`); read positions persist in `/var/lib/alloy`
 
 ### Tracing
 
@@ -232,7 +232,7 @@ App-level changes (editing anything under `Ansbile/argocd-apps/`) don't need a C
 | CI/CD          | GitHub Actions (self-hosted runner on git-k3s-server)                     |
 | Metrics        | Prometheus, node-exporter, kubelet-cAdvisor, kube-state-metrics, Scraparr |
 | Visualization  | Grafana                                                                   |
-| Logging        | Loki, Promtail                                                            |
+| Logging        | Loki, Grafana Alloy                                                            |
 | Alerting       | Alertmanager                                                              |
 | Reverse Proxy  | Nginx (gateway) + ingress-nginx (K3s)                                     |
 | DNS            | AdGuard Home                                                              |

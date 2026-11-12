@@ -9,7 +9,7 @@ groups:
     interval: 1m
     rules:
       # Every line Loki receives, per container. Its absence means the log
-      # pipeline (promtail -> Loki -> ruler -> Prometheus) is broken.
+      # pipeline (Alloy -> Loki -> ruler -> Prometheus) is broken.
       - record: log:lines:count5m
         expr: sum by (namespace, container) (count_over_time({job=~".+"} [5m]))
 

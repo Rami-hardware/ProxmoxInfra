@@ -59,7 +59,7 @@ ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml --vault-pas
 ```
 This rebuilds: AdGuard (systemd), adguard-exporter (systemd,
 /opt/adguard-exporter), the k3s cluster bootstrap, ArgoCD + Image Updater,
-istio, MetalLB, cert-manager, ingress-nginx, tempo, promtail and
+istio, MetalLB, cert-manager, ingress-nginx, tempo, Alloy and
 renders Prometheus/Loki/Alertmanager configs. Note: ufw, docker and the
 adguard-exporter systemd units are current live state; codify anything you
 had to fix by hand (see AGENTS.md conventions).

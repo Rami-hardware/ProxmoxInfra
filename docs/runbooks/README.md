@@ -10,7 +10,7 @@ Every alert annotation links here. One runbook per alert family.
 | [k8s-workloads.md](k8s-workloads.md) | deployments, pods, PVCs, jobs, nodes, kubelet |
 | [ingress.md](ingress.md) | ingress-nginx controller and routes |
 | [istio-tempo.md](istio-tempo.md) | Istio mesh + Tempo tracing |
-| [loki-logs.md](loki-logs.md) | Loki pipeline, promtail, log-based alerts |
+| [loki-logs.md](loki-logs.md) | Loki pipeline, Alloy (log agent), log-based alerts |
 | [argocd-alertmanager.md](argocd-alertmanager.md) | GitOps + notification path |
 | [exporters.md](exporters.md) | SMART, ZFS, scraparr, qBittorrent, Intel GPU, cert-manager |
 | [slo.md](slo.md) | SLO burn alerts and the error budget |

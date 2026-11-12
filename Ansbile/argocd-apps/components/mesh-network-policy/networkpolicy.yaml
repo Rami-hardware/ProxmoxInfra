@@ -48,7 +48,7 @@ spec:
               kubernetes.io/metadata.name: istio-system
 ---
 # Traffic that starts outside the pod network: ingress-nginx (hostNetwork),
-# NodePorts, hostPorts, promtail, kubelet probes. A node reaches a pod from
+# NodePorts, hostPorts, Alloy, kubelet probes. A node reaches a pod from
 # its cni0 address (10.42.N.1, same node) or its flannel.1 address
 # (10.42.N.0, other node), so each node's 10.42.N.0/31 is listed, never the
 # whole 10.42.0.0/16 (that would let every pod in the cluster in).

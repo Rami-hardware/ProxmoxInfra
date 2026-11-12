@@ -34,7 +34,7 @@ sudo k3s kubectl logs -n istio-system deploy/tempo --tail=30
 - NetworkPolicy (default-deny ingress) covers the three mesh namespaces,
   from `argocd-apps/components/mesh-network-policy`; k3s's kube-router
   enforces it. Allowed in: same namespace, `monitoring` and `istio-system`,
-  the LAN, each node's `10.42.N.0/31` (ingress-nginx, NodePorts, promtail)
+  the LAN, each node's `10.42.N.0/31` (ingress-nginx, NodePorts, Alloy)
   and `169.254.7.127` (ambient kubelet probes). Symptom of a missing allow:
   ingress 502 or a connection timeout, often after adding a node (add its
   /31) or a new caller namespace. Quick test from outside the allowed set:

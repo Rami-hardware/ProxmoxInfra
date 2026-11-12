@@ -117,31 +117,10 @@
     dest: "{{ k3s_apps_manifest_dir }}/node-exporter.yml"
     mode: '0644'
 
-# promtail reads its config from /opt/promtail on every node (hostPath)
-- name: Ensure promtail config directory exists on K3s nodes
-  ansible.builtin.file:
-    path: /opt/promtail
-    state: directory
-    mode: '0755'
-  delegate_to: "{{ k3s_node }}"
-  loop: "{{ k3s_apps_nodes }}"
-  loop_control:
-    loop_var: k3s_node
-
-- name: Deploy promtail config to all K3s nodes
+- name: Template Alloy (log agent) manifest
   ansible.builtin.template:
-    src: promtail-config.yml.j2
-    dest: /opt/promtail/config.yml
-    mode: '0644'
-  delegate_to: "{{ k3s_node }}"
-  loop: "{{ k3s_apps_nodes }}"
-  loop_control:
-    loop_var: k3s_node
-
-- name: Template promtail DaemonSet manifest
-  ansible.builtin.template:
-    src: promtail-daemonset.yml.j2
-    dest: "{{ k3s_apps_manifest_dir }}/promtail.yml"
+    src: alloy.yml.j2
+    dest: "{{ k3s_apps_manifest_dir }}/alloy.yml"
     mode: '0644'
 
 - name: Apply cluster monitoring manifests
@@ -153,8 +132,36 @@
     - prometheus-rbac
     - kube-state-metrics
     - node-exporter
-    - promtail
+    - alloy
   changed_when: true
+
+# Promtail (end of life) was replaced by Alloy; remove what is left of it.
+- name: Check for the old Promtail manifest
+  ansible.builtin.stat:
+    path: "{{ k3s_apps_manifest_dir }}/promtail.yml"
+  register: k3s_apps_promtail_manifest
+
+- name: Remove Promtail from the cluster
+  ansible.builtin.command:
+    cmd: k3s kubectl delete -f {{ k3s_apps_manifest_dir }}/promtail.yml --ignore-not-found
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  when: k3s_apps_promtail_manifest.stat.exists
+  changed_when: true
+
+- name: Remove the old Promtail manifest
+  ansible.builtin.file:
+    path: "{{ k3s_apps_manifest_dir }}/promtail.yml"
+    state: absent
+
+- name: Remove Promtail config and read positions from the nodes
+  ansible.builtin.file:
+    path: "{{ item.1 }}"
+    state: absent
+  delegate_to: "{{ item.0 }}"
+  loop: "{{ k3s_apps_nodes | product(['/opt/promtail', '/var/lib/promtail']) | list }}"
+  loop_control:
+    label: "{{ item.0 }}: {{ item.1 }}"
 
 # ── Namespaces ────────────────────────────────────────────────────────────────
 # ArgoCD creates the app namespaces on first sync; create any that are missing
@@ -708,7 +715,7 @@
     path: "/etc/cni/net.d/{{ item.1 }}"
     state: absent
   delegate_to: "{{ item.0 }}"
-  loop: "{{ ['git-k3s-server', 'media-server', 'monitoring-server', 'gateway-server'] | product(['10-calico.conflist', 'calico-kubeconfig']) | list }}"
+  loop: "{{ k3s_apps_nodes | product(['10-calico.conflist', 'calico-kubeconfig']) | list }}"
   loop_control:
     label: "{{ item.0 }}: {{ item.1 }}"
 

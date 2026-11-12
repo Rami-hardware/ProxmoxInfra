@@ -66,7 +66,7 @@ groups:
           summary: "No logs from Tempo in 10+ minutes"
           description: "Tempo normally logs continuously and has gone silent: likely crashed or hung rather than idle. Check the tempo pod in istio-system."
 
-      # The log metrics themselves stopped arriving: promtail, Loki, the
+      # The log metrics themselves stopped arriving: Alloy, Loki, the
       # ruler or its remote write to Prometheus is broken, so every log
       # alert above is blind.
       - alert: LogPipelineBroken
@@ -77,7 +77,7 @@ groups:
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
           summary: "No log metrics from Loki for 15 minutes"
-          description: "Prometheus receives no log:lines:count5m from Loki's ruler. Check promtail, the Loki pod and its ruler remote write (Loki logs: 'remote write')."
+          description: "Prometheus receives no log:lines:count5m from Loki's ruler. Check Alloy, the Loki pod and its ruler remote write (Loki logs: 'remote write')."
 
   # AdGuard DNS itself — the one true liveness check for the whole pod DNS
   # chain (pods → CoreDNS → AdGuard). Probed directly at :53 by the blackbox
@@ -1025,8 +1025,8 @@ groups:
           severity: warning
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
-          summary: "Loki rejecting push requests from Promtail"
-          description: "The /loki/api/v1/push endpoint is failing. Promtail agents on every node will start buffering and eventually dropping logs. Check Loki's ingester health and disk space."
+          summary: "Loki rejecting push requests from Alloy"
+          description: "The /loki/api/v1/push endpoint is failing. Alloy agents on every node will start buffering and eventually dropping logs. Check Loki's ingester health and disk space."
 
       - alert: LokiIngesterWALDiskUsageHigh
         expr: (loki_ingester_wal_disk_usage_percent * 100) > 80
@@ -1108,50 +1108,39 @@ groups:
           summary: "Loki compactor not running / Retention hasn't run successfully"
           description: "Compaction or retention enforcement has stopped. Over time this leads to unbounded storage growth and slower queries. Check compactor logs for errors."
 
-  # Ported from Grafana UI rules (group 'Promtail Evaluation') — rule names renamed to alert: CamelCase.
-  - name: promtail
+  # Grafana Alloy, the log agent on every node (replaced Promtail).
+  - name: alloy
     rules:
-      - alert: PromtailDroppedLogEntries
-        expr: (increase(promtail_dropped_entries_total{reason="ingester_error"}[15m])) > 0
+      - alert: AlloyDroppedLogEntries
+        expr: increase(loki_write_dropped_entries_total[15m]) > 0
         for: 10m
         labels:
           severity: warning
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
-          summary: "Promtail dropping log entries to {{ $labels.host }}"
-          description: "Promtail is failing to deliver log lines to Loki (ingester_error) and dropping them permanently after retries. Check Loki ingester health, disk space, and rate limits."
+          summary: "Alloy on {{ $labels.instance }} is dropping log lines"
+          description: "{{ humanize $value }} log lines dropped in 15m (Loki rejected them or kept failing). Those lines are lost. Check Loki health and the Alloy logs."
 
-      - alert: PromtailBatchRetriesClimbing
-        expr: (increase(promtail_batch_retries_total[15m])) > 5
+      - alert: AlloyLokiWriteRetries
+        expr: increase(loki_write_batch_retries_total[15m]) > 5
         for: 10m
         labels:
           severity: warning
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
-          summary: "Promtail batch retries increasing"
-          description: "Promtail is having to retry sending log batches to Loki more than usual, suggesting Loki is slow, overloaded, or briefly unreachable."
+          summary: "Alloy on {{ $labels.instance }} keeps retrying pushes to Loki"
+          description: "Loki is slow or refusing writes; lines are queued and will drop if this continues."
 
-      - alert: PromtailRequestErrors
-        expr: (sum(rate(promtail_request_duration_seconds_count{status_code=~"4..|5.."}[5m])) by (host, status_code)) > 0
-        for: 10m
+      - alert: AlloyDown
+        expr: up{job="alloy"} == 0
+        for: 5m
         labels:
           severity: warning
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
-          summary: "Promtail getting HTTP {{ $labels.status_code }} errors from Loki at {{ $labels.host }}"
-          description: "Promtail's push requests to {{ $labels.host }} are failing with HTTP errors. 400s usually mean malformed/out-of-order log lines; 503s mean Loki is overloaded or restarting."
+          summary: "Alloy on {{ $labels.instance }} is down"
+          description: "No logs are collected from this node while it is down. Check the alloy pod in the monitoring namespace."
 
-      - alert: PromtailProcessExporterDown
-        expr: (up{job="promtail"}) == 0
-        for: 1m
-        labels:
-          severity: warning
-        annotations:
-          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/loki-logs.md"
-          summary: "Promtail exporter unreachable"
-          description: "Prometheus can't scrape the promtail target — log shipping from this node has likely stopped entirely. Check the promtail pod/container status."
-
-  # Ported from Grafana UI rules (group 'Tempo Evaluation') — rule names renamed to alert: CamelCase.
   - name: tempo
     rules:
       - alert: TempoDistributorPushFailures

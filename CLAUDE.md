@@ -19,7 +19,7 @@ All agent rules, commands, conventions and load-bearing quirks live in AGENTS.md
 | `host-node` | .250 | Proxmox host itself (ZFS, backups) |
 
 **Ansible vs ArgoCD ownership:**
-- Ansible (`git-k3s-server.yml` → `k3s_server`, `k3s_apps` roles) owns cluster infra: K3s, Helm releases (cert-manager, ingress-nginx, Istio, ArgoCD + Image Updater), and cluster-wide DaemonSets (node-exporter, Promtail, kube-state-metrics). Changes here need CI / a playbook run.
+- Ansible (`git-k3s-server.yml` → `k3s_server`, `k3s_apps` roles) owns cluster infra: K3s, Helm releases (cert-manager, ingress-nginx, Istio, ArgoCD + Image Updater), and cluster-wide DaemonSets (node-exporter, Grafana Alloy, kube-state-metrics). Changes here need CI / a playbook run.
 - ArgoCD owns everything under `Ansbile/argocd-apps/` — push to `main` and it syncs. Image Updater commits `build: automatic update of <ns>` back to `main`; pull before pushing.
 
 **Exposing a service:** app gets a Service in its `argocd-apps/` YAML → add it to `nginx_services_local` in `group_vars/gateway-vm.yml` → the `nginx_config` role renders an Ingress for ingress-nginx (MetalLB `192.168.10.210`, one replica each on git and monitoring) pointing at that Service, TLS from the internal CA (`homelab-ca-issuer`), plus an AdGuard/Unbound name in `group_vars/all/local_dns.yml`. New Prometheus targets go in `prometheus_scrape_jobs` (`group_vars/monitoring-vm.yml`); new alerts in `roles/prometheus/templates/prometheus-rules.yml.j2` with a `runbook_url` to a file in `docs/runbooks/`.

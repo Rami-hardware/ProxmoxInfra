@@ -22,6 +22,8 @@ k3s_apps_public_cert_name: darkestserver-wildcard
 
 # Cloudflare Tunnel connector (templates/cloudflared.yml.j2). Two replicas on
 # different nodes keep the public sites up when one node or pod restarts.
+# Grafana Alloy log agent (templates/alloy.yml.j2), one per node.
+k3s_apps_alloy_version: "v1.21.3"
 k3s_apps_cloudflared_version: "2026.10.7"
 k3s_apps_cloudflared_replicas: 2
 # Nodes whose IP may carry Cloudflare Tunnel traffic to the ingress (any
@@ -48,7 +50,7 @@ k3s_apps_ambient_namespaces:
 k3s_apps_waypoint_namespaces:
   - media
 
-# Every K3s node — promtail's hostPath config is deployed to each of these.
+# Every K3s node (host-level tasks delegated to each).
 k3s_apps_nodes:
   - git-k3s-server
   - gateway-server

@@ -4,7 +4,6 @@ service_tcp_ports:
   - 443    # HTTPS
   - 3000   # Grafana NodePort
   - 8081   # AdGuard UI
-  - 9080   # Promtail metrics
 
 # AdGuardHome runs as a pinned systemd service managed by the `adguard` role
 # (binary at /opt/adguardhome), not in a container: it owns port 53.

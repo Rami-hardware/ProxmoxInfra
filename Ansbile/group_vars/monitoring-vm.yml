@@ -363,12 +363,13 @@ prometheus_scrape_jobs:
       - target_label: instance
         replacement: monitoring-server
 
-  - name: promtail
+  # Grafana Alloy log agent (hostNetwork DaemonSet, one per node).
+  - name: alloy
     targets:
-      - "{{ hostvars['gateway-server']['ansible_host'] }}:9080"
-      - "{{ hostvars['media-server']['ansible_host'] }}:9080"
-      - "{{ hostvars['monitoring-server']['ansible_host'] }}:9080"
-      - "{{ hostvars['git-k3s-server']['ansible_host'] }}:9080"
+      - "{{ hostvars['gateway-server']['ansible_host'] }}:12345"
+      - "{{ hostvars['media-server']['ansible_host'] }}:12345"
+      - "{{ hostvars['monitoring-server']['ansible_host'] }}:12345"
+      - "{{ hostvars['git-k3s-server']['ansible_host'] }}:12345"
     relabel_configs:
       - source_labels: [__address__]
         regex: "{{ hostvars['gateway-server']['ansible_host'] }}:.*"
