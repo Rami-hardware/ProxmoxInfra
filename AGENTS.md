@@ -23,7 +23,7 @@ Homelab infra: Proxmox VMs provisioned with Terraform, configured with Ansible, 
 - Provider `bpg/proxmox` pinned `~> 0.70.1`. No `required_version`. No remote backend — **state (`terraform.tfstate`) is committed to git**.
 - `Terraform/.terraform/` is gitignored — provider binaries were once committed (81MB, several stale versions); never re-add them. CI installs providers via the filesystem mirror action.
 - VMs defined as a `map(object)` in `terraform.tfvars` (keys: `gateway`, `media`, `monitoring`, `github`). Map keys are state addresses: **renaming a key destroys the VM**.
-  - After a key rename, add the old key to the hardcoded stale-state cleanup list in `deploy.yml` (`for stale in ...`), or CI's plan sees destroy + recreate and blocks.
+  - A key rename makes CI's plan show destroy + recreate and block. Move the state by hand first (`terraform state mv 'module.proxmox_vms["old"]' 'module.proxmox_vms["new"]'`) and commit the state.
 - `lifecycle.ignore_changes` (in `modules/proxmox_vm/main.tf`) covers `disk`, `initialization`, `clone`, `hostpci`, `cpu` and more — don't remove.
 - CI deliberately does NOT apply VMs — plan only, with a destroy/replace guard that fails the pipeline. `terraform apply` in `deploy.yml` is commented out on purpose (manual applies only).
 - Manual apply requires `parallelism=1` (Proxmox API race conditions) and `-target` per VM.
@@ -44,6 +44,7 @@ terraform plan -input=false -no-color -detailed-exitcode -out=tfplan
 - Inventory: `inventory.ini` (groups = `gateway-vm`, `media-vm`, `monitoring-vm`, `git-k3s-server-vm`, `host-node`). Group names must match `group_vars/<group>.yml` filenames.
 - Playbooks: one per host (`gateway-server.yml`, `media-server.yml`, `monitoring-server.yml`, `git-k3s-server.yml`).
 - 17 roles under `Ansbile/roles/`. Deploy order in CI: gateway → monitoring → media → git-k3s.
+- **CI runs only the playbooks whose files changed** since the branch's last successful pipeline run (`.github/scripts/detect-changed-hosts.sh`). Shared files (`roles/common`, `group_vars/all`, inventory, `requirements.yml`, `.github/`) or an unmapped path run all four; schedule and manual dispatch always run all four. Adding a role to a playbook → add it to that host's line in the script (forgetting is safe, just deploys every host).
 - Secrets: `group_vars/all/vault.yml` is fully vault-encrypted (plain vars go in other files under `group_vars/all/`, e.g. `local_dns.yml`). Vault password via `--vault-password-file ~/.vault_pass` (CI writes it from `ANSIBLE_VAULT_PASSWORD` secret). Never commit plaintext secrets — CI's Trivy scan flags them.
 
 ### Conventions (enforced — match existing code)
@@ -82,7 +83,10 @@ Excluded from ansible-lint via root `.ansible-lint` (`exclude_paths: [Ansbile/ar
 
 ## CI/CD (`.github/workflows/`)
 
-Self-hosted runner (small disk — has hit ENOSPC before; workflows prune docker/caches — keep those steps). Entry `main.yml` → reusable workflows: `testing.yml`, `deploy.yml`, `build-image.yml`, `security.yml`, `notify.yml`. Composite actions: `setup-ssh-vault`, `setup-terraform-mirror`, `cleanup-secrets`.
+Self-hosted runner (small disk — has hit ENOSPC before; workflows prune docker/caches — keep those steps). Entry `main.yml` → `changes` job (picks playbooks) + reusable workflows: `testing.yml`, `deploy.yml`, `build-image.yml`, `security.yml`, `notify.yml`. Composite actions: `setup-ssh-vault`, `setup-terraform-mirror`, `setup-ansible-venv`, `cleanup-secrets`.
+
+- `checks.yml` covers the paths `main.yml` ignores: server-side dry run of `argocd-apps/<ns>` against the live cluster (`-n <ns>` — the shared NetworkPolicy component has no namespace), and the alertops-mcp pytest suite. It deploys nothing.
+- Ansible tool versions are pinned in `.github/ci-requirements.txt`; the venv is cached in `~/.cache/ci-ansible-venv` on the runner (checkout wipes the workspace). Bump pins on purpose.
 
 - `build-image.yml` builds the `alert-forwarder` image from `Ansbile/apps/alert-forwarder`, Trivy-scans it, pushes to GHCR.
 - Runner has no registry access — Terraform providers install via filesystem mirror (`setup-terraform-mirror`), currently seeded for `bpg/proxmox 0.70.1` and `telmate/proxmox 2.9.14`. Bumping a provider requires updating the mirror action too.

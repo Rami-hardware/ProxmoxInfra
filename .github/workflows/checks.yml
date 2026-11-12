@@ -1,0 +1,66 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+# Checks for the paths main.yml ignores (ArgoCD manifests, alertops-mcp).
+# Nothing here deploys: ArgoCD still syncs the manifests itself. This just
+# fails loudly on a broken push instead of leaving ArgoCD stuck OutOfSync.
+name: Manifest & Tooling Checks
+
+on:
+  push:
+    branches:
+      - development
+      - staging
+      - main
+    paths:
+      - 'Ansbile/argocd-apps/**'
+      - 'tools/alertops-mcp/**'
+      - '.github/workflows/checks.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: checks-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  argocd-manifests:
+    name: ArgoCD manifests (server dry run)
+    runs-on: self-hosted
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Server-side dry run against the live cluster: catches bad kustomize,
+      # unknown fields, CRD schema errors and immutable-field changes — what
+      # ArgoCD would hit on sync. -n matches each Application's destination
+      # namespace (the shared NetworkPolicy component sets none).
+      - name: Dry-run each namespace
+        run: |
+          rc=0
+          for ns in media monitoring network; do
+            echo "::group::$ns"
+            k3s kubectl apply --dry-run=server -n "$ns" -k "Ansbile/argocd-apps/$ns" || rc=1
+            echo "::endgroup::"
+          done
+          exit $rc
+
+  alertops-mcp:
+    name: alertops-mcp tests
+    runs-on: self-hosted
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Venv cached in ~/.cache (checkout cleans the workspace), rebuilt when
+      # pyproject.toml changes.
+      - name: Run tests
+        working-directory: tools/alertops-mcp
+        run: |
+          root="$HOME/.cache/ci-alertops-venv"
+          venv="$root/$(sha256sum pyproject.toml | cut -c1-12)"
+          if [ ! -x "$venv/bin/pytest" ]; then
+            rm -rf "$root"
+            python3 -m venv "$venv"
+            "$venv/bin/pip" install --quiet -e ".[test]"
+          fi
+          "$venv/bin/pytest" -q

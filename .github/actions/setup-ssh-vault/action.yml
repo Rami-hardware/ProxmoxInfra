@@ -10,10 +10,16 @@ inputs:
 runs:
   using: composite
   steps:
+    # Passed through env, not ${{ }} inside the script: interpolating a secret
+    # into shell source breaks on quotes or $ in it and lets it run as code.
     - name: Setup SSH and Vault
       shell: bash
+      env:
+        SSH_PRIVATE_KEY: ${{ inputs.ssh-private-key }}
+        VAULT_PASSWORD: ${{ inputs.ansible-vault-password }}
       run: |
         mkdir -p ~/.ssh
-        echo "${{ inputs.ssh-private-key }}" > ~/.ssh/id_rsa
-        echo "${{ inputs.ansible-vault-password }}" > ~/.vault_pass
+        umask 077
+        printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+        printf '%s\n' "$VAULT_PASSWORD" > ~/.vault_pass
         chmod 600 ~/.ssh/id_rsa ~/.vault_pass

@@ -2,6 +2,20 @@ name: Deploy Infrastructure Code
 
 on:
   workflow_call:
+    # Which playbooks to run — set by the `changes` job in main.yml.
+    inputs:
+      gateway:
+        type: boolean
+        default: true
+      monitoring:
+        type: boolean
+        default: true
+      media:
+        type: boolean
+        default: true
+      git_k3s:
+        type: boolean
+        default: true
     secrets:
       PM_API_URL:
         required: true
@@ -98,6 +112,12 @@ jobs:
           elif [ $EXIT_CODE -eq 2 ]; then
             echo "has_changes=true" >> $GITHUB_OUTPUT
             echo "Changes detected — apply manually."
+            {
+              echo "### ⚠️ Terraform drift — Proxmox VMs differ from code (apply manually)"
+              echo '```'
+              terraform show -no-color tfplan | grep -E '^ *# |^Plan:' || true
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "has_changes=false" >> $GITHUB_OUTPUT
             echo "No changes."
@@ -132,20 +152,11 @@ jobs:
             echo "All packages already installed — skipping apt-get update."
           fi
 
-      - name: Set up Python virtualenv
-        run: |
-          if [ ! -f venv/bin/ansible ]; then
-            python3 -m venv venv
-            source venv/bin/activate
-            pip install --quiet ansible
-          else
-            echo "ansible already installed — skipping."
-          fi
+      - name: Set up Ansible virtualenv
+        uses: ./.github/actions/setup-ansible-venv
 
       - name: Install Ansible collections
-        run: |
-          source venv/bin/activate
-          ansible-galaxy collection install -r Ansbile/requirements.yml
+        run: ansible-galaxy collection install -r Ansbile/requirements.yml
 
       - name: Setup SSH and Vault
         uses: ./.github/actions/setup-ssh-vault
@@ -158,6 +169,7 @@ jobs:
       # step removes the silence, and it expires by itself after 45 minutes.
       - name: Silence warning alerts during the deploy
         id: am_silence
+        if: inputs.gateway || inputs.monitoring || inputs.media || inputs.git_k3s
         continue-on-error: true
         run: |
           now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -170,6 +182,7 @@ jobs:
           echo "Silenced warnings until $end (silence $id)"
 
       - name: Run Ansible playbooks
+        if: inputs.gateway || inputs.monitoring || inputs.media || inputs.git_k3s
         env:
           ANSIBLE_VAULT_PASSWORD_FILE: ~/.vault_pass
           ANSIBLE_HOST_KEY_CHECKING: 'False'
@@ -183,12 +196,23 @@ jobs:
           OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
           CF_DNS_API_TOKEN: ${{ secrets.CF_DNS_API_TOKEN }}
           HEALTHCHECKS_PING_URL: ${{ secrets.HEALTHCHECKS_PING_URL }}
+          RUN_GATEWAY: ${{ inputs.gateway }}
+          RUN_MONITORING: ${{ inputs.monitoring }}
+          RUN_MEDIA: ${{ inputs.media }}
+          RUN_GIT_K3S: ${{ inputs.git_k3s }}
         run: |
-          source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --vault-password-file ~/.vault_pass
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml --vault-password-file ~/.vault_pass
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml --vault-password-file ~/.vault_pass
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml --vault-password-file ~/.vault_pass
+          # Order matters: gateway → monitoring → media → git-k3s. A failed
+          # playbook stops the ones after it.
+          play() {
+            if [ "$1" != true ]; then echo "Skipping $2 — no changes for it."; return; fi
+            echo "::group::$2"
+            ansible-playbook -i Ansbile/inventory.ini "Ansbile/$2.yml" --vault-password-file ~/.vault_pass
+            echo "::endgroup::"
+          }
+          play "$RUN_GATEWAY" gateway-server
+          play "$RUN_MONITORING" monitoring-server
+          play "$RUN_MEDIA" media-server
+          play "$RUN_GIT_K3S" git-k3s-server
 
       - name: Remove the deploy silence
         if: always() && steps.am_silence.outputs.id != ''

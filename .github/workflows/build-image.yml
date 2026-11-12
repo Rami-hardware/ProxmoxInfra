@@ -94,14 +94,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Deploys pin :<sha>; :latest is only a convenience pointer, so only
+      # main moves it (a staging/development push used to overwrite it).
       - name: Build and push image
+        if: github.ref_name == 'main' || github.ref_name == 'staging' || github.ref_name == 'development'
         uses: docker/build-push-action@v6
         with:
           context: Ansbile/apps/alert-forwarder
           push: true
           tags: |
             ghcr.io/rami-hardware/alert-forwarder:${{ github.sha }}
-            ghcr.io/rami-hardware/alert-forwarder:latest
+            ${{ github.ref_name == 'main' && 'ghcr.io/rami-hardware/alert-forwarder:latest' || '' }}
 
       # Runner has a small disk — unused image layers accumulate run over run
       # and can fill it (previously caused CI to fail with ENOSPC).

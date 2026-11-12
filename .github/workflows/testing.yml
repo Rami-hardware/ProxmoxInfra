@@ -78,20 +78,11 @@ jobs:
           terraform validate
 
       # ── Ansible ──────────────────────────────────────────────────────────────
-      - name: Install Ansible lint in virtualenv
-        run: |
-          if [ ! -f venv/bin/ansible-lint ]; then
-            python3 -m venv venv
-            source venv/bin/activate
-            pip install --quiet ansible-lint
-          else
-            echo "ansible-lint already installed — skipping."
-          fi
+      - name: Set up Ansible virtualenv
+        uses: ./.github/actions/setup-ansible-venv
 
       - name: Install Ansible collections
-        run: |
-          source venv/bin/activate
-          ansible-galaxy collection install -r Ansbile/requirements.yml
+        run: ansible-galaxy collection install -r Ansbile/requirements.yml
 
       - name: Setup SSH and Vault
         uses: ./.github/actions/setup-ssh-vault
@@ -101,19 +92,17 @@ jobs:
 
       - name: Ansible syntax check
         run: |
-          source venv/bin/activate
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --syntax-check --vault-password-file ~/.vault_pass
+          for pb in gateway-server monitoring-server media-server git-k3s-server; do
+            ansible-playbook -i Ansbile/inventory.ini "Ansbile/$pb.yml" --syntax-check --vault-password-file ~/.vault_pass
+          done
 
       - name: Ansible lint
-        run: |
-          source venv/bin/activate
-          ansible-lint Ansbile/
+        run: ansible-lint Ansbile/
 
       # gateway and media use Docker command/shell tasks that break in check mode
       # --check is limited to template-driven playbooks only
       - name: Ansible dry run (check + diff)
         run: |
-          source venv/bin/activate
           ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --check --diff --vault-password-file ~/.vault_pass
         env:
           ANSIBLE_HOST_KEY_CHECKING: 'False'

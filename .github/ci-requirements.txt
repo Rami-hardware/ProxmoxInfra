@@ -1,0 +1,5 @@
+# Python tools for the Ansible CI jobs. Pinned so a new upstream release can't
+# break lint or deploys mid-week; bump on purpose. Changing this file rebuilds
+# the cached virtualenv (see actions/setup-ansible-venv).
+ansible==14.6.0
+ansible-lint==26.11.0

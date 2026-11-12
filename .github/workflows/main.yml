@@ -29,6 +29,30 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  changes:
+    name: Detect Changed Hosts
+    runs-on: self-hosted
+    timeout-minutes: 5
+    permissions:
+      actions: read   # find the last successful run to diff against
+      contents: read
+    outputs:
+      gateway: ${{ steps.detect.outputs.gateway }}
+      monitoring: ${{ steps.detect.outputs.monitoring }}
+      media: ${{ steps.detect.outputs.media }}
+      git_k3s: ${{ steps.detect.outputs.git_k3s }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # needs history back to the last deployed commit
+
+      - name: Pick playbooks to run
+        id: detect
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: .github/scripts/detect-changed-hosts.sh
+
   build-image:
     name: Build & Scan Docker Image & Files
     uses: ./.github/workflows/build-image.yml
@@ -50,8 +74,13 @@ jobs:
       OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
   Deploy:
     name: Deploy Infrastructure Code
-    needs: testing
+    needs: [changes, testing]
     uses: ./.github/workflows/deploy.yml
+    with:
+      gateway: ${{ needs.changes.outputs.gateway == 'true' }}
+      monitoring: ${{ needs.changes.outputs.monitoring == 'true' }}
+      media: ${{ needs.changes.outputs.media == 'true' }}
+      git_k3s: ${{ needs.changes.outputs.git_k3s == 'true' }}
     secrets:
       PM_API_URL: ${{ secrets.PM_API_URL }}
       PM_API_TOKEN: ${{ secrets.PM_API_TOKEN }}
@@ -78,10 +107,11 @@ jobs:
 
   notify:
     name: Notify Discord
-    needs: [testing, Deploy, security]
+    needs: [build-image, testing, Deploy, security]
     if: always()
     uses: ./.github/workflows/notify.yml
     with:
+      build_result: ${{ needs.build-image.result }}
       testing_result: ${{ needs.testing.result }}
       deploy_result: ${{ needs.Deploy.result }}
       security_result: ${{ needs.security.result }}

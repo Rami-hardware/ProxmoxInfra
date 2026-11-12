@@ -1,0 +1,24 @@
+name: Setup Ansible virtualenv
+description: >
+  Puts a virtualenv with the pinned tools from .github/ci-requirements.txt on
+  PATH. It lives in ~/.cache, not the workspace — actions/checkout cleans the
+  workspace every run, which used to force a full pip install each job.
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Ansible virtualenv
+      shell: bash
+      run: |
+        req="$GITHUB_WORKSPACE/.github/ci-requirements.txt"
+        root="$HOME/.cache/ci-ansible-venv"
+        venv="$root/$(sha256sum "$req" | cut -c1-12)"
+        # ansible-lint is installed last, so its presence means a finished venv.
+        if [ ! -x "$venv/bin/ansible-lint" ]; then
+          rm -rf "$root"  # drop venvs for older pins — small runner disk
+          python3 -m venv "$venv"
+          "$venv/bin/pip" install --quiet -r "$req"
+        else
+          echo "Reusing $venv"
+        fi
+        echo "$venv/bin" >> "$GITHUB_PATH"
