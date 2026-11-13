@@ -39,7 +39,10 @@ all() {
   finish "$1"
 }
 
-[ "$GITHUB_EVENT_NAME" = push ] || all "$GITHUB_EVENT_NAME run deploys every host"
+# Schedule and a plain manual run deploy everything; promote.yml dispatches
+# with full_deploy=false to get the same selective deploy as a push.
+[ "$GITHUB_EVENT_NAME" = push ] || [ "${FULL_DEPLOY:-true}" = false ] \
+  || all "$GITHUB_EVENT_NAME run deploys every host"
 
 runs_api="$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/workflows/main.yml/runs"
 api() { curl -fsSG -H "Authorization: Bearer $GH_TOKEN" "$runs_api" "$@"; }

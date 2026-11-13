@@ -22,6 +22,11 @@ on:
   schedule:
     - cron: '0 3 1 * *'  # 1st of every month at 03:00 UTC — monthly redeploy (triggers cert regen as side effect)
   workflow_dispatch:
+    inputs:
+      full_deploy:
+        description: Run every playbook (off = only hosts changed since the last green run; promote.yml uses that)
+        type: boolean
+        default: true
 
 # Prevent two deploys from racing on Terraform state / Ansible runs.
 concurrency:
@@ -52,7 +57,38 @@ jobs:
         id: detect
         env:
           GH_TOKEN: ${{ github.token }}
+          FULL_DEPLOY: ${{ github.event_name != 'workflow_dispatch' || inputs.full_deploy }}
         run: .github/scripts/detect-changed-hosts.sh
+
+  # Production deploys wait for a reviewer (environment protection). Say so on
+  # Discord, with the approve link, so the run doesn't sit there unnoticed.
+  approval-notice:
+    name: Ask for Production Approval
+    needs: [changes, testing, security]
+    if: github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Post to Discord
+        continue-on-error: true
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_CD_Alert_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT: ${{ github.sha }}
+          HOSTS: >-
+            gateway=${{ needs.changes.outputs.gateway }}
+            monitoring=${{ needs.changes.outputs.monitoring }}
+            media=${{ needs.changes.outputs.media }}
+            git_k3s=${{ needs.changes.outputs.git_k3s }}
+            ci_runners=${{ needs.changes.outputs.ci_runners }}
+        run: |
+          hosts=$(echo "$HOSTS" | tr ' ' '\n' | awk -F= '$2=="true"{print $1}' | paste -sd, -)
+          jq -n --arg u "$RUN_URL" --arg c "${COMMIT:0:8}" --arg h "${hosts:-none (Terraform/Cloudflare only)}" \
+            '{embeds:[{title:"🚦 Production deploy waiting for approval", url:$u, color:15844367,
+              description:"Tests passed. Open the run → **Review deployments** → Approve.",
+              fields:[{name:"Commit", value:("`"+$c+"`"), inline:true},
+                      {name:"Hosts", value:$h, inline:true}]}]}' \
+            | curl -sS -f -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK"
 
   build-image:
     name: Build & Scan Docker Image & Files

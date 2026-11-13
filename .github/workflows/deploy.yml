@@ -56,9 +56,12 @@ jobs:
     runs-on: self-hosted
     env:
       # Alertmanager API (NodePort on monitoring-server), for deploy silences.
-      ALERTMANAGER_URL: http://192.168.10.203:9093
+      # Repo variable (Settings → Secrets and variables → Variables).
+      ALERTMANAGER_URL: ${{ vars.ALERTMANAGER_URL }}
     timeout-minutes: 60
-    environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || 'development' }}
+    # The only job bound to an environment, so each environment's Deployments
+    # page is real deploy history. Production requires a reviewer.
+    environment: ${{ github.ref_name == 'main' && 'Production' || github.ref_name == 'staging' && 'Staging' || 'Development' }}
 
     steps:
       - name: Checkout code

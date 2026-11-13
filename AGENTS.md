@@ -11,7 +11,10 @@ Guidance for AI coding agents working in this repo.
 Homelab infra: Proxmox VMs provisioned with Terraform, configured with Ansible, apps deployed via GitOps (ArgoCD + Image Updater) on K3s. Branches: `main` / `staging` / `development` — CI runs on push to any of them, plus a monthly scheduled run on main (full redeploy; regenerates certs as a side effect). All three share one inventory, i.e. the real hosts:
 - `development` — developed code; CI tests it, **never deploys**.
 - `staging` — **canary**: deploys the changed playbooks from the staging branch to the real hosts. Watch it, then merge to `main`. Main's next run redeploys every host staging touched since main's last success (no-op if merged, revert if abandoned). Cloudflare apply and ArgoCD stay main-only.
-- `main` — production.
+- `main` — production. **Promote with the `Promote staging → main` workflow** (Actions tab → Run workflow): it requires staging's latest run for that exact commit to be green, fast-forwards main (or merges when main only has Image Updater `.argocd-source-*.yaml` commits), dispatches the main pipeline with `full_deploy=false`, and posts to Discord.
+- **Production deploys need approval**: the `Production` environment has the owner as required reviewer. Discord gets a "waiting for approval" message with the run link; approve under **Review deployments**. This applies to the monthly scheduled run too. While a main deploy waits, it holds the `deploy-hosts` concurrency group, so staging deploys queue behind it.
+- `main` has a ruleset (`protect-main`): no deletion, no force-push. Normal pushes (you, Image Updater, promote) still work.
+- Only the Deploy job binds to an environment (`Production`/`Staging`), so each environment's Deployments page is real deploy history. Secrets are still repo-level (not yet scoped per environment). `vars.ALERTMANAGER_URL` is a repo variable.
 
 ## Load-Bearing Quirks — DO NOT "FIX"
 

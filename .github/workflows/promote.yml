@@ -1,0 +1,104 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+# Promote the staging canary to production: moves main to staging's commit,
+# but only if staging's latest pipeline run for that exact commit is green.
+# Then starts the main pipeline (selective deploy), which waits for the
+# Production approval. Result goes to Discord either way.
+name: Promote staging → main
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: promote
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # push main
+  actions: write    # dispatch main.yml (a GITHUB_TOKEN push triggers no workflows)
+
+jobs:
+  promote:
+    name: Promote staging → main
+    runs-on: ubuntu-latest  # git + GitHub API only, nothing on the LAN
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Check staging and move main
+        id: promote
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          fail() { echo "reason=$1" >> "$GITHUB_OUTPUT"; echo "::error::$1"; exit 1; }
+
+          staging=$(git rev-parse origin/staging)
+          main=$(git rev-parse origin/main)
+          echo "staging=${staging:0:8}" >> "$GITHUB_OUTPUT"
+          echo "from=${main:0:8}" >> "$GITHUB_OUTPUT"
+
+          [ "$staging" != "$main" ] || fail "main is already at staging (${staging:0:8}) — nothing to promote."
+
+          # The canary verdict: the newest main.yml run for staging's exact commit.
+          read -r status conclusion < <(gh api \
+            "repos/$GITHUB_REPOSITORY/actions/workflows/main.yml/runs?branch=staging&head_sha=$staging&per_page=1" \
+            -q '.workflow_runs[0] | "\(.status // "none") \(.conclusion // "none")"')
+          [ "$status" = completed ] || fail "staging's run for ${staging:0:8} is $status — wait for it to finish."
+          [ "$conclusion" = success ] || fail "staging's run for ${staging:0:8} ended '$conclusion' — fix it on staging first."
+
+          # Image Updater commits straight to main (.argocd-source-*.yaml only).
+          # Those may be merged across; anything else on main must reach
+          # staging first so the canary has tested it.
+          extra=$(git diff --name-only "$(git merge-base origin/main origin/staging)" origin/main \
+                  | grep -vE '^Ansbile/argocd-apps/[^/]+/\.argocd-source-[^/]+\.yaml$' || true)
+          [ -z "$extra" ] || fail "main has changes staging never tested: $(echo $extra | head -c 300). Merge main into staging, let the canary run, then promote."
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -q main
+          if git merge-base --is-ancestor origin/main origin/staging; then
+            git merge -q --ff-only origin/staging
+            echo "mode=fast-forward" >> "$GITHUB_OUTPUT"
+          else
+            git merge -q --no-ff origin/staging -m "Promote staging ${staging:0:8} to main"
+            echo "mode=merge (kept Image Updater commits)" >> "$GITHUB_OUTPUT"
+          fi
+          git push origin main
+          echo "to=$(git rev-parse --short=8 HEAD)" >> "$GITHUB_OUTPUT"
+
+          # A push made with GITHUB_TOKEN starts no workflows; dispatch is the
+          # exception. full_deploy=false keeps the per-host selective deploy.
+          gh workflow run main.yml --ref main -f full_deploy=false
+
+      - name: Notify Discord
+        if: always()
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_CD_Alert_URL }}
+          OUTCOME: ${{ steps.promote.outcome }}
+          REASON: ${{ steps.promote.outputs.reason }}
+          FROM: ${{ steps.promote.outputs.from }}
+          TO: ${{ steps.promote.outputs.to }}
+          MODE: ${{ steps.promote.outputs.mode }}
+          STAGING: ${{ steps.promote.outputs.staging }}
+          ACTOR: ${{ github.actor }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ "$OUTCOME" = success ]; then
+            TITLE="🚀 Promoted staging → main"
+            COLOR=3066993
+            DESC="main \`$FROM\` → \`$TO\` ($MODE). Production deploy will wait for approval."
+          else
+            TITLE="⛔ Promotion blocked"
+            COLOR=15158332
+            DESC="${REASON:-promote step failed — see the run}"
+          fi
+          jq -n --arg t "$TITLE" --arg d "$DESC" --arg u "$RUN_URL" --arg a "$ACTOR" --arg s "${STAGING:-?}" --argjson c "$COLOR" \
+            '{embeds:[{title:$t, description:$d, url:$u, color:$c,
+              fields:[{name:"Staging commit", value:("`"+$s+"`"), inline:true},
+                      {name:"By", value:$a, inline:true}],
+              footer:{text:"GitHub Actions — promote"}}]}' \
+            | curl -sS -f -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK"
