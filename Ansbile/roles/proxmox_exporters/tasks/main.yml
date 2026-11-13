@@ -57,7 +57,7 @@
 # ── zfs_exporter (pinned binary) ──────────────────────────────────────────────
 - name: Download zfs_exporter
   ansible.builtin.get_url:
-    url: "https://github.com/pdf/zfs_exporter/releases/download/v{{ proxmox_exporters_zfs_version }}/zfs_exporter-{{ proxmox_exporters_zfs_version }}.linux-amd64.tar.gz"
+    url: "{{ proxmox_exporters_zfs_release_url }}/zfs_exporter-{{ proxmox_exporters_zfs_version }}.linux-amd64.tar.gz"
     dest: "/tmp/zfs_exporter-{{ proxmox_exporters_zfs_version }}.tar.gz"
     checksum: "{{ proxmox_exporters_zfs_checksum }}"
     mode: '0644'

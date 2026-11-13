@@ -20,6 +20,7 @@ proxmox_exporters_node_timers:
 
 # zfs_exporter — pin matches the binary already running on the host.
 proxmox_exporters_zfs_version: "2.3.11"
+proxmox_exporters_zfs_release_url: "https://github.com/pdf/zfs_exporter/releases/download/v{{ proxmox_exporters_zfs_version }}"
 proxmox_exporters_zfs_checksum: "sha256:416cf18e4790614a7cef5f5f97a29d18938b16ed96e9f83043a499ae70e9887e"
 proxmox_exporters_zfs_bin: /usr/local/bin/zfs_exporter
 proxmox_exporters_zfs_port: 9134

@@ -65,7 +65,7 @@ jobs:
   # Discord, with the approve link, so the run doesn't sit there unnoticed.
   approval-notice:
     name: Ask for Production Approval
-    needs: [changes, testing, security]
+    needs: [changes, testing]
     if: github.ref_name == 'main'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -103,6 +103,7 @@ jobs:
     needs: build-image
     uses: ./.github/workflows/testing.yml
     secrets:
+      DISCORD_CI_ALERT_SEC_URL: ${{ secrets.DISCORD_CI_ALERT_SEC_URL }}
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
       DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
@@ -116,7 +117,7 @@ jobs:
   # (main's next run puts main's version back on any host staging touched).
   Deploy:
     name: Deploy Infrastructure Code
-    needs: [changes, testing, security]
+    needs: [changes, testing]
     if: github.ref_name != 'development'
     # One group for every branch: staging and main deploy to the same hosts,
     # and with several runners two deploys could otherwise overlap. A deploy
@@ -150,22 +151,14 @@ jobs:
       OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
       CF_DNS_API_TOKEN: ${{ secrets.CF_DNS_API_TOKEN }}
       PVE_EXPORTER_TOKEN: ${{ secrets.PVE_EXPORTER_TOKEN }}
-  # Gates the deploy: a committed secret fails the run before anything ships.
-  security:
-    name: Security Scan
-    uses: ./.github/workflows/security.yml
-    secrets:
-      DISCORD_CI_ALERT_SEC_URL: ${{ secrets.DISCORD_CI_ALERT_SEC_URL }}
-
   notify:
     name: Notify Discord
-    needs: [build-image, testing, Deploy, security]
+    needs: [build-image, testing, Deploy]
     if: always()
     uses: ./.github/workflows/notify.yml
     with:
       build_result: ${{ needs.build-image.result }}
       testing_result: ${{ needs.testing.result }}
       deploy_result: ${{ needs.Deploy.result }}
-      security_result: ${{ needs.security.result }}
     secrets:
       DISCORD_CD_Alert_URL: ${{ secrets.DISCORD_CD_Alert_URL }}
