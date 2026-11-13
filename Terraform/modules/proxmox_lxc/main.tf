@@ -1,5 +1,6 @@
-# Unprivileged LXC container. nesting + keyctl let Docker run inside it
-# (the GitHub Actions runners build and scan images).
+# Unprivileged LXC container. nesting is what Ubuntu 24.04's systemd needs
+# inside an unprivileged container; no Docker runs here (image builds are on
+# GitHub-hosted runners), so no keyctl.
 resource "proxmox_virtual_environment_container" "ct" {
   node_name     = var.target_node
   vm_id         = var.vmid
@@ -10,7 +11,6 @@ resource "proxmox_virtual_environment_container" "ct" {
 
   features {
     nesting = true
-    keyctl  = true
   }
 
   operating_system {

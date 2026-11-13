@@ -10,7 +10,7 @@
   ansible.builtin.group:
     name: "{{ ci_runner_group }}"
 
-# CI steps call sudo (docker, apt-get) and Ansible uses become on the
+# CI steps call sudo (apt-get) and Ansible uses become on the
 # controller (this host).
 - name: Allow runner users passwordless sudo
   ansible.builtin.template:

@@ -13,6 +13,6 @@ for dir in {{ ci_runner_cleanup_dirs | join(' ') }}; do
   done
   rm -rf "$dir/_work/_update" "$dir"/actions-runner-linux-*.tar.gz
 done
-# Dangling layers from CI image builds.
-docker image prune -f >/dev/null
+# Dangling layers from CI image builds (hosts that have Docker).
+if command -v docker >/dev/null; then docker image prune -f >/dev/null; fi
 apt-get clean

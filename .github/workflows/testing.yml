@@ -45,12 +45,13 @@ jobs:
       - name: Install system dependencies
         run: |
           need_install=false
-          for pkg in unzip curl git ansible python3-venv python3-pip; do
+          # Ansible itself comes from the pinned venv, not apt.
+          for pkg in unzip curl git python3-venv python3-pip; do
             dpkg -s "$pkg" &>/dev/null || { need_install=true; break; }
           done
           if $need_install; then
             sudo apt-get update -o Acquire::Retries=3
-            sudo apt-get install -y unzip curl git ansible python3-venv python3-pip
+            sudo apt-get install -y unzip curl git python3-venv python3-pip
           else
             echo "All packages already installed — skipping apt-get update."
           fi

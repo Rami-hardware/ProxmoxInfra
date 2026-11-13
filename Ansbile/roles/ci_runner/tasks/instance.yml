@@ -4,7 +4,7 @@
   ansible.builtin.user:
     name: "{{ ci_runner_inst_user }}"
     shell: /bin/bash
-    groups: [docker, "{{ ci_runner_group }}"]
+    groups: ["{{ ci_runner_group }}"]
     append: true
 
 - name: "Create runner directory for {{ ci_runner_inst_user }}"
