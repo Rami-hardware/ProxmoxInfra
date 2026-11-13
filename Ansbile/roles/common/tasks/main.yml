@@ -1,4 +1,11 @@
 ---
+# Exists on the cloud-init VMs, not on the minimal LXC template.
+- name: Ensure apt-daily-upgrade timer drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/apt-daily-upgrade.timer.d
+    state: directory
+    mode: '0755'
+
 - name: Pin unattended-upgrades install window to 10:00 local (07:00 UTC; VMs run UTC)
   ansible.builtin.template:
     src: apt-daily-upgrade-override.conf.j2
