@@ -1,0 +1,7 @@
+# Managed by Ansible (roles/proxmox_exporters) — do not edit on the host.
+# The token value comes from the PVE_EXPORTER_TOKEN CI secret.
+default:
+  user: {{ proxmox_exporters_pve_user }}
+  token_name: {{ proxmox_exporters_pve_token_name }}
+  token_value: {{ proxmox_exporters_pve_token }}
+  verify_ssl: false

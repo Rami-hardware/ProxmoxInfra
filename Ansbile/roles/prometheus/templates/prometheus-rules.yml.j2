@@ -1526,4 +1526,30 @@ groups:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
           summary: "zfs-exporter target is down"
           description: "Fires when Prometheus can't scrape the zfs-exporter job at all. Check that the exporter service is running on the host and that the port is reachable — this is a scrape-level failure, not a ZFS metric threshold."
+
+  # Proxmox API metrics from prometheus-pve-exporter on host-node (:9221).
+  # Host CPU/RAM/disk come from node-exporter; these cover the Proxmox layer
+  # (API reachability and per-storage usage). Host memory is already alerted by
+  # NodeHighMemoryUsage in the `nodes` group, so it is not duplicated here.
+  - name: proxmox
+    rules:
+      - alert: ProxmoxExporterDown
+        expr: (up{job="pve"}) < 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
+          summary: "prometheus-pve-exporter target is down"
+          description: "Prometheus can't scrape the pve job on host-node:9221. Check the pve_exporter.service on the Proxmox host and that its PVE API token is still valid (PVEAuditor, not expired/deleted)."
+
+      - alert: ProxmoxStorageUsageHigh
+        expr: (pve_disk_usage_bytes{id=~"storage/.*"} / pve_disk_size_bytes{id=~"storage/.*"}) > 0.9
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/exporters.md"
+          summary: "Proxmox storage {{ $labels.id }} at {{ $value | humanizePercentage }}"
+          description: "A Proxmox storage is over 90% full. Free space (old backups/ISOs/unused disks) or expand it — a full storage blocks backups and new guests."
 {% endraw %}

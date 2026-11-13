@@ -132,11 +132,22 @@ prometheus_scrape_jobs:
     relabel_configs:
       - target_label: instance
         replacement: host-node
-  - name: smartctl_exporter
-    targets: ["{{ hostvars['host-node']['ansible_host'] }}:9633"]
+  # prometheus-pve-exporter on host-node (:9221) queries the local Proxmox API.
+  # The metrics path is /pve?target=<node>; the exporter address and the target
+  # it queries are both host-node. (SMART/NVMe come from node-exporter's
+  # smartmon/nvme textfile collectors — there is no separate smartctl exporter.)
+  - name: pve
+    metrics_path: /pve
+    params:
+      module: ["default"]
+    targets: ["{{ hostvars['host-node']['ansible_host'] }}"]
     relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
       - target_label: instance
         replacement: host-node
+      - target_label: __address__
+        replacement: "{{ hostvars['host-node']['ansible_host'] }}:9221"
   # One target per controller pod (hostNetwork, so the pod IP is the node IP),
   # labelled with the node it runs on. Follows k3s_apps_ingress_nodes.
   - name: ingress-nginx

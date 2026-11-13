@@ -1,0 +1,37 @@
+---
+# Exporters on the Proxmox host (host-node, .250). This role codifies what was
+# previously hand-installed:
+#   - prometheus-node-exporter (apt) on :9100, with the smartmon/nvme/apt
+#     textfile-collector timers that feed the `smart` alert group (smartmon_*,
+#     nvme_*). This is the single source of SMART/NVMe data.
+#   - zfs_exporter (pinned binary) on :9134.
+#   - prometheus-pve-exporter (venv) on :9221 — Proxmox API metrics (per-guest
+#     CPU/RAM/disk, cluster/storage), which the host had none of before.
+# It also removes two dead leftovers: the broken manual node_exporter.service
+# (ExecStart pointed at /path/to/node_exporter) and the redundant
+# smartctl-exporter snap on :9633 (emitted nothing; SMART is covered above).
+
+# node-exporter (Debian package) + its textfile-collector timers.
+proxmox_exporters_node_package: prometheus-node-exporter
+proxmox_exporters_node_timers:
+  - prometheus-node-exporter-smartmon.timer
+  - prometheus-node-exporter-nvme.timer
+  - prometheus-node-exporter-apt.timer
+
+# zfs_exporter — pin matches the binary already running on the host.
+proxmox_exporters_zfs_version: "2.3.11"
+proxmox_exporters_zfs_checksum: "sha256:416cf18e4790614a7cef5f5f97a29d18938b16ed96e9f83043a499ae70e9887e"
+proxmox_exporters_zfs_bin: /usr/local/bin/zfs_exporter
+proxmox_exporters_zfs_port: 9134
+
+# prometheus-pve-exporter — read-only Proxmox API metrics.
+# Install is skipped until a token is provided (empty by default), so CI never
+# ships a half-configured, crash-looping service. See docs/runbooks/exporters.md
+# for creating the PVE token and adding the PVE_EXPORTER_TOKEN CI secret.
+proxmox_exporters_pve_version: "3.11.0"
+proxmox_exporters_pve_venv: /opt/pve-exporter
+proxmox_exporters_pve_config_dir: /etc/prometheus-pve-exporter
+proxmox_exporters_pve_port: 9221
+proxmox_exporters_pve_user: "pve-exporter@pam"
+proxmox_exporters_pve_token_name: "monitoring"
+proxmox_exporters_pve_token: "{{ lookup('env', 'PVE_EXPORTER_TOKEN') | default('', true) }}"

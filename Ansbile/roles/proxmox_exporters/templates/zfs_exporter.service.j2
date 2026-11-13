@@ -1,0 +1,16 @@
+# Managed by Ansible (roles/proxmox_exporters) — do not edit on the host.
+[Unit]
+Description=ZFS Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=root
+Group=root
+Type=simple
+ExecStart={{ proxmox_exporters_zfs_bin }} --web.listen-address=:{{ proxmox_exporters_zfs_port }}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,5 @@
+---
+# Proxmox host (host-node, .250). Exporter versions/ports are the role defaults;
+# override here if they need to diverge. The PVE API token is injected from the
+# PVE_EXPORTER_TOKEN CI secret (see roles/proxmox_exporters/defaults/main.yml and
+# docs/runbooks/exporters.md), never committed.

@@ -50,9 +50,9 @@ terraform plan -input=false -no-color -detailed-exitcode -out=tfplan
 ## Ansible (`Ansbile/`)
 
 - Inventory: `inventory.ini` (groups = `gateway-vm`, `media-vm`, `monitoring-vm`, `git-k3s-server-vm`, `host-node`). Group names must match `group_vars/<group>.yml` filenames.
-- Playbooks: one per host (`gateway-server.yml`, `media-server.yml`, `monitoring-server.yml`, `git-k3s-server.yml`).
-- 17 roles under `Ansbile/roles/`. Deploy order in CI: gateway → monitoring → media → git-k3s.
-- **CI runs only the playbooks whose files changed** since the branch's last successful pipeline run (`.github/scripts/detect-changed-hosts.sh`). Shared files (`roles/common`, `group_vars/all`, inventory, `requirements.yml`, `.github/`) or an unmapped path run all four; schedule and manual dispatch always run all four. Adding a role to a playbook → add it to that host's line in the script (forgetting is safe, just deploys every host).
+- Playbooks: one per host (`gateway-server.yml`, `media-server.yml`, `monitoring-server.yml`, `git-k3s-server.yml`, `ci-runners.yml`, `host-node.yml` — the last is the Proxmox host itself, exporters only: node/zfs/pve).
+- 18 roles under `Ansbile/roles/`. Deploy order in CI: gateway → monitoring → media → git-k3s → ci-runners → host-node.
+- **CI runs only the playbooks whose files changed** since the branch's last successful pipeline run (`.github/scripts/detect-changed-hosts.sh`). Shared files (`roles/common`, `group_vars/all`, inventory, `requirements.yml`, `.github/`) or an unmapped path run every playbook; schedule and manual dispatch always run them all. Adding a role to a playbook → add it to that host's line in the script (forgetting is safe, just deploys every host).
 - Secrets: `group_vars/all/vault.yml` is fully vault-encrypted (plain vars go in other files under `group_vars/all/`, e.g. `local_dns.yml`). Vault password via `--vault-password-file ~/.vault_pass` (CI writes it from `ANSIBLE_VAULT_PASSWORD` secret). Never commit plaintext secrets — CI's Trivy scan flags them.
 
 ### Conventions (enforced — match existing code)

@@ -18,18 +18,18 @@
 # once staging is merged; a revert if staging was abandoned).
 set -euo pipefail
 
-declare -A want=([gateway]=false [monitoring]=false [media]=false [git_k3s]=false [ci_runners]=false)
+declare -A want=([gateway]=false [monitoring]=false [media]=false [git_k3s]=false [ci_runners]=false [host_node]=false)
 
 finish() {
   echo "Reason: $1"
   {
-    for h in gateway monitoring media git_k3s ci_runners; do echo "$h=${want[$h]}"; done
+    for h in gateway monitoring media git_k3s ci_runners host_node; do echo "$h=${want[$h]}"; done
   } >> "$GITHUB_OUTPUT"
   {
     echo "### Hosts to deploy"
     echo "$1"
     echo
-    for h in gateway monitoring media git_k3s ci_runners; do echo "- \`$h\`: ${want[$h]}"; done
+    for h in gateway monitoring media git_k3s ci_runners host_node; do echo "- \`$h\`: ${want[$h]}"; done
   } >> "$GITHUB_STEP_SUMMARY"
   exit 0
 }
@@ -100,6 +100,9 @@ while IFS= read -r f; do
       want[git_k3s]=true ;;
     Ansbile/ci-runners.yml | Ansbile/group_vars/ci-runner-lxc.yml)
       want[ci_runners]=true ;;
+    Ansbile/host-node.yml | Ansbile/group_vars/host-node.yml | \
+    Ansbile/roles/proxmox_exporters/*)
+      want[host_node]=true ;;
     # Shared Ansible files (common role, group_vars/all, inventory, collections)
     # and the pipeline itself.
     Ansbile/* | .github/*)

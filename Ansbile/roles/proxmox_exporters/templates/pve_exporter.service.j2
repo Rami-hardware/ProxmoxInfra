@@ -1,0 +1,17 @@
+# Managed by Ansible (roles/proxmox_exporters) — do not edit on the host.
+[Unit]
+Description=Prometheus Proxmox VE Exporter
+Wants=network-online.target
+After=network-online.target pve-cluster.service
+
+[Service]
+# Reads the local Proxmox API (https://localhost:8006) with a read-only
+# PVEAuditor API token. Config (with the token) is 0600 root.
+ExecStart={{ proxmox_exporters_pve_venv }}/bin/pve_exporter \
+  --config.file={{ proxmox_exporters_pve_config_dir }}/pve.yml \
+  --web.listen-address=:{{ proxmox_exporters_pve_port }}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,158 @@
+---
+# ── node-exporter (apt) + textfile-collector timers ───────────────────────────
+- name: Install prometheus-node-exporter
+  ansible.builtin.apt:
+    name: "{{ proxmox_exporters_node_package }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Enable and start node-exporter
+  ansible.builtin.systemd:
+    name: prometheus-node-exporter.service
+    enabled: true
+    state: started
+
+# These oneshot timers write smartmon.prom / nvme.prom / apt.prom into the
+# textfile-collector dir node-exporter reads. They are the source of the
+# smartmon_* and nvme_* metrics the `smart` alert group depends on.
+- name: Enable and start node-exporter textfile-collector timers
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop: "{{ proxmox_exporters_node_timers }}"
+
+# ── Remove dead leftovers ─────────────────────────────────────────────────────
+# A hand-written unit whose ExecStart was a literal placeholder
+# (/path/to/node_exporter); it has only ever been in `failed`. The real node
+# exporter is the apt package above.
+- name: Remove the broken manual node_exporter.service
+  ansible.builtin.systemd:
+    name: node_exporter.service
+    state: stopped
+    enabled: false
+  failed_when: false
+
+- name: Delete the broken manual node_exporter unit file
+  ansible.builtin.file:
+    path: /etc/systemd/system/node_exporter.service
+    state: absent
+  notify: Reload systemd
+
+# The smartctl-exporter snap on :9633 emitted no metrics and no rule or
+# dashboard reads smartctl_*; SMART is covered by the smartmon textfile
+# collector above. Remove it and stop scraping :9633 (see monitoring-vm.yml).
+- name: Check whether the smartctl-exporter snap is installed
+  ansible.builtin.command: snap list smartctl-exporter
+  register: proxmox_exporters_smartctl_snap
+  changed_when: false
+  failed_when: false
+
+- name: Remove the redundant smartctl-exporter snap
+  ansible.builtin.command: snap remove smartctl-exporter
+  when: proxmox_exporters_smartctl_snap.rc == 0
+  changed_when: true
+
+# ── zfs_exporter (pinned binary) ──────────────────────────────────────────────
+- name: Download zfs_exporter
+  ansible.builtin.get_url:
+    url: "https://github.com/pdf/zfs_exporter/releases/download/v{{ proxmox_exporters_zfs_version }}/zfs_exporter-{{ proxmox_exporters_zfs_version }}.linux-amd64.tar.gz"
+    dest: "/tmp/zfs_exporter-{{ proxmox_exporters_zfs_version }}.tar.gz"
+    checksum: "{{ proxmox_exporters_zfs_checksum }}"
+    mode: '0644'
+
+- name: Unpack zfs_exporter
+  ansible.builtin.unarchive:
+    src: "/tmp/zfs_exporter-{{ proxmox_exporters_zfs_version }}.tar.gz"
+    dest: /tmp
+    remote_src: true
+    creates: "/tmp/zfs_exporter-{{ proxmox_exporters_zfs_version }}.linux-amd64/zfs_exporter"
+
+- name: Install the zfs_exporter binary
+  ansible.builtin.copy:
+    src: "/tmp/zfs_exporter-{{ proxmox_exporters_zfs_version }}.linux-amd64/zfs_exporter"
+    dest: "{{ proxmox_exporters_zfs_bin }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: '0755'
+  notify: Restart zfs_exporter
+
+- name: Install zfs_exporter systemd unit
+  ansible.builtin.template:
+    src: zfs_exporter.service.j2
+    dest: /etc/systemd/system/zfs_exporter.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Reload systemd
+    - Restart zfs_exporter
+
+- name: Enable and start zfs_exporter
+  ansible.builtin.systemd:
+    name: zfs_exporter.service
+    enabled: true
+    state: started
+    daemon_reload: true
+
+# ── prometheus-pve-exporter (venv) ────────────────────────────────────────────
+# Skipped entirely until a token is configured, so we never leave a broken unit.
+- name: Install python venv tooling for pve-exporter
+  ansible.builtin.apt:
+    name:
+      - python3-venv
+      - python3-pip
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: proxmox_exporters_pve_token | length > 0
+
+- name: Install prometheus-pve-exporter into a venv
+  ansible.builtin.pip:
+    name: "prometheus-pve-exporter=={{ proxmox_exporters_pve_version }}"
+    virtualenv: "{{ proxmox_exporters_pve_venv }}"
+    virtualenv_command: python3 -m venv
+  when: proxmox_exporters_pve_token | length > 0
+  notify: Restart pve_exporter
+
+- name: Create pve-exporter config directory
+  ansible.builtin.file:
+    path: "{{ proxmox_exporters_pve_config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0750'
+  when: proxmox_exporters_pve_token | length > 0
+
+- name: Render pve-exporter config (holds the API token, 0600)
+  ansible.builtin.template:
+    src: pve.yml.j2
+    dest: "{{ proxmox_exporters_pve_config_dir }}/pve.yml"
+    owner: root
+    group: root
+    mode: '0600'
+  no_log: true
+  when: proxmox_exporters_pve_token | length > 0
+  notify: Restart pve_exporter
+
+- name: Install pve-exporter systemd unit
+  ansible.builtin.template:
+    src: pve_exporter.service.j2
+    dest: /etc/systemd/system/pve_exporter.service
+    owner: root
+    group: root
+    mode: '0644'
+  when: proxmox_exporters_pve_token | length > 0
+  notify:
+    - Reload systemd
+    - Restart pve_exporter
+
+- name: Enable and start pve-exporter
+  ansible.builtin.systemd:
+    name: pve_exporter.service
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: proxmox_exporters_pve_token | length > 0

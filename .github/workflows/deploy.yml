@@ -19,6 +19,9 @@ on:
       ci_runners:
         type: boolean
         default: true
+      host_node:
+        type: boolean
+        default: true
     secrets:
       PM_API_URL:
         required: true
@@ -50,6 +53,11 @@ on:
         required: true
       CF_DNS_API_TOKEN:
         required: true
+      PVE_EXPORTER_TOKEN:
+        # Read-only PVE API token for prometheus-pve-exporter on host-node.
+        # Until it is set, the host-node playbook skips the pve-exporter install
+        # (see roles/proxmox_exporters, docs/runbooks/exporters.md).
+        required: false
 jobs:
   Deploy:
     name: Deploy Infrastructure Code
@@ -175,7 +183,7 @@ jobs:
       # step removes the silence, and it expires by itself after 45 minutes.
       - name: Silence warning alerts during the deploy
         id: am_silence
-        if: inputs.gateway || inputs.monitoring || inputs.media || inputs.git_k3s || inputs.ci_runners
+        if: inputs.gateway || inputs.monitoring || inputs.media || inputs.git_k3s || inputs.ci_runners || inputs.host_node
         continue-on-error: true
         run: |
           now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -188,7 +196,7 @@ jobs:
           echo "Silenced warnings until $end (silence $id)"
 
       - name: Run Ansible playbooks
-        if: inputs.gateway || inputs.monitoring || inputs.media || inputs.git_k3s || inputs.ci_runners
+        if: inputs.gateway || inputs.monitoring || inputs.media || inputs.git_k3s || inputs.ci_runners || inputs.host_node
         env:
           ANSIBLE_VAULT_PASSWORD_FILE: ~/.vault_pass
           ADGUARD_EXPORTER_PASSWORD: ${{ secrets.ADGUARD_EXPORTER_PASSWORD }}
@@ -201,15 +209,18 @@ jobs:
           OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
           CF_DNS_API_TOKEN: ${{ secrets.CF_DNS_API_TOKEN }}
           HEALTHCHECKS_PING_URL: ${{ secrets.HEALTHCHECKS_PING_URL }}
+          PVE_EXPORTER_TOKEN: ${{ secrets.PVE_EXPORTER_TOKEN }}
           RUN_GATEWAY: ${{ inputs.gateway }}
           RUN_MONITORING: ${{ inputs.monitoring }}
           RUN_MEDIA: ${{ inputs.media }}
           RUN_GIT_K3S: ${{ inputs.git_k3s }}
           RUN_CI_RUNNERS: ${{ inputs.ci_runners }}
+          RUN_HOST_NODE: ${{ inputs.host_node }}
         run: |
           # Order matters: gateway → monitoring → media → git-k3s → runners
           # (the runners copy their kubeconfig from k3s). A failed playbook
-          # stops the ones after it.
+          # stops the ones after it. host-node (the Proxmox host, exporters
+          # only) is independent and runs last.
           play() {
             if [ "$1" != true ]; then echo "Skipping $2 — no changes for it."; return; fi
             echo "::group::$2"
@@ -221,6 +232,7 @@ jobs:
           play "$RUN_MEDIA" media-server
           play "$RUN_GIT_K3S" git-k3s-server
           play "$RUN_CI_RUNNERS" ci-runners
+          play "$RUN_HOST_NODE" host-node
 
       - name: Remove the deploy silence
         if: always() && steps.am_silence.outputs.id != ''

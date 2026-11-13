@@ -47,6 +47,7 @@ jobs:
       media: ${{ steps.detect.outputs.media }}
       git_k3s: ${{ steps.detect.outputs.git_k3s }}
       ci_runners: ${{ steps.detect.outputs.ci_runners }}
+      host_node: ${{ steps.detect.outputs.host_node }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -81,6 +82,7 @@ jobs:
             media=${{ needs.changes.outputs.media }}
             git_k3s=${{ needs.changes.outputs.git_k3s }}
             ci_runners=${{ needs.changes.outputs.ci_runners }}
+            host_node=${{ needs.changes.outputs.host_node }}
         run: |
           hosts=$(echo "$HOSTS" | tr ' ' '\n' | awk -F= '$2=="true"{print $1}' | paste -sd, -)
           jq -n --arg u "$RUN_URL" --arg c "${COMMIT:0:8}" --arg h "${hosts:-none (Terraform/Cloudflare only)}" \
@@ -130,6 +132,7 @@ jobs:
       media: ${{ needs.changes.outputs.media == 'true' }}
       git_k3s: ${{ needs.changes.outputs.git_k3s == 'true' }}
       ci_runners: ${{ needs.changes.outputs.ci_runners == 'true' }}
+      host_node: ${{ needs.changes.outputs.host_node == 'true' }}
     secrets:
       PM_API_URL: ${{ secrets.PM_API_URL }}
       PM_API_TOKEN: ${{ secrets.PM_API_TOKEN }}
@@ -146,6 +149,7 @@ jobs:
       RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
       OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
       CF_DNS_API_TOKEN: ${{ secrets.CF_DNS_API_TOKEN }}
+      PVE_EXPORTER_TOKEN: ${{ secrets.PVE_EXPORTER_TOKEN }}
   # Gates the deploy: a committed secret fails the run before anything ships.
   security:
     name: Security Scan
