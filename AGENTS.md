@@ -26,6 +26,8 @@ Homelab infra: Proxmox VMs provisioned with Terraform, configured with Ansible, 
 - Provider `bpg/proxmox` pinned `~> 0.70.1`. No `required_version`. No remote backend — **state (`terraform.tfstate`) is committed to git**.
 - `Terraform/.terraform/` is gitignored — provider binaries were once committed (81MB, several stale versions); never re-add them. CI installs providers via the filesystem mirror action.
 - VMs defined as a `map(object)` in `terraform.tfvars` (keys: `gateway`, `media`, `monitoring`, `github`). Map keys are state addresses: **renaming a key destroys the VM**.
+- LXC containers: `containers` map (keys `ci_runner_1`, `ci_runner_2`) → `modules/proxmox_lxc` (unprivileged, nesting + keyctl for Docker). Same key-rename rule. The Ubuntu template must exist on the host first: `pveam update && pveam download local ubuntu-24.04-standard_24.04-2_amd64.tar.zst`.
+- Host RAM is the tight resource (33.6 GB, VMs pin most of it; media's GPU passthrough pins all of its RAM). Check `node_memory_MemAvailable_bytes{instance="host-node"}` before adding guests.
   - A key rename makes CI's plan show destroy + recreate and block. Move the state by hand first (`terraform state mv 'module.proxmox_vms["old"]' 'module.proxmox_vms["new"]'`) and commit the state.
 - `lifecycle.ignore_changes` (in `modules/proxmox_vm/main.tf`) covers `disk`, `initialization`, `clone`, `hostpci`, `cpu` and more — don't remove.
 - CI deliberately does NOT apply VMs — plan only, with a destroy/replace guard that fails the pipeline. `terraform apply` in `deploy.yml` is commented out on purpose (manual applies only).
@@ -86,7 +88,7 @@ Excluded from ansible-lint via root `.ansible-lint` (`exclude_paths: [Ansbile/ar
 
 ## CI/CD (`.github/workflows/`)
 
-Self-hosted runner (small disk — has hit ENOSPC before; workflows prune docker/caches — keep those steps). Entry `main.yml` → `changes` job (picks playbooks) + reusable workflows: `testing.yml`, `deploy.yml`, `build-image.yml`, `security.yml`, `notify.yml`. Composite actions: `setup-ssh-vault`, `setup-terraform-mirror`, `setup-ansible-venv`, `cleanup-secrets`.
+Self-hosted runners: the hand-installed one on git-k3s-server (small disk — has hit ENOSPC before; workflows prune docker/caches — keep those steps) and two LXCs `ci-runner-1/2` (label `lxc`) installed by `ci-runners.yml` / `roles/ci_runner` (`ci_runner_install: true`; registers via `vault_github_runner_pat`, a fine-grained PAT with Administration read/write on this repo). Jobs use `runs-on: self-hosted` and may land on any of them, so workflows use plain `kubectl` (every runner has a kubeconfig at `/etc/rancher/k3s/k3s.yaml`, which the Cloudflare backend also reads). Deploy jobs share one concurrency group (`deploy-hosts`) across branches. Entry `main.yml` → `changes` job (picks playbooks) + reusable workflows: `testing.yml`, `deploy.yml`, `build-image.yml`, `security.yml`, `notify.yml`. Composite actions: `setup-ssh-vault`, `setup-terraform-mirror`, `setup-ansible-venv`, `cleanup-secrets`.
 
 - `checks.yml` covers the paths `main.yml` ignores: server-side dry run of `argocd-apps/<ns>` against the live cluster (`-n <ns>` — the shared NetworkPolicy component has no namespace), and the alertops-mcp pytest suite. It deploys nothing.
 - Ansible tool versions are pinned in `.github/ci-requirements.txt`; the venv is cached in `~/.cache/ci-ansible-venv` on the runner (checkout wipes the workspace). Bump pins on purpose.

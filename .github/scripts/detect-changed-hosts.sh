@@ -18,18 +18,18 @@
 # once staging is merged; a revert if staging was abandoned).
 set -euo pipefail
 
-declare -A want=([gateway]=false [monitoring]=false [media]=false [git_k3s]=false)
+declare -A want=([gateway]=false [monitoring]=false [media]=false [git_k3s]=false [ci_runners]=false)
 
 finish() {
   echo "Reason: $1"
   {
-    for h in gateway monitoring media git_k3s; do echo "$h=${want[$h]}"; done
+    for h in gateway monitoring media git_k3s ci_runners; do echo "$h=${want[$h]}"; done
   } >> "$GITHUB_OUTPUT"
   {
     echo "### Hosts to deploy"
     echo "$1"
     echo
-    for h in gateway monitoring media git_k3s; do echo "- \`$h\`: ${want[$h]}"; done
+    for h in gateway monitoring media git_k3s ci_runners; do echo "- \`$h\`: ${want[$h]}"; done
   } >> "$GITHUB_STEP_SUMMARY"
   exit 0
 }
@@ -88,11 +88,15 @@ while IFS= read -r f; do
     Ansbile/media-server.yml | Ansbile/group_vars/media-vm.yml | \
     Ansbile/roles/intel_arc/* | Ansbile/roles/scraparr/*)
       want[media]=true ;;
+    # Shared by the k3s server (hand-installed runner) and the runner LXCs.
+    Ansbile/roles/docker_setup/* | Ansbile/roles/ci_runner/*)
+      want[git_k3s]=true; want[ci_runners]=true ;;
     # Ansbile/apps/ is the alert-forwarder image, which k3s_apps deploys.
     Ansbile/git-k3s-server.yml | Ansbile/group_vars/git-k3s-server-vm.yml | \
-    Ansbile/roles/docker_setup/* | Ansbile/roles/ci_runner/* | Ansbile/roles/dns/* | \
-    Ansbile/roles/k3s_server/* | Ansbile/roles/k3s_apps/* | Ansbile/apps/*)
+    Ansbile/roles/dns/* | Ansbile/roles/k3s_server/* | Ansbile/roles/k3s_apps/* | Ansbile/apps/*)
       want[git_k3s]=true ;;
+    Ansbile/ci-runners.yml | Ansbile/group_vars/ci-runner-lxc.yml)
+      want[ci_runners]=true ;;
     # Shared Ansible files (common role, group_vars/all, inventory, collections)
     # and the pipeline itself.
     Ansbile/* | .github/*)

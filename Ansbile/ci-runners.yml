@@ -1,0 +1,9 @@
+---
+- name: Configure GitHub Actions runner containers
+  hosts: ci-runner-lxc
+  become: true
+  roles:
+    - common
+    # Image builds and Trivy scans run in Docker (needs nesting + keyctl on the LXC).
+    - docker_setup
+    - ci_runner

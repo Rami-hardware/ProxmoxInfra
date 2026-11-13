@@ -26,7 +26,7 @@ vms = {
     vmid       = 911
     ip         = "192.168.10.201/24"
     cores      = 6
-    memory     = 10240
+    memory     = 7168 # was 10240; 7d peak use 5.4 GB. GPU passthrough pins all of it, so this frees 3 GB on the host
     ciuser     = "media"
     cipassword = ""
     hostpcis   = ["0000:03:00.0", "0000:04:00.0"]
@@ -95,5 +95,28 @@ vms = {
         discard      = "on"
       }
     ]
+  }
+}
+
+# GitHub Actions runners (Ansible: ci-runners.yml). 2 GB is a cgroup limit,
+# not reserved; idle use is a few hundred MB.
+containers = {
+  ci_runner_1 = {
+    name        = "ci-runner-1"
+    vmid        = 205
+    description = "GitHub Actions runner (managed by Terraform + Ansible ci-runners.yml)"
+    ip          = "192.168.10.205/24"
+    cores       = 2
+    memory      = 2048
+    disk_size   = 25
+  }
+  ci_runner_2 = {
+    name        = "ci-runner-2"
+    vmid        = 206
+    description = "GitHub Actions runner (managed by Terraform + Ansible ci-runners.yml)"
+    ip          = "192.168.10.206/24"
+    cores       = 2
+    memory      = 2048
+    disk_size   = 25
   }
 }

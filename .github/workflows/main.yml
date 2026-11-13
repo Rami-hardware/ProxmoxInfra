@@ -41,6 +41,7 @@ jobs:
       monitoring: ${{ steps.detect.outputs.monitoring }}
       media: ${{ steps.detect.outputs.media }}
       git_k3s: ${{ steps.detect.outputs.git_k3s }}
+      ci_runners: ${{ steps.detect.outputs.ci_runners }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -79,12 +80,20 @@ jobs:
     name: Deploy Infrastructure Code
     needs: [changes, testing, security]
     if: github.ref_name != 'development'
+    # One group for every branch: staging and main deploy to the same hosts,
+    # and with several runners two deploys could otherwise overlap. A deploy
+    # dropped while pending is picked up by that branch's next run (the diff
+    # base is its last successful run).
+    concurrency:
+      group: deploy-hosts
+      cancel-in-progress: false
     uses: ./.github/workflows/deploy.yml
     with:
       gateway: ${{ needs.changes.outputs.gateway == 'true' }}
       monitoring: ${{ needs.changes.outputs.monitoring == 'true' }}
       media: ${{ needs.changes.outputs.media == 'true' }}
       git_k3s: ${{ needs.changes.outputs.git_k3s == 'true' }}
+      ci_runners: ${{ needs.changes.outputs.ci_runners == 'true' }}
     secrets:
       PM_API_URL: ${{ secrets.PM_API_URL }}
       PM_API_TOKEN: ${{ secrets.PM_API_TOKEN }}

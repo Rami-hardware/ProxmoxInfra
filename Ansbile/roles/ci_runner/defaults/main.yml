@@ -1,4 +1,27 @@
 ---
-# The GitHub Actions runner itself is installed by hand (config.sh); this role
-# only cleans up after it.
+# git-k3s-server's runner is installed by hand (config.sh); there this role
+# only cleans up after it. The LXC runners set ci_runner_install: true and
+# get the full install (group_vars/ci-runner-lxc.yml).
+ci_runner_install: false
+ci_runner_user: github
 ci_runner_dir: /home/github/actions-runner
+
+# Used only when ci_runner_install is true.
+ci_runner_repo: Rami-hardware/ProxmoxInfra
+ci_runner_labels: [lxc]
+# The runner auto-updates itself after registering; this is the first install.
+ci_runner_version: "2.338.2"
+ci_runner_checksum: "sha256:baebf204307bac6193480852732f0aba2ae97b6c5597c244f4d5558390147c40"
+# Match the cluster (k3s v1.34.3).
+ci_runner_kubectl_version: "v1.34.3"
+ci_runner_packages:
+  - ca-certificates
+  - curl
+  - git
+  - jq
+  - unzip
+  - python3-venv
+  - python3-pip
+# Fine-grained PAT, this repo only, "Administration: read and write". Only
+# used to fetch a one-hour registration token when a runner isn't registered.
+ci_runner_github_pat: "{{ vault_github_runner_pat | default('') }}"

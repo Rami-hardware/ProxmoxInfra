@@ -21,6 +21,34 @@ variable "vms" {
   }))
 }
 
+# LXC containers (currently the GitHub Actions runners). Map keys are state
+# addresses, same as vms: renaming one destroys the container.
+variable "containers" {
+  type = map(object({
+    name        = string
+    vmid        = number
+    description = optional(string, "")
+    ip          = string
+    cores       = number
+    memory      = number
+    disk_size   = number
+  }))
+  default = {}
+}
+
+# Download once on the Proxmox host before the first apply:
+#   pveam update && pveam download local ubuntu-24.04-standard_24.04-2_amd64.tar.zst
+variable "lxc_template_file_id" {
+  type    = string
+  default = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
+}
+
+# AdGuard on the gateway first, unbound on monitoring as the fallback.
+variable "lxc_dns_servers" {
+  type    = list(string)
+  default = ["192.168.10.200", "192.168.10.203"]
+}
+
 variable "pm_api_url" {
   type        = string
   description = "Proxmox API URL"

@@ -1,0 +1,6 @@
+---
+# LXC containers from Terraform `containers` (ci_runner_1/2).
+ci_runner_install: true
+ci_runner_user: runner
+ci_runner_dir: /home/runner/actions-runner
+ci_runner_labels: [lxc]

@@ -1,4 +1,8 @@
 ---
+- name: Install and register the runner
+  ansible.builtin.include_tasks: install.yml
+  when: ci_runner_install
+
 - name: Install CI runner cleanup script
   ansible.builtin.template:
     src: ci-runner-cleanup.sh.j2

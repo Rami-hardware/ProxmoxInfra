@@ -38,7 +38,7 @@ jobs:
           rc=0
           for ns in media monitoring network; do
             echo "::group::$ns"
-            k3s kubectl apply --dry-run=server -n "$ns" -k "Ansbile/argocd-apps/$ns" || rc=1
+            kubectl apply --dry-run=server -n "$ns" -k "Ansbile/argocd-apps/$ns" || rc=1
             echo "::endgroup::"
           done
           exit $rc

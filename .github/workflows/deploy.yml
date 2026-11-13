@@ -16,6 +16,9 @@ on:
       git_k3s:
         type: boolean
         default: true
+      ci_runners:
+        type: boolean
+        default: true
     secrets:
       PM_API_URL:
         required: true
@@ -169,7 +172,7 @@ jobs:
       # step removes the silence, and it expires by itself after 45 minutes.
       - name: Silence warning alerts during the deploy
         id: am_silence
-        if: inputs.gateway || inputs.monitoring || inputs.media || inputs.git_k3s
+        if: inputs.gateway || inputs.monitoring || inputs.media || inputs.git_k3s || inputs.ci_runners
         continue-on-error: true
         run: |
           now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -182,7 +185,7 @@ jobs:
           echo "Silenced warnings until $end (silence $id)"
 
       - name: Run Ansible playbooks
-        if: inputs.gateway || inputs.monitoring || inputs.media || inputs.git_k3s
+        if: inputs.gateway || inputs.monitoring || inputs.media || inputs.git_k3s || inputs.ci_runners
         env:
           ANSIBLE_VAULT_PASSWORD_FILE: ~/.vault_pass
           ADGUARD_EXPORTER_PASSWORD: ${{ secrets.ADGUARD_EXPORTER_PASSWORD }}
@@ -199,9 +202,11 @@ jobs:
           RUN_MONITORING: ${{ inputs.monitoring }}
           RUN_MEDIA: ${{ inputs.media }}
           RUN_GIT_K3S: ${{ inputs.git_k3s }}
+          RUN_CI_RUNNERS: ${{ inputs.ci_runners }}
         run: |
-          # Order matters: gateway → monitoring → media → git-k3s. A failed
-          # playbook stops the ones after it.
+          # Order matters: gateway → monitoring → media → git-k3s → runners
+          # (the runners copy their kubeconfig from k3s). A failed playbook
+          # stops the ones after it.
           play() {
             if [ "$1" != true ]; then echo "Skipping $2 — no changes for it."; return; fi
             echo "::group::$2"
@@ -212,6 +217,7 @@ jobs:
           play "$RUN_MONITORING" monitoring-server
           play "$RUN_MEDIA" media-server
           play "$RUN_GIT_K3S" git-k3s-server
+          play "$RUN_CI_RUNNERS" ci-runners
 
       - name: Remove the deploy silence
         if: always() && steps.am_silence.outputs.id != ''
@@ -227,7 +233,7 @@ jobs:
       # deploy (it still fails the job).
       - name: Ensure Terraform state namespace exists
         run: |
-          k3s kubectl create namespace terraform --dry-run=client -o yaml | k3s kubectl apply -f -
+          kubectl create namespace terraform --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Cloudflare plan
         id: cf_plan
@@ -266,9 +272,9 @@ jobs:
         working-directory: Terraform/cloudflare
         run: |
           terraform output -raw tunnel_token \
-            | k3s kubectl -n cloudflared create secret generic cloudflared-token \
+            | kubectl -n cloudflared create secret generic cloudflared-token \
                 --from-file=token=/dev/stdin --dry-run=client -o yaml \
-            | k3s kubectl apply -f -
+            | kubectl apply -f -
 
       - name: Cleanup secrets
         if: always()
