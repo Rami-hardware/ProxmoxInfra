@@ -1,0 +1,19 @@
+# Weekly PRs for new versions of the GitHub Actions the workflows use
+# (actions/checkout, setup-terraform, docker/*, ...), grouped into one PR.
+# PRs target `development`: merging one runs CI there (tested, never
+# deployed); promote it through staging → main as usual. Dependabot's own
+# branches trigger nothing (CI runs on pushes to the three branches only,
+# never on pull_request — the repo is public and the runners are on the LAN).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: development
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"
