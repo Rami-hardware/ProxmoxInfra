@@ -77,8 +77,8 @@ check_monitoring() {
   local bad=0
   curl -sf --max-time 5 -o /dev/null "$PROM/-/ready" || { echo "Prometheus not ready"; bad=1; }
   curl -sf --max-time 5 -o /dev/null "$AM/-/ready" || { echo "Alertmanager not ready"; bad=1; }
-  # Loki's /ready reports "Ingester not ready" while it serves fine, so ask
-  # the query API instead.
+  # The query API, not /ready: /ready only turns 200 after it has been polled
+  # for 15s (the pod's readiness probe does that).
   curl -sf --max-time 5 -o /dev/null "$LOKI/loki/api/v1/labels" || { echo "Loki query API not answering"; bad=1; }
   return $bad
 }
