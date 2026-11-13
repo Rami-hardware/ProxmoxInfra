@@ -523,6 +523,8 @@
 
 # ── alert-forwarder via Helm ──────────────────────────────────────────────────
 # Helm runs on the server, so the chart is copied there from the checkout.
+# copy never deletes: a template removed from the chart stays on the server
+# (and in the release) until it's deleted from /opt/k3s/charts by hand.
 - name: Copy the alert-forwarder chart to the server
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/apps/alert-forwarder/chart/"
