@@ -4,10 +4,6 @@
   become: true
   roles:
     - { role: common, tags: [common] }
-    # Docker daemon — used by the CI runner for image builds.
-    - { role: docker_setup, tags: [docker_setup] }
-    # Weekly cleanup after the hand-installed GitHub Actions runner.
-    - { role: ci_runner, tags: [ci_runner] }
     - { role: dns, tags: [dns] }
     - { role: k3s_server, tags: [k3s_server] }
     - { role: k3s_apps, tags: [k3s_apps] }

@@ -1,12 +1,7 @@
 ---
-# git-k3s-server's runner is installed by hand (config.sh); there this role
-# only cleans up after it. The LXC runners set ci_runner_install: true and
-# get the full install (group_vars/ci-runner-lxc.yml).
-ci_runner_install: false
-ci_runner_user: github
-ci_runner_dir: /home/github/actions-runner
+# GitHub Actions runners on the ci-runner LXCs (ci-runners.yml).
 
-# Install mode only: runner instances per host. Each gets its own user
+# Runner instances per host. Each gets its own user
 # (runner-<x>), home and service, so two jobs on one host never share
 # ~/.ssh/id_rsa or ~/.vault_pass (CI writes and deletes them per job).
 ci_runner_instances: [a]
@@ -19,10 +14,8 @@ ci_runner_inst_name: "{{ inventory_hostname }}-{{ ci_runner_instance }}"
 ci_runner_prewarm_dir: /usr/local/lib/ci-runner
 # Directories the weekly cleanup timer tidies.
 ci_runner_cleanup_dirs: >-
-  {{ (ci_runner_instances | map('regex_replace', '^', '/home/runner-') | map('regex_replace', '$', '/actions-runner') | list)
-     if ci_runner_install else [ci_runner_dir] }}
+  {{ ci_runner_instances | map('regex_replace', '^', '/home/runner-') | map('regex_replace', '$', '/actions-runner') | list }}
 
-# Used only when ci_runner_install is true.
 ci_runner_repo: Rami-hardware/ProxmoxInfra
 ci_runner_labels: [lxc]
 # The runner auto-updates itself after registering; this is the first install.

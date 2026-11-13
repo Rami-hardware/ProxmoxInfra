@@ -15,7 +15,7 @@ All agent rules, commands, conventions and load-bearing quirks live in AGENTS.md
 | `gateway-server` | .200 | DNS (AdGuard, systemd); K3s worker for `network` ns |
 | `media-server` | .201 | K3s worker, `media` ns; Intel Arc GPU passthrough |
 | `monitoring-server` | .203 | K3s worker, `monitoring` ns (Prometheus, Grafana, Loki, Alertmanager); ingress-nginx replica; unbound (secondary DNS) |
-| `git-k3s-server` | .204 | K3s control plane + self-hosted GitHub Actions runner + ArgoCD/Image Updater; ingress-nginx replica; Tempo + istiod (`istio-system`) |
+| `git-k3s-server` | .204 | K3s control plane + ArgoCD/Image Updater; ingress-nginx replica; Tempo + istiod (`istio-system`) |
 | `ci-runner-1` / `-2` / `-3` | .205 / .206 / .207 | Unprivileged LXCs (Terraform `containers`, vmid 205–207): GitHub Actions runners, label `lxc`, no Docker (nesting only) |
 | `host-node` | .250 | Proxmox host itself (ZFS, backups) |
 
