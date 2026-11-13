@@ -4,6 +4,10 @@ on:
   workflow_call:
     # Which playbooks to run — set by the `changes` job in main.yml.
     inputs:
+      alert_forwarder_tag:
+        description: alert-forwarder image tag from build-image.yml (app-<content hash>)
+        type: string
+        required: true
       gateway:
         type: boolean
         default: true
@@ -210,6 +214,7 @@ jobs:
           CF_DNS_API_TOKEN: ${{ secrets.CF_DNS_API_TOKEN }}
           HEALTHCHECKS_PING_URL: ${{ secrets.HEALTHCHECKS_PING_URL }}
           PVE_EXPORTER_TOKEN: ${{ secrets.PVE_EXPORTER_TOKEN }}
+          ALERT_FORWARDER_TAG: ${{ inputs.alert_forwarder_tag }}
           RUN_GATEWAY: ${{ inputs.gateway }}
           RUN_MONITORING: ${{ inputs.monitoring }}
           RUN_MEDIA: ${{ inputs.media }}

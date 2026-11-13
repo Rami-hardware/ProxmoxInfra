@@ -11,9 +11,10 @@ k3s_apps_ingress_nodes:
 # Tempo keeps its trace data on this node's local disk.
 k3s_apps_tempo_node: git-k3s-server
 
-# alert-forwarder image: CI builds and pushes it as :<commit sha> in the same
-# run, so deploy exactly that build. Runs outside CI fall back to :latest.
-k3s_apps_alert_forwarder_image_tag: "{{ lookup('env', 'GITHUB_SHA') | default('latest', true) }}"
+# alert-forwarder image: CI tags it app-<content hash of its directory> and
+# only builds a tag that doesn't exist yet (build-image.yml), so an unchanged
+# app keeps its tag and isn't restarted. Runs outside CI fall back to :latest.
+k3s_apps_alert_forwarder_image_tag: "{{ lookup('env', 'ALERT_FORWARDER_TAG') | default('latest', true) }}"
 
 # Public domain proxied by Cloudflare. Its wildcard cert (Let's Encrypt,
 # DNS-01) is ingress-nginx's default certificate.

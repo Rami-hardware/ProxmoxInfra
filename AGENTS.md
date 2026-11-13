@@ -53,14 +53,14 @@ terraform plan -input=false -no-color -detailed-exitcode -out=tfplan
 - Playbooks: one per host (`gateway-server.yml`, `media-server.yml`, `monitoring-server.yml`, `git-k3s-server.yml`, `ci-runners.yml`, `host-node.yml` — the last is the Proxmox host itself, exporters only: node/zfs/pve).
 - 18 roles under `Ansbile/roles/`. Deploy order in CI: gateway → monitoring → media → git-k3s → ci-runners → host-node.
 - **CI runs only the playbooks whose files changed** since the branch's last successful pipeline run (`.github/scripts/detect-changed-hosts.sh`). Shared files (`roles/common`, `group_vars/all`, inventory, `requirements.yml`, `.github/`) or an unmapped path run every playbook; schedule and manual dispatch always run them all. Adding a role to a playbook → add it to that host's line in the script (forgetting is safe, just deploys every host).
-- Secrets: `group_vars/all/vault.yml` is fully vault-encrypted (plain vars go in other files under `group_vars/all/`, e.g. `local_dns.yml`). Vault password via `--vault-password-file ~/.vault_pass` (CI writes it from `ANSIBLE_VAULT_PASSWORD` secret). Never commit plaintext secrets — CI's Trivy scan flags them.
+- Secrets: `group_vars/all/vault.yml` is fully vault-encrypted (plain vars go in other files under `group_vars/all/`, e.g. `local_dns.yml`). Vault password via `--vault-password-file ~/.vault_pass` (CI writes it from `ANSIBLE_VAULT_PASSWORD` secret). Never commit plaintext secrets — GitHub push protection blocks known token types.
 
 ### Conventions (enforced — match existing code)
 
 - **FQCN always**: `ansible.builtin.template`, `community.general.*` — no short module names.
 - **Role vars prefixed** `<role_name>_` (e.g. `k3s_server_version`, `grafana_data_dir`).
 - **All config rendered from Jinja2 templates** (`*.yml.j2`) — no inline hardcoded content in tasks.
-- **No moving image tags** (`:latest`, `:alpine`) in Ansible templates: pin a version (bump it on purpose). ArgoCD apps may use `:latest` in `kustomization.yaml` only because Image Updater pins the digest in `.argocd-source-*.yaml`. alert-forwarder deploys the `:<commit sha>` CI just built.
+- **No moving image tags** (`:latest`, `:alpine`) in Ansible templates: pin a version (bump it on purpose). ArgoCD apps may use `:latest` in `kustomization.yaml` only because Image Updater pins the digest in `.argocd-source-*.yaml`. alert-forwarder deploys `:app-<content hash>` (see build-image.yml).
 - **IPs referenced via `hostvars[host]['ansible_host']`** from inventory — single source of truth, never hardcode IPs.
 - Command/shell tasks need explicit `changed_when` / `failed_when`.
 - Alerting: all Prometheus-evaluated rules live in `roles/prometheus/templates/prometheus-rules.yml.j2` (Alertmanager → alert-forwarder → Discord). Log-based alerts live there too (group `logs`): Loki's ruler only runs LogQL **recording** rules (`roles/loki/templates/loki-rules.yml.j2`, metrics named `log:*`) and remote-writes them to Prometheus. Loki itself sends no alerts. Grafana keeps NO alert rules — never add alerts in the Grafana UI.
@@ -96,11 +96,11 @@ Self-hosted runners: the hand-installed one on git-k3s-server (small disk — ha
 - `checks.yml` covers the paths `main.yml` ignores: server-side dry run of `argocd-apps/<ns>` against the live cluster (`-n <ns>` — the shared NetworkPolicy component has no namespace), and the alertops-mcp pytest suite. It deploys nothing.
 - Ansible tool versions are pinned in `.github/ci-requirements.txt`; the venv is cached in `~/.cache/ci-ansible-venv` on the runner (checkout wipes the workspace). Bump pins on purpose.
 
-- `build-image.yml` builds the `alert-forwarder` image from `Ansbile/apps/alert-forwarder`, Trivy-scans it, pushes to GHCR.
+- `build-image.yml` tags the `alert-forwarder` image `app-<git tree hash of Ansbile/apps/alert-forwarder>` and builds + pushes to GHCR **only if that tag doesn't exist yet** (app changed or never built). Deploy gets the tag as an input → `ALERT_FORWARDER_TAG` → `k3s_apps_alert_forwarder_image_tag`. Unchanged app = same tag = no pod restart.
 - Runner has no registry access — Terraform providers install via filesystem mirror (`setup-terraform-mirror`), currently seeded for `bpg/proxmox 0.70.1` and `telmate/proxmox 2.9.14`. Bumping a provider requires updating the mirror action too.
 - `setup-terraform` uses `terraform_wrapper: false` — required for `-detailed-exitcode` to work.
 - `terraform apply` in `deploy.yml` is commented out on purpose (manual applies only).
-- `testing.yml` starts with the security scan (it replaced `security.yml`): Trivy fs (misconfig + secret) in a throwaway container, findings posted to Discord, and **any secret fails Testing, which blocks the deploy** (~60 known misconfig findings stay informational). The k3s image CVE scan step is there but disabled (`if: false`).
+- No Trivy/CVE scanning in CI (removed on purpose). Committed secrets are caught by GitHub's own secret scanning + push protection (enabled in repo settings).
 - SSH host keys are pinned: Ansible in CI uses `StrictHostKeyChecking=yes` against `.github/ssh_known_hosts` (set by `setup-ssh-vault`). After rebuilding a VM, CI fails with "REMOTE HOST IDENTIFICATION HAS CHANGED" until you update its line (`ssh-keyscan -t ed25519 <ip>`, check the fingerprint against the VM console).
 - Discord notifications via webhook secrets.
 
