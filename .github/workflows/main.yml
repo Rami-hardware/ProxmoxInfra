@@ -43,7 +43,7 @@ jobs:
       git_k3s: ${{ steps.detect.outputs.git_k3s }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0  # needs history back to the last deployed commit
 

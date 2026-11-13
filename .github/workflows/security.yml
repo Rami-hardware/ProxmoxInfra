@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Scans the repo filesystem for misconfigurations (Terraform, Ansible, Dockerfiles)
       # and known-secret patterns. Runs in a throwaway container like the image scan in
