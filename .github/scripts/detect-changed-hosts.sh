@@ -10,6 +10,10 @@
 # clearly owned by a role or host runs everything: an extra deploy is cheap, a
 # skipped one leaves a host out of date.
 #
+# Also writes lint_paths (the roles/playbooks/vars files ansible-lint checks:
+# only what changed, or Ansbile/ when everything runs) and syntax_playbooks
+# (the playbooks of the hosts that deploy).
+#
 # The diff base is the last commit that passed the whole pipeline on this
 # branch, not github.event.before: the concurrency group drops queued runs, so
 # a dropped push's changes would otherwise never deploy. A failed run does not
@@ -35,6 +39,8 @@ declare -A hostvars_file=([gateway]=gateway-vm [monitoring]=monitoring-vm [media
                           [git_k3s]=git-k3s-server-vm [ci_runners]=ci-runner-lxc [host_node]=host-node)
 # Roles to run per host: ALL = the whole playbook, else a space list.
 declare -A tags=()
+# Ansible paths ansible-lint checks (keys; ALL = the whole Ansbile/ tree).
+declare -A lint=()
 
 # Comma list for --tags, or empty for the whole playbook.
 tag_list() {
@@ -44,9 +50,19 @@ tag_list() {
 
 finish() {
   echo "Reason: $1"
+  local lint_paths="" syntax=""
+  if [ -n "${lint[ALL]:-}" ]; then lint_paths=Ansbile/
+  else
+    # Existing paths only: a deleted role or playbook has nothing to lint.
+    for p in "${!lint[@]}"; do [ -e "$p" ] && lint_paths="$lint_paths $p"; done
+    lint_paths=$(tr ' ' '\n' <<< "$lint_paths" | sed '/^$/d' | sort | paste -sd' ' -)
+  fi
+  for h in "${hosts[@]}"; do ${want[$h]} && syntax="$syntax Ansbile/${playbook[$h]}.yml"; done
   {
     for h in "${hosts[@]}"; do echo "$h=${want[$h]}"; echo "${h}_tags=$(tag_list "$h")"; done
     for h in terraform terraform_apply cloudflare; do echo "$h=${want[$h]}"; done
+    echo "lint_paths=$lint_paths"
+    echo "syntax_playbooks=${syntax# }"
   } >> "$GITHUB_OUTPUT"
   {
     echo "### Deploy targets"
@@ -58,6 +74,7 @@ finish() {
       else echo "- \`$h\`: roles \`$(tag_list "$h")\`"; fi
     done
     for h in terraform terraform_apply cloudflare; do echo "- \`$h\`: ${want[$h]}"; done
+    echo "- ansible-lint: \`${lint_paths:-—}\`"
   } >> "$GITHUB_STEP_SUMMARY"
   exit 0
 }
@@ -68,6 +85,7 @@ all() {
   # change in the same diff must not hide one (set below, before the loop).
   for h in "${!want[@]}"; do [ "$h" = terraform_apply ] || want[$h]=true; done
   for h in "${hosts[@]}"; do tags[$h]=ALL; done
+  lint[ALL]=1
   finish "$1"
 }
 
@@ -120,6 +138,7 @@ host_all() { want[$1]=true; tags[$1]=ALL; }
 run_role() {
   local role=$1 found=false h; shift
   local want_tags=${*:-$role}
+  lint[Ansbile/roles/$role]=1
   for h in "${hosts[@]}"; do
     roles_of "$h" | grep -qx "$role" || continue
     found=true; want[$h]=true
@@ -162,12 +181,12 @@ while IFS= read -r f; do
     # The alert-forwarder image + chart, which k3s_apps deploys.
     Ansbile/apps/*) run_role k3s_apps k3s_apps_alert_forwarder ;;
     # Only adguard and unbound read the local DNS names.
-    Ansbile/group_vars/all/local_dns.yml) run_role adguard; run_role unbound ;;
+    Ansbile/group_vars/all/local_dns.yml) lint[$f]=1; run_role adguard; run_role unbound ;;
     Ansbile/*.yml | Ansbile/group_vars/*.yml)
       matched=false
       for h in "${hosts[@]}"; do
         if [ "$f" = "Ansbile/${playbook[$h]}.yml" ] || [ "$f" = "Ansbile/group_vars/${hostvars_file[$h]}.yml" ]; then
-          host_all "$h"; matched=true
+          host_all "$h"; matched=true; lint[$f]=1
         fi
       done
       $matched || all "shared file changed: $f" ;;

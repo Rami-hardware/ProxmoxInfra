@@ -16,6 +16,13 @@ on:
       cloudflare:
         type: boolean
         default: true
+      # From detect-changed-hosts.sh: only what this push changed ('' = none).
+      lint_paths:
+        type: string
+        default: Ansbile/
+      syntax_playbooks:
+        type: string
+        default: Ansbile/gateway-server.yml Ansbile/monitoring-server.yml Ansbile/media-server.yml Ansbile/git-k3s-server.yml Ansbile/ci-runners.yml Ansbile/host-node.yml
     secrets:
       SSH_PRIVATE_KEY:
         required: true
@@ -105,14 +112,27 @@ jobs:
           terraform validate
 
       # ── Ansible ──────────────────────────────────────────────────────────────
+      # Only the playbooks that deploy this run and the roles/files that
+      # changed; Ansbile/ when everything runs (shared file, schedule).
       - name: Ansible syntax check
+        if: inputs.syntax_playbooks != ''
+        env:
+          PLAYBOOKS: ${{ inputs.syntax_playbooks }}
         run: |
-          for pb in gateway-server monitoring-server media-server git-k3s-server; do
-            ansible-playbook -i Ansbile/inventory.ini "Ansbile/$pb.yml" --syntax-check --vault-password-file ~/.vault_pass
+          for pb in $PLAYBOOKS; do
+            ansible-playbook -i Ansbile/inventory.ini "$pb" --syntax-check --vault-password-file ~/.vault_pass
           done
 
+      # --offline: the collections are installed above; don't let ansible-lint
+      # re-check requirements.yml against Galaxy.
       - name: Ansible lint
-        run: ansible-lint Ansbile/
+        if: inputs.lint_paths != ''
+        env:
+          LINT_PATHS: ${{ inputs.lint_paths }}
+        run: |
+          echo "Linting: $LINT_PATHS"
+          # shellcheck disable=SC2086  # word-split the path list on purpose
+          ansible-lint --offline $LINT_PATHS
 
       - name: Cleanup secrets
         if: always()

@@ -57,6 +57,8 @@ jobs:
       terraform: ${{ steps.detect.outputs.terraform }}
       terraform_apply: ${{ steps.detect.outputs.terraform_apply }}
       cloudflare: ${{ steps.detect.outputs.cloudflare }}
+      lint_paths: ${{ steps.detect.outputs.lint_paths }}
+      syntax_playbooks: ${{ steps.detect.outputs.syntax_playbooks }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -117,6 +119,8 @@ jobs:
       gateway_tags: ${{ needs.changes.outputs.gateway_tags }}
       terraform: ${{ needs.changes.outputs.terraform == 'true' }}
       cloudflare: ${{ needs.changes.outputs.cloudflare == 'true' }}
+      lint_paths: ${{ needs.changes.outputs.lint_paths }}
+      syntax_playbooks: ${{ needs.changes.outputs.syntax_playbooks }}
     secrets:
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}

@@ -110,12 +110,14 @@ env:
   HEALTHCHECKS_PING_URL: ${{ secrets.HEALTHCHECKS_PING_URL }}
   PVE_EXPORTER_TOKEN: ${{ secrets.PVE_EXPORTER_TOKEN }}
   ALERT_FORWARDER_TAG: ${{ inputs.alert_forwarder_tag }}
-  # Alertmanager API (NodePort on monitoring-server), for deploy silences.
+  # Alertmanager API (NodePort on monitoring-server), for deploy silences
+  # (.github/scripts/am-silence.sh).
   ALERTMANAGER_URL: ${{ vars.ALERTMANAGER_URL }}
 
 # Every host job starts at once after the approval (and the Terraform apply),
 # each on its own runner:
-#   tf_plan → gate (approval) → tf_apply → gateway | monitoring | media | host-node | git-k3s | ci-runners → finish
+#   tf_plan → gate (approval) → tf_apply → gateway | monitoring | media | host-node | git-k3s | ci-runners → finish (Cloudflare)
+# Each deploy job silences warning alerts for its own duration.
 # Safe on a running cluster: k3s_agent and ci_runner only *read* the token /
 # kubeconfig from git-k3s, and with per-role --tags a push rarely restarts k3s
 # and an agent together. A failing host no longer holds the others back. A
@@ -229,33 +231,19 @@ jobs:
           echo "No destroys detected — safe to proceed."
 
   gate:
-    name: Approval and silence
+    name: Approval
     needs: [tf_plan]
     # tf_plan skipped (Terraform untouched) is fine; a failed plan or a
     # destroy/replace blocks the whole deploy.
     if: ${{ !cancelled() && !failure() }}
-    runs-on: self-hosted
-    timeout-minutes: 20
+    # Only waits for the approval: GitHub-hosted, so it never queues for a
+    # LAN runner. Each deploy job silences alerts itself (am-silence.sh).
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     environment: ${{ github.ref_name == 'main' && 'Production' || github.ref_name == 'staging' && 'Staging' || 'Development' }}
-    outputs:
-      silence_id: ${{ steps.am_silence.outputs.id }}
     steps:
-      # Deploys restart pods and briefly fail probes, which used to page as
-      # warnings. Silence warnings (not criticals) while the host jobs run;
-      # `finish` removes it, and it expires by itself after 45 minutes.
-      - name: Silence warning alerts during the deploy
-        id: am_silence
-        if: inputs.gateway || inputs.monitoring || inputs.media || inputs.git_k3s || inputs.ci_runners || inputs.host_node || (inputs.terraform_apply && needs.tf_plan.outputs.has_changes == 'true')
-        continue-on-error: true
-        run: |
-          now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          end=$(date -u -d '+45 minutes' +%Y-%m-%dT%H:%M:%SZ)
-          id=$(curl -sf -X POST "$ALERTMANAGER_URL/api/v2/silences" -H 'Content-Type: application/json' \
-            -d "{\"matchers\":[{\"name\":\"severity\",\"value\":\"warning\",\"isRegex\":false,\"isEqual\":true}],
-                 \"startsAt\":\"$now\",\"endsAt\":\"$end\",\"createdBy\":\"github-actions\",
-                 \"comment\":\"CI deploy ${{ github.run_id }}\"}" | jq -r .silenceID)
-          echo "id=$id" >> "$GITHUB_OUTPUT"
-          echo "Silenced warnings until $end (silence $id)"
+      - name: Approved
+        run: echo "Deploying ${{ github.sha }} to ${{ github.ref_name }}"
 
   # Applies the reviewed Proxmox plan — main only, after the approval, and
   # only when this deploy contains a Terraform code change (never for drift).
@@ -287,6 +275,11 @@ jobs:
       - name: Terraform init
         working-directory: Terraform
         run: terraform init
+
+      - name: Silence warning alerts while this job runs
+        id: silence
+        continue-on-error: true
+        run: .github/scripts/am-silence.sh create "${{ github.job }}"
 
       # Re-plan now and compare with the plan shown before the approval:
       # anything that moved in between (a hand apply, a console change) means
@@ -339,6 +332,11 @@ jobs:
           done
           exit $rc
 
+      - name: Remove this job's silence
+        if: always() && steps.silence.outputs.id != ''
+        continue-on-error: true
+        run: .github/scripts/am-silence.sh delete "${{ steps.silence.outputs.id }}"
+
   gateway:
     name: "Ansible: gateway-server"
     needs: [gate, tf_apply]
@@ -349,6 +347,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Silence warning alerts while this job runs
+        id: silence
+        continue-on-error: true
+        run: .github/scripts/am-silence.sh create "${{ github.job }}"
 
       - name: Prepare Ansible
         uses: ./.github/actions/ansible-prep
@@ -362,6 +365,11 @@ jobs:
         run: |
           [ -n "$TAGS" ] && echo "Only roles: $TAGS" || echo "Whole playbook"
           ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --vault-password-file ~/.vault_pass ${TAGS:+--tags "$TAGS"}
+
+      - name: Remove this job's silence
+        if: always() && steps.silence.outputs.id != ''
+        continue-on-error: true
+        run: .github/scripts/am-silence.sh delete "${{ steps.silence.outputs.id }}"
 
       - name: Cleanup secrets
         if: always()
@@ -378,6 +386,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Silence warning alerts while this job runs
+        id: silence
+        continue-on-error: true
+        run: .github/scripts/am-silence.sh create "${{ github.job }}"
+
       - name: Prepare Ansible
         uses: ./.github/actions/ansible-prep
         with:
@@ -390,6 +403,11 @@ jobs:
         run: |
           [ -n "$TAGS" ] && echo "Only roles: $TAGS" || echo "Whole playbook"
           ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml --vault-password-file ~/.vault_pass ${TAGS:+--tags "$TAGS"}
+
+      - name: Remove this job's silence
+        if: always() && steps.silence.outputs.id != ''
+        continue-on-error: true
+        run: .github/scripts/am-silence.sh delete "${{ steps.silence.outputs.id }}"
 
       - name: Cleanup secrets
         if: always()
@@ -406,6 +424,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Silence warning alerts while this job runs
+        id: silence
+        continue-on-error: true
+        run: .github/scripts/am-silence.sh create "${{ github.job }}"
+
       - name: Prepare Ansible
         uses: ./.github/actions/ansible-prep
         with:
@@ -418,6 +441,11 @@ jobs:
         run: |
           [ -n "$TAGS" ] && echo "Only roles: $TAGS" || echo "Whole playbook"
           ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml --vault-password-file ~/.vault_pass ${TAGS:+--tags "$TAGS"}
+
+      - name: Remove this job's silence
+        if: always() && steps.silence.outputs.id != ''
+        continue-on-error: true
+        run: .github/scripts/am-silence.sh delete "${{ steps.silence.outputs.id }}"
 
       - name: Cleanup secrets
         if: always()
@@ -435,6 +463,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Silence warning alerts while this job runs
+        id: silence
+        continue-on-error: true
+        run: .github/scripts/am-silence.sh create "${{ github.job }}"
+
       - name: Prepare Ansible
         uses: ./.github/actions/ansible-prep
         with:
@@ -447,6 +480,11 @@ jobs:
         run: |
           [ -n "$TAGS" ] && echo "Only roles: $TAGS" || echo "Whole playbook"
           ansible-playbook -i Ansbile/inventory.ini Ansbile/host-node.yml --vault-password-file ~/.vault_pass ${TAGS:+--tags "$TAGS"}
+
+      - name: Remove this job's silence
+        if: always() && steps.silence.outputs.id != ''
+        continue-on-error: true
+        run: .github/scripts/am-silence.sh delete "${{ steps.silence.outputs.id }}"
 
       - name: Cleanup secrets
         if: always()
@@ -463,6 +501,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Silence warning alerts while this job runs
+        id: silence
+        continue-on-error: true
+        run: .github/scripts/am-silence.sh create "${{ github.job }}"
+
       - name: Prepare Ansible
         uses: ./.github/actions/ansible-prep
         with:
@@ -475,6 +518,11 @@ jobs:
         run: |
           [ -n "$TAGS" ] && echo "Only roles: $TAGS" || echo "Whole playbook"
           ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml --vault-password-file ~/.vault_pass ${TAGS:+--tags "$TAGS"}
+
+      - name: Remove this job's silence
+        if: always() && steps.silence.outputs.id != ''
+        continue-on-error: true
+        run: .github/scripts/am-silence.sh delete "${{ steps.silence.outputs.id }}"
 
       - name: Cleanup secrets
         if: always()
@@ -492,6 +540,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Silence warning alerts while this job runs
+        id: silence
+        continue-on-error: true
+        run: .github/scripts/am-silence.sh create "${{ github.job }}"
+
       - name: Prepare Ansible
         uses: ./.github/actions/ansible-prep
         with:
@@ -505,25 +558,25 @@ jobs:
           [ -n "$TAGS" ] && echo "Only roles: $TAGS" || echo "Whole playbook"
           ansible-playbook -i Ansbile/inventory.ini Ansbile/ci-runners.yml --vault-password-file ~/.vault_pass ${TAGS:+--tags "$TAGS"}
 
+      - name: Remove this job's silence
+        if: always() && steps.silence.outputs.id != ''
+        continue-on-error: true
+        run: .github/scripts/am-silence.sh delete "${{ steps.silence.outputs.id }}"
+
       - name: Cleanup secrets
         if: always()
         uses: ./.github/actions/cleanup-secrets
 
+  # Only when Terraform/cloudflare changed (or a full run).
   finish:
-    name: Unsilence and Cloudflare
+    name: Cloudflare
     needs: [gate, tf_apply, gateway, monitoring, media, host_node, git_k3s, ci_runners]
-    if: always() && needs.gate.result == 'success'
+    if: always() && needs.gate.result == 'success' && inputs.cloudflare
     runs-on: self-hosted
     timeout-minutes: 20
     steps:
       - name: Checkout code
-        if: inputs.cloudflare
         uses: actions/checkout@v4
-
-      - name: Remove the deploy silence
-        if: needs.gate.outputs.silence_id != ''
-        continue-on-error: true
-        run: curl -sf -X DELETE "$ALERTMANAGER_URL/api/v2/silence/${{ needs.gate.outputs.silence_id }}"
 
       - name: Setup Terraform
         if: inputs.cloudflare && !contains(needs.*.result, 'failure')
