@@ -1,0 +1,86 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+# Every 15 minutes: are the self-hosted runners online? Posts to Discord when
+# one goes offline and again when all are back, not every 15 minutes: a run
+# that finds a runner offline uploads a `runners-offline` artifact, and the
+# next run compares with that. (The job itself stays green, so GitHub doesn't
+# email on every check.) GitHub-hosted, so it still works when the LAN
+# runners are down.
+#
+# Needs secret RUNNER_STATUS_TOKEN: a fine-grained PAT on this repo with
+# Administration: Read-only (GITHUB_TOKEN can't list runners).
+name: Runner health
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: read  # the previous run's artifacts
+
+concurrency:
+  group: runner-health
+
+jobs:
+  check:
+    name: Check runners
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check runners and alert on change
+        id: check
+        env:
+          RUNNERS_TOKEN: ${{ secrets.RUNNER_STATUS_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          WEBHOOK: ${{ secrets.DISCORD_CD_ALERT_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$RUNNERS_TOKEN" ]; then
+            echo "::warning::Secret RUNNER_STATUS_TOKEN is not set — cannot list runners."
+            exit 0
+          fi
+          runners=$(GH_TOKEN=$RUNNERS_TOKEN gh api "repos/$GITHUB_REPOSITORY/actions/runners" --paginate \
+            -q '.runners[] | "\(.name) \(.status) \(.busy)"')
+          echo "$runners"
+          total=$(grep -c . <<< "$runners" || true)
+          offline=$(awk '$2 != "online" {print $1}' <<< "$runners" | paste -sd' ' -)
+          online=$((total - $(wc -w <<< "$offline")))
+
+          # Did the previous completed run (not this one) find a runner offline?
+          prev_run=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/runner-health.yml/runs?status=completed&per_page=5" \
+            -q "[.workflow_runs[] | select(.id != $GITHUB_RUN_ID)][0].id // empty")
+          was_offline=false
+          if [ -n "$prev_run" ] && [ "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$prev_run/artifacts" \
+              -q '[.artifacts[] | select(.name == "runners-offline")] | length')" -gt 0 ]; then
+            was_offline=true
+          fi
+
+          post() {
+            jq -n --arg t "$1" --arg d "$2" --argjson c "$3" --arg u "$RUN_URL" \
+              '{embeds: [{title: $t, description: $d, color: $c, url: $u}]}' \
+              | curl -sS -f -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK"
+          }
+
+          if [ -n "$offline" ]; then
+            echo "::warning::Offline runners: $offline ($online/$total online)"
+            echo "$offline" > runners-offline.txt
+            echo "offline=true" >> "$GITHUB_OUTPUT"
+            if ! $was_offline; then
+              post "⚠️ CI runner offline" \
+                "Offline: \`$offline\` — $online/$total online. Jobs queue on the rest; with none online, deploys wait. Runbook: docs/runbooks/ci-runners.md" \
+                15158332
+            fi
+            exit 0
+          fi
+          echo "All $total runners online."
+          if $was_offline; then
+            post "✅ CI runners back online" "All $total runners online." 3066993
+          fi
+
+      - name: Remember the outage for the next check
+        if: steps.check.outputs.offline == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: runners-offline
+          path: runners-offline.txt
+          retention-days: 1
