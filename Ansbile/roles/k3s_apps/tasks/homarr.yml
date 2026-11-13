@@ -1,6 +1,6 @@
 ---
 # ── Homarr ────────────────────────────────────────────────────────────────────
-# Homarr dashboard; values in templates/homarr-values.yml.j2.
+# Homarr dashboard (homarr ns); values in templates/homarr-values.yml.j2.
 # Installed from the upstream Helm chart rather than a hand-written manifest.
 # The chart only accepts SECRET_ENCRYPTION_KEY through an existing Secret, so
 # the key is generated once on the node and never stored in git.
