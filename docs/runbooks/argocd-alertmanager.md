@@ -24,8 +24,11 @@ curl -s http://192.168.10.203:30302/alertmanager   # alert-forwarder reachable?
   minute. If healthchecks.io emails "DOWN", the alert path itself is broken
   (Prometheus, Alertmanager or monitoring-server); Discord will be silent, so
   check those first. The ping URL is the `HEALTHCHECKS_PING_URL` secret.
-- **CI deploys silence warnings** (not criticals) for up to 45 minutes and lift
-  the silence when Ansible ends. See active silences:
+- **CI deploys silence warnings** (not criticals) of the host being deployed
+  only (`instance`/`namespace` matchers; git-k3s and Terraform apply silence
+  every warning), and lift them when that host's Ansible ends; they expire
+  after 45 minutes otherwise (`.github/scripts/am-silence.sh`). A warning
+  from another host still pages during a deploy. See active silences:
   `curl -s http://192.168.10.203:9093/api/v2/silences | jq '.[] | select(.status.state=="active")'`
 - ArgoCD sync policy on the apps: `automated: {prune: true, selfHeal: false}` —
   auto-sync fires on NEW git revisions, but live drift (manual kubectl edits)
