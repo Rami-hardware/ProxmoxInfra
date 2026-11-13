@@ -59,6 +59,7 @@
     path: "{{ ci_runner_inst_dir }}/.runner"
   register: ci_runner_registered
 
+# A new LXC, or an instance removed with `config.sh remove`: no .runner file.
 - name: Register the runner with GitHub
   when: not ci_runner_registered.stat.exists
   block:
