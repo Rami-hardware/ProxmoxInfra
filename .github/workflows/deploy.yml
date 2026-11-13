@@ -23,6 +23,12 @@ on:
       ci_runners:
         type: boolean
         default: true
+      terraform:
+        type: boolean
+        default: true
+      cloudflare:
+        type: boolean
+        default: true
       host_node:
         type: boolean
         default: true
@@ -81,15 +87,18 @@ jobs:
 
       # ── Terraform ────────────────────────────────────────────────────────────
       - name: Setup Terraform
+        if: inputs.terraform || inputs.cloudflare
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.0
           terraform_wrapper: false  # wrapper intercepts exit codes; breaks -detailed-exitcode
 
       - name: Setup Terraform provider mirror
+        if: inputs.terraform || inputs.cloudflare
         uses: ./.github/actions/setup-terraform-mirror
 
       - name: Terraform init
+        if: inputs.terraform
         working-directory: Terraform
         env:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
@@ -114,6 +123,7 @@ jobs:
       # the wrapper rewrites exit codes and would collapse 2 into 0.)
       - name: Terraform plan (compare code vs server)
         id: plan
+        if: inputs.terraform
         working-directory: Terraform
         env:
           TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
@@ -252,11 +262,13 @@ jobs:
       # Runs after Ansible so a Cloudflare API problem never blocks a server
       # deploy (it still fails the job).
       - name: Ensure Terraform state namespace exists
+        if: inputs.cloudflare
         run: |
           kubectl create namespace terraform --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Cloudflare plan
         id: cf_plan
+        if: inputs.cloudflare
         working-directory: Terraform/cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DNS_API_TOKEN }}
@@ -288,7 +300,7 @@ jobs:
       # cloudflared (k3s_apps role) reads its connector token from this Secret.
       # Piped so the token never appears in the log or the process list.
       - name: Store Cloudflare Tunnel token for cloudflared
-        if: github.ref_name == 'main'
+        if: inputs.cloudflare && github.ref_name == 'main'
         working-directory: Terraform/cloudflare
         run: |
           terraform output -raw tunnel_token \

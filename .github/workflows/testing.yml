@@ -2,6 +2,17 @@ name: Testing Infrastructure Code
 
 on:
   workflow_call:
+    # From the `changes` job: skip work for parts this push didn't touch.
+    inputs:
+      gateway:
+        type: boolean
+        default: true
+      terraform:
+        type: boolean
+        default: true
+      cloudflare:
+        type: boolean
+        default: true
     secrets:
       SSH_PRIVATE_KEY:
         required: true
@@ -52,27 +63,33 @@ jobs:
 
       # ── Terraform ────────────────────────────────────────────────────────────
       - name: Setup Terraform
+        if: inputs.terraform || inputs.cloudflare
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.0
           terraform_wrapper: false  # wrapper intercepts exit codes; breaks -detailed-exitcode
 
       - name: Setup Terraform provider mirror
+        if: inputs.terraform || inputs.cloudflare
         uses: ./.github/actions/setup-terraform-mirror
 
       - name: Terraform init (no backend)
+        if: inputs.terraform
         working-directory: Terraform
         run: terraform init -backend=false
 
       - name: Terraform format check
+        if: inputs.terraform || inputs.cloudflare
         working-directory: Terraform
         run: terraform fmt -check -recursive
 
       - name: Terraform validate
+        if: inputs.terraform
         working-directory: Terraform
         run: terraform validate
 
       - name: Terraform validate (Cloudflare)
+        if: inputs.cloudflare
         working-directory: Terraform/cloudflare
         run: |
           terraform init -backend=false -input=false
@@ -103,6 +120,7 @@ jobs:
       # gateway and media use Docker command/shell tasks that break in check mode
       # --check is limited to template-driven playbooks only
       - name: Ansible dry run (check + diff)
+        if: inputs.gateway
         run: |
           ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --check --diff --vault-password-file ~/.vault_pass
         env:

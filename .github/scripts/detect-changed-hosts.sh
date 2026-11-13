@@ -18,18 +18,19 @@
 # once staging is merged; a revert if staging was abandoned).
 set -euo pipefail
 
-declare -A want=([gateway]=false [monitoring]=false [media]=false [git_k3s]=false [ci_runners]=false [host_node]=false)
+# Playbooks per host, plus the two Terraform roots (only planned when touched).
+declare -A want=([gateway]=false [monitoring]=false [media]=false [git_k3s]=false [ci_runners]=false [host_node]=false [terraform]=false [cloudflare]=false)
 
 finish() {
   echo "Reason: $1"
   {
-    for h in gateway monitoring media git_k3s ci_runners host_node; do echo "$h=${want[$h]}"; done
+    for h in gateway monitoring media git_k3s ci_runners host_node terraform cloudflare; do echo "$h=${want[$h]}"; done
   } >> "$GITHUB_OUTPUT"
   {
-    echo "### Hosts to deploy"
+    echo "### Deploy targets"
     echo "$1"
     echo
-    for h in gateway monitoring media git_k3s ci_runners host_node; do echo "- \`$h\`: ${want[$h]}"; done
+    for h in gateway monitoring media git_k3s ci_runners host_node terraform cloudflare; do echo "- \`$h\`: ${want[$h]}"; done
   } >> "$GITHUB_STEP_SUMMARY"
   exit 0
 }
@@ -107,7 +108,9 @@ while IFS= read -r f; do
     # and the pipeline itself.
     Ansbile/* | .github/*)
       all "shared file changed: $f" ;;
-    *) ;;  # Terraform (planned every run), docs, tools: no playbook
+    Terraform/cloudflare/*) want[cloudflare]=true ;;
+    Terraform/*) want[terraform]=true ;;
+    *) ;;  # docs, tools: nothing to deploy
   esac
 done <<< "$changed"
 

@@ -48,6 +48,8 @@ jobs:
       git_k3s: ${{ steps.detect.outputs.git_k3s }}
       ci_runners: ${{ steps.detect.outputs.ci_runners }}
       host_node: ${{ steps.detect.outputs.host_node }}
+      terraform: ${{ steps.detect.outputs.terraform }}
+      cloudflare: ${{ steps.detect.outputs.cloudflare }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -93,13 +95,17 @@ jobs:
             | curl -sS -f -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK"
 
   build-image:
-    name: Build & Scan Docker Image & Files
+    name: Build Docker Image
     uses: ./.github/workflows/build-image.yml
 
   testing:
     name: Testing Infrastructure Code
-    needs: build-image
+    needs: [changes, build-image]
     uses: ./.github/workflows/testing.yml
+    with:
+      gateway: ${{ needs.changes.outputs.gateway == 'true' }}
+      terraform: ${{ needs.changes.outputs.terraform == 'true' }}
+      cloudflare: ${{ needs.changes.outputs.cloudflare == 'true' }}
     secrets:
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
@@ -131,6 +137,8 @@ jobs:
       git_k3s: ${{ needs.changes.outputs.git_k3s == 'true' }}
       alert_forwarder_tag: ${{ needs.build-image.outputs.tag }}
       ci_runners: ${{ needs.changes.outputs.ci_runners == 'true' }}
+      terraform: ${{ needs.changes.outputs.terraform == 'true' }}
+      cloudflare: ${{ needs.changes.outputs.cloudflare == 'true' }}
       host_node: ${{ needs.changes.outputs.host_node == 'true' }}
     secrets:
       PM_API_URL: ${{ secrets.PM_API_URL }}

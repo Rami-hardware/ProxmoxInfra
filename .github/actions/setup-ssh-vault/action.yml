@@ -33,4 +33,6 @@ runs:
       run: |
         cp "$GITHUB_WORKSPACE/.github/ssh_known_hosts" "$RUNNER_TEMP/ssh_known_hosts"
         echo "ANSIBLE_HOST_KEY_CHECKING=True" >> "$GITHUB_ENV"
+        # One SSH round-trip per task instead of several (Ubuntu sudo needs no tty).
+        echo "ANSIBLE_PIPELINING=True" >> "$GITHUB_ENV"
         echo "ANSIBLE_SSH_ARGS=-C -o ControlMaster=auto -o ControlPersist=60s -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$RUNNER_TEMP/ssh_known_hosts" >> "$GITHUB_ENV"
