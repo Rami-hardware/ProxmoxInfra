@@ -79,7 +79,7 @@ jobs:
 
       - name: Remember the outage for the next check
         if: steps.check.outputs.offline == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: runners-offline
           path: runners-offline.txt
