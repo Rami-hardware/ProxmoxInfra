@@ -29,7 +29,7 @@ Homelab infra: Proxmox VMs provisioned with Terraform, configured with Ansible, 
 - Provider `bpg/proxmox` pinned `~> 0.70.1`. No `required_version`. No remote backend — **state (`terraform.tfstate`) is committed to git**.
 - `Terraform/.terraform/` is gitignored — provider binaries were once committed (81MB, several stale versions); never re-add them. CI installs providers via the filesystem mirror action.
 - VMs defined as a `map(object)` in `terraform.tfvars` (keys: `gateway`, `media`, `monitoring`, `github`). Map keys are state addresses: **renaming a key destroys the VM**.
-- LXC containers: `containers` map (keys `ci_runner_1`, `ci_runner_2`) → `modules/proxmox_lxc` (unprivileged, nesting only — no Docker on the runners). Same key-rename rule. The Ubuntu template must exist on the host first: `pveam update && pveam download local ubuntu-24.04-standard_24.04-2_amd64.tar.zst`.
+- LXC containers: `containers` map (keys `ci_runner_1`..`ci_runner_3`) → `modules/proxmox_lxc` (unprivileged, nesting only — no Docker on the runners). Same key-rename rule. The Ubuntu template must exist on the host first: `pveam update && pveam download local ubuntu-24.04-standard_24.04-2_amd64.tar.zst`.
 - Host RAM is the tight resource (33.6 GB, VMs pin most of it; media's GPU passthrough pins all of its RAM). Check `node_memory_MemAvailable_bytes{instance="host-node"}` before adding guests.
   - A key rename makes CI's plan show destroy + recreate and block. Move the state by hand first (`terraform state mv 'module.proxmox_vms["old"]' 'module.proxmox_vms["new"]'`) and commit the state.
 - `lifecycle.ignore_changes` (in `modules/proxmox_vm/main.tf`) covers `disk`, `initialization`, `clone`, `hostpci`, `cpu` and more — don't remove.
