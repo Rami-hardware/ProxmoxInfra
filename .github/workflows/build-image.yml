@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # The tag is the git tree hash of the app directory: same code → same
       # tag on every commit, so an unchanged app is neither rebuilt nor

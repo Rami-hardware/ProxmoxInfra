@@ -116,8 +116,8 @@ env:
 
 # Every host job starts at once after the approval (and the Terraform apply),
 # each on its own runner:
-#   tf_plan → gate (approval) → tf_apply → gateway | monitoring | media | host-node | git-k3s | ci-runners → finish (Cloudflare)
-# Each deploy job silences warning alerts for its own duration.
+#   tf_plan → gate (approval) → tf_apply → gateway | monitoring | media | host-node | git-k3s | ci-runners → finish (Cloudflare) + smoke
+# Each deploy job silences its own host's warning alerts while it runs (am-silence.sh).
 # Safe on a running cluster: k3s_agent and ci_runner only *read* the token /
 # kubeconfig from git-k3s, and with per-role --tags a push rarely restarts k3s
 # and an agent together. A failing host no longer holds the others back. A
@@ -142,7 +142,7 @@ jobs:
       fingerprint: ${{ steps.plan.outputs.fingerprint }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -261,7 +261,7 @@ jobs:
       TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -346,12 +346,12 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Silence warning alerts while this job runs
         id: silence
         continue-on-error: true
-        run: .github/scripts/am-silence.sh create "${{ github.job }}"
+        run: .github/scripts/am-silence.sh create "${{ github.job }}" 'instance=~gateway-server|192\.168\.10\.200' 'namespace=network'
 
       - name: Prepare Ansible
         uses: ./.github/actions/ansible-prep
@@ -384,12 +384,12 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Silence warning alerts while this job runs
         id: silence
         continue-on-error: true
-        run: .github/scripts/am-silence.sh create "${{ github.job }}"
+        run: .github/scripts/am-silence.sh create "${{ github.job }}" 'instance=~monitoring-server|192\.168\.10\.203' 'namespace=monitoring'
 
       - name: Prepare Ansible
         uses: ./.github/actions/ansible-prep
@@ -422,12 +422,12 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Silence warning alerts while this job runs
         id: silence
         continue-on-error: true
-        run: .github/scripts/am-silence.sh create "${{ github.job }}"
+        run: .github/scripts/am-silence.sh create "${{ github.job }}" 'instance=media-server' 'namespace=media'
 
       - name: Prepare Ansible
         uses: ./.github/actions/ansible-prep
@@ -461,12 +461,12 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Silence warning alerts while this job runs
         id: silence
         continue-on-error: true
-        run: .github/scripts/am-silence.sh create "${{ github.job }}"
+        run: .github/scripts/am-silence.sh create "${{ github.job }}" 'instance=host-node'
 
       - name: Prepare Ansible
         uses: ./.github/actions/ansible-prep
@@ -499,7 +499,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Silence warning alerts while this job runs
         id: silence
@@ -538,12 +538,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Silence warning alerts while this job runs
-        id: silence
-        continue-on-error: true
-        run: .github/scripts/am-silence.sh create "${{ github.job }}"
+        uses: actions/checkout@v5
 
       - name: Prepare Ansible
         uses: ./.github/actions/ansible-prep
@@ -558,11 +553,6 @@ jobs:
           [ -n "$TAGS" ] && echo "Only roles: $TAGS" || echo "Whole playbook"
           ansible-playbook -i Ansbile/inventory.ini Ansbile/ci-runners.yml --vault-password-file ~/.vault_pass ${TAGS:+--tags "$TAGS"}
 
-      - name: Remove this job's silence
-        if: always() && steps.silence.outputs.id != ''
-        continue-on-error: true
-        run: .github/scripts/am-silence.sh delete "${{ steps.silence.outputs.id }}"
-
       - name: Cleanup secrets
         if: always()
         uses: ./.github/actions/cleanup-secrets
@@ -576,7 +566,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Terraform
         if: inputs.cloudflare && !contains(needs.*.result, 'failure')
@@ -641,3 +631,30 @@ jobs:
             | kubectl -n cloudflared create secret generic cloudflared-token \
                 --from-file=token=/dev/stdin --dry-run=client -o yaml \
             | kubectl apply -f -
+
+  # Does the lab work after this deploy? Cluster-wide checks plus the
+  # Prometheus targets of the hosts that deployed (.github/scripts/smoke-test.sh).
+  # A failure fails the run, so staging is not promotable.
+  smoke:
+    name: Smoke test
+    needs: [gate, tf_apply, gateway, monitoring, media, host_node, git_k3s, ci_runners]
+    if: >-
+      always() && needs.gate.result == 'success' &&
+      (inputs.gateway || inputs.monitoring || inputs.media || inputs.git_k3s || inputs.ci_runners || inputs.host_node || needs.tf_apply.result == 'success')
+    runs-on: self-hosted
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Smoke test
+        env:
+          HOSTS: >-
+            ${{ inputs.gateway && 'gateway' || '' }}
+            ${{ inputs.monitoring && 'monitoring' || '' }}
+            ${{ inputs.media && 'media' || '' }}
+            ${{ inputs.git_k3s && 'git_k3s' || '' }}
+            ${{ inputs.ci_runners && 'ci_runners' || '' }}
+            ${{ inputs.host_node && 'host_node' || '' }}
+        # shellcheck disable=SC2086  # word-split the host list on purpose
+        run: .github/scripts/smoke-test.sh $HOSTS
