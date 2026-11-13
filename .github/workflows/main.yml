@@ -49,6 +49,7 @@ jobs:
       ci_runners: ${{ steps.detect.outputs.ci_runners }}
       host_node: ${{ steps.detect.outputs.host_node }}
       terraform: ${{ steps.detect.outputs.terraform }}
+      terraform_apply: ${{ steps.detect.outputs.terraform_apply }}
       cloudflare: ${{ steps.detect.outputs.cloudflare }}
     steps:
       - name: Checkout code
@@ -85,7 +86,7 @@ jobs:
             git_k3s=${{ needs.changes.outputs.git_k3s }}
             ci_runners=${{ needs.changes.outputs.ci_runners }}
             host_node=${{ needs.changes.outputs.host_node }}
-            terraform=${{ needs.changes.outputs.terraform }}
+            terraform=${{ needs.changes.outputs.terraform_apply }}
         run: |
           hosts=$(echo "$HOSTS" | tr ' ' '\n' | awk -F= '$2=="true"{print $1}' | paste -sd, -)
           jq -n --arg u "$RUN_URL" --arg c "${COMMIT:0:8}" --arg h "${hosts:-none (Cloudflare only)}" \
@@ -141,6 +142,7 @@ jobs:
       alert_forwarder_tag: ${{ needs.build-image.outputs.tag }}
       ci_runners: ${{ needs.changes.outputs.ci_runners == 'true' }}
       terraform: ${{ needs.changes.outputs.terraform == 'true' }}
+      terraform_apply: ${{ needs.changes.outputs.terraform_apply == 'true' }}
       cloudflare: ${{ needs.changes.outputs.cloudflare == 'true' }}
       host_node: ${{ needs.changes.outputs.host_node == 'true' }}
     secrets:
