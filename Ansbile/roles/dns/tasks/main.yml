@@ -11,11 +11,14 @@
         dest: /etc/systemd/resolved.conf
         mode: "0644"
         backup: true
+      register: dns_resolved_conf
 
+    # Restart only on a config change: an unconditional restart dropped
+    # name resolution on the k3s server for a moment on every deploy.
     - name: Restart systemd-resolved
       ansible.builtin.systemd:
         name: systemd-resolved
-        state: restarted
+        state: "{{ 'restarted' if dns_resolved_conf is changed else 'started' }}"
         enabled: true
 
     - name: Ensure /etc/resolv.conf points to systemd-resolved stub

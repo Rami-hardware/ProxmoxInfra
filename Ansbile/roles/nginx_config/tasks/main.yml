@@ -153,6 +153,7 @@
   loop: "{{ groups['all'] | difference(['host-node']) }}"
   loop_control:
     loop_var: nginx_config_host
+  register: nginx_config_ca_install
 
 - name: Update CA trust store on managed hosts
   ansible.builtin.command: update-ca-certificates
@@ -160,7 +161,7 @@
   become: true
   changed_when: true
   ignore_unreachable: true
-  loop: "{{ groups['all'] | difference(['host-node']) }}"
+  loop: "{{ nginx_config_ca_install.results | selectattr('changed', 'defined') | selectattr('changed') | map(attribute='nginx_config_host') | list }}"
   loop_control:
     loop_var: nginx_config_host
 
@@ -172,9 +173,11 @@
     mode: "0644"
   delegate_to: localhost
   become: true
+  register: nginx_config_ca_controller
 
 - name: Update CA trust store on controller
   ansible.builtin.command: update-ca-certificates
   delegate_to: localhost
   become: true
   changed_when: true
+  when: nginx_config_ca_controller is changed

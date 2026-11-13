@@ -77,11 +77,9 @@
     state: stopped
     enabled: false
 
-- name: Remove /etc/resolv.conf
-  ansible.builtin.file:
-    path: /etc/resolv.conf
-    state: absent
-
+# copy replaces a symlink (the systemd stub) with a regular file and leaves
+# an already-correct file alone. Deleting it first left the gateway with no
+# resolver for a moment and reported a change on every run.
 - name: Create new resolv.conf pointing to AdGuard
   ansible.builtin.copy:
     dest: /etc/resolv.conf
@@ -105,13 +103,14 @@
     replace: '\1address: 0.0.0.0:{{ adguard_ui_port }}'
   notify: Restart AdGuardHome
 
+# Directory only: recurse set the files to 0700 and the task below set them
+# back to 0600, so both reported a change on every run. The dir is flat.
 - name: Fix AdGuard config directory permissions
   ansible.builtin.file:
     path: "{{ adguard_conf_dir }}"
     owner: 1000
     group: 1000
     mode: '0700'
-    recurse: true
     state: directory
 
 - name: Fix file permissions inside AdGuard config

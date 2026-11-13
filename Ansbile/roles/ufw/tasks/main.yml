@@ -1,4 +1,13 @@
+# The DNS swap is only needed to install ufw (AdGuard may not be up yet on a
+# fresh host). Doing it every run briefly pointed the gateway at public DNS,
+# which can't resolve homelab.lan.
+- name: Check whether UFW is installed
+  ansible.builtin.stat:
+    path: /usr/sbin/ufw
+  register: ufw_binary
+
 - name: Temporarily use public DNS for package installation
+  when: not ufw_binary.stat.exists
   ansible.builtin.copy:
     dest: /etc/resolv.conf
     content: |
@@ -9,12 +18,14 @@
     mode: '0644'
 
 - name: Ensure UFW is installed
+  when: not ufw_binary.stat.exists
   ansible.builtin.apt:
     name: ufw
     state: present
     update_cache: true
 
 - name: Restore resolv.conf to AdGuard
+  when: not ufw_binary.stat.exists
   ansible.builtin.copy:
     dest: /etc/resolv.conf
     content: |

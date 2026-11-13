@@ -136,7 +136,20 @@
 # policy sequential: prefer AdGuard, only fall back to public DNS on transport
 # failure. The default random policy would send ~50% of homelab.lan queries to
 # public resolvers (NXDOMAIN) if both upstreams were listed.
+# The re-apply always printed "configured" (kubectl's last-applied annotation
+# churn), which rolled CoreDNS on every deploy. Only patch when the stock
+# forward line is back, i.e. k3s reset the configmap.
+- name: Read current CoreDNS Corefile
+  ansible.builtin.command:
+    cmd: k3s kubectl get configmap coredns -n kube-system -o jsonpath='{.data.Corefile}'
+  register: k3s_server_coredns_current
+  changed_when: false
+  retries: 12
+  delay: 5
+  until: k3s_server_coredns_current.rc == 0
+
 - name: Patch CoreDNS to forward non-cluster DNS to AdGuard on the gateway
+  when: "'forward . /etc/resolv.conf' in k3s_server_coredns_current.stdout"
   ansible.builtin.shell:
     cmd: |
       set -o pipefail
@@ -180,7 +193,7 @@
     (k3s_server_config_result is defined and k3s_server_config_result.changed)
     or (k3s_server_resolv_conf_result is defined and k3s_server_resolv_conf_result.changed)
     or (k3s_server_coredns_zone_stage is defined and k3s_server_coredns_zone_stage.changed)
-    or ('configured' in k3s_server_coredns_patch_result.stdout)
+    or (k3s_server_coredns_patch_result is changed)
     or ('configured' in k3s_server_coredns_custom_result.stdout)
     or ('created' in k3s_server_coredns_custom_result.stdout)
 
