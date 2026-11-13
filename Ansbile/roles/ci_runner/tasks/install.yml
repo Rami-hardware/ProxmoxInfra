@@ -82,7 +82,7 @@
 
 - name: Install kubeconfig pointing at the k3s server
   ansible.builtin.copy:
-    content: "{{ ci_runner_k3s_kubeconfig.content | b64decode | replace('https://127.0.0.1:6443', 'https://' ~ hostvars['git-k3s-server']['ansible_host'] ~ ':6443') }}"
+    content: "{{ ci_runner_k3s_kubeconfig.content | b64decode | replace('https://127.0.0.1:6443', ci_runner_k3s_api) }}"
     dest: "{{ item }}"
     owner: "{{ ci_runner_user }}"
     group: "{{ ci_runner_user }}"
@@ -90,6 +90,8 @@
   loop:
     - /etc/rancher/k3s/k3s.yaml
     - "/home/{{ ci_runner_user }}/.kube/config"
+  vars:
+    ci_runner_k3s_api: "https://{{ hostvars['git-k3s-server']['ansible_host'] }}:6443"
   no_log: true
 
 - name: Check whether the runner is registered
