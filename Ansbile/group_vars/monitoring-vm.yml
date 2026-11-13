@@ -18,6 +18,9 @@ prometheus_scrape_jobs:
       - "{{ hostvars['monitoring-server']['ansible_host'] }}:9100"
       - "{{ hostvars['git-k3s-server']['ansible_host'] }}:9100"
       - "{{ hostvars['host-node']['ansible_host'] }}:9100"
+      - "{{ hostvars['ci-runner-1']['ansible_host'] }}:9100"
+      - "{{ hostvars['ci-runner-2']['ansible_host'] }}:9100"
+      - "{{ hostvars['ci-runner-3']['ansible_host'] }}:9100"
     labels:
       os: linux
     relabel_configs:
@@ -41,6 +44,18 @@ prometheus_scrape_jobs:
         regex: "{{ hostvars['host-node']['ansible_host'] }}:.*"
         target_label: instance
         replacement: "host-node"
+      - source_labels: [__address__]
+        regex: "{{ hostvars['ci-runner-1']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "ci-runner-1"
+      - source_labels: [__address__]
+        regex: "{{ hostvars['ci-runner-2']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "ci-runner-2"
+      - source_labels: [__address__]
+        regex: "{{ hostvars['ci-runner-3']['ansible_host'] }}:.*"
+        target_label: instance
+        replacement: "ci-runner-3"
   - name: loki
     targets: ["{{ hostvars['monitoring-server']['ansible_host'] }}:3100"]
     labels:

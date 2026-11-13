@@ -95,6 +95,16 @@ spec:
             - "-config.file=/etc/loki/config.yml"
           ports:
             - containerPort: 3100
+          # /ready answers 503 "waiting for 15s after being ready" until it
+          # has been polled for 15s (the countdown starts at the first call),
+          # so without a probe it looked broken while Loki worked fine.
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3100
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 6
           volumeMounts:
             - name: config
               mountPath: /etc/loki

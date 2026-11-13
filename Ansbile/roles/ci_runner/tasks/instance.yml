@@ -59,13 +59,14 @@
     path: "{{ ci_runner_inst_dir }}/.runner"
   register: ci_runner_registered
 
+# A new LXC, or an instance removed with `config.sh remove`: no .runner file.
 - name: Register the runner with GitHub
   when: not ci_runner_registered.stat.exists
   block:
     - name: Require the registration PAT
       ansible.builtin.assert:
         that: ci_runner_github_pat | length > 0
-        fail_msg: "Add vault_github_runner_pat to group_vars/all/vault.yml (see roles/ci_runner/defaults/main.yml)."
+        fail_msg: "Set the RUNNER_ADMIN_TOKEN secret (or vault_github_runner_pat) — see roles/ci_runner/defaults/main.yml."
         quiet: true
 
     - name: Get a registration token

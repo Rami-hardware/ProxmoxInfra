@@ -6,6 +6,20 @@
     update_cache: true
     cache_valid_time: 3600
 
+# Scraped by Prometheus (job `nodes`, group_vars/monitoring-vm.yml). No
+# recommends: they add SMART/NVMe timers that can't work in a container.
+- name: Install node-exporter
+  ansible.builtin.apt:
+    name: prometheus-node-exporter
+    state: present
+    install_recommends: false
+
+- name: Enable and start node-exporter
+  ansible.builtin.systemd:
+    name: prometheus-node-exporter.service
+    enabled: true
+    state: started
+
 - name: Create runner group
   ansible.builtin.group:
     name: "{{ ci_runner_group }}"

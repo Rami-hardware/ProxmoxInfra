@@ -16,14 +16,19 @@ Runners: `ci-runner-<n>-a` / `-b` = two instances on LXC `ci-runner-<n>`
 - One instance offline = its service:
   `ssh root@192.168.10.<ip> 'systemctl status "actions.runner.*"'`, and
   `journalctl -u "actions.runner.*" -n 50`.
-- Disk full stops jobs too: `df -h /` on the LXC (the cleanup timer
+- Disk/memory: the LXCs run node-exporter (`instance=ci-runner-N`), so the
+  usual node disk/memory alerts cover them. Disk full stops jobs:
+  `df -h /` on the LXC (the cleanup timer
   `ci-runner-cleanup.timer` prunes `_work` and caches).
 
 ## Fixes
 - Container down: `pct start <vmid>`. The runners start with it.
 - Service dead: `systemctl restart "actions.runner.*"` on the LXC.
 - Runner removed from GitHub (shows nowhere, or "not configured"): re-run the
-  playbook for that host — it registers missing instances:
+  playbook for that host — it registers missing instances with the
+  `RUNNER_ADMIN_TOKEN` secret (CI) or `vault_github_runner_pat` (by hand).
+  An unregistered instance needs `rm /home/runner-<x>/actions-runner/.runner`
+  first if the file is still there:
   `ansible-playbook -i Ansbile/inventory.ini Ansbile/ci-runners.yml --limit ci-runner-<n> --vault-password-file ~/.vault_pass`.
 - Container rebuilt: pin its new host key in `.github/ssh_known_hosts`
   (`ssh-keyscan -t ed25519 <ip>`, compare with the console) before CI can reach it.

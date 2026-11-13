@@ -20,7 +20,7 @@ exec 3>&1  # warnings from inside a check's $( ) still reach the log
 
 # deploy.yml host key → Prometheus `instance` label.
 declare -A instance=([gateway]=gateway-server [monitoring]=monitoring-server [media]=media-server
-                     [git_k3s]=git-k3s-server [host_node]=host-node)
+                     [git_k3s]=git-k3s-server [host_node]=host-node [ci_runners]='ci-runner-.*')
 instances=$(for h in "$@"; do [ -n "${instance[$h]:-}" ] && echo "${instance[$h]}"; done | paste -sd'|' -)
 
 # Each check prints why it failed on stdout and returns non-zero.
@@ -77,8 +77,8 @@ check_monitoring() {
   local bad=0
   curl -sf --max-time 5 -o /dev/null "$PROM/-/ready" || { echo "Prometheus not ready"; bad=1; }
   curl -sf --max-time 5 -o /dev/null "$AM/-/ready" || { echo "Alertmanager not ready"; bad=1; }
-  # Loki's /ready reports "Ingester not ready" while it serves fine, so ask
-  # the query API instead.
+  # The query API, not /ready: /ready only turns 200 after it has been polled
+  # for 15s (the pod's readiness probe does that).
   curl -sf --max-time 5 -o /dev/null "$LOKI/loki/api/v1/labels" || { echo "Loki query API not answering"; bad=1; }
   return $bad
 }

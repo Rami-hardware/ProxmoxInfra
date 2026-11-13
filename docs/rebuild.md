@@ -37,8 +37,9 @@ qm start 911   # media
 ```
 CI runs only on the runner LXCs (`pct start 205 206 207`). If they are gone,
 `terraform apply` recreates them (`containers` map); then pin their host keys
-in `.github/ssh_known_hosts` and register them (`ci-runners.yml`, needs
-`vault_github_runner_pat`) — see `docs/runbooks/ci-runners.md`.
+in `.github/ssh_known_hosts` and run `ci-runners.yml` (CI does it on the
+next run; it registers them with the `RUNNER_ADMIN_TOKEN` secret) — see
+`docs/runbooks/ci-runners.md`.
 
 VM specs live in `Terraform/terraform.tfvars` — after restore, verify memory
 matches (`qm config <id> | grep memory`).
