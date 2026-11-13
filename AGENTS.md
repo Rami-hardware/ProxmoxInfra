@@ -61,6 +61,7 @@ terraform plan -input=false -no-color -detailed-exitcode -out=tfplan
 - **FQCN always**: `ansible.builtin.template`, `community.general.*` — no short module names.
 - **Role vars prefixed** `<role_name>_` (e.g. `k3s_server_version`, `grafana_data_dir`).
 - **All config rendered from Jinja2 templates** (`*.yml.j2`) — no inline hardcoded content in tasks.
+- **Helm releases** in `k3s_apps` use `kubernetes.core.helm` with every chart version pinned (`k3s_apps_*_chart_version`) and the `helm-diff` plugin (`/etc/helm/plugins`), so a release only upgrades when its rendered manifests change. Bump chart versions on purpose; never go back to shell `helm upgrade --install`.
 - **No moving image tags** (`:latest`, `:alpine`) in Ansible templates: pin a version (bump it on purpose). ArgoCD apps may use `:latest` in `kustomization.yaml` only because Image Updater pins the digest in `.argocd-source-*.yaml`. alert-forwarder deploys `:app-<content hash>` (see build-image.yml).
 - **IPs referenced via `hostvars[host]['ansible_host']`** from inventory — single source of truth, never hardcode IPs.
 - Command/shell tasks need explicit `changed_when` / `failed_when`.

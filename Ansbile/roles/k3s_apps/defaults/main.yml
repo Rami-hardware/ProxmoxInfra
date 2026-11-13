@@ -38,6 +38,19 @@ k3s_apps_ingress_trusted_nodes:
 # Istio chart version (base, istiod, cni, ztunnel must match) and the
 # Gateway API release it was built against (istio/istio go.mod).
 k3s_apps_istio_version: "1.30.8"
+
+# Helm charts pinned to what was installed on 2026-11-13 (they used to float to
+# the newest chart on every deploy). Bump on purpose.
+k3s_apps_cert_manager_chart_version: "v1.21.3"
+k3s_apps_metallb_chart_version: "0.16.2"
+k3s_apps_ingress_nginx_chart_version: "4.15.1"
+k3s_apps_argocd_chart_version: "10.18.0"
+
+# helm-diff plugin, used by kubernetes.core.helm to skip unchanged releases.
+# Checksum from the release's signed .prov file.
+k3s_apps_helm_plugins_dir: /etc/helm/plugins
+k3s_apps_helm_diff_version: "3.15.15"
+k3s_apps_helm_diff_checksum: "sha256:504e99410611daa70702362e1b10dc74929df8a912cb3f6b5d21d1ee9d0cb7d9"
 k3s_apps_gateway_api_version: v1.5.1
 
 # Namespaces in the Istio ambient mesh (ztunnel: mTLS between pods).

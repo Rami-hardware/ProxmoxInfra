@@ -13,6 +13,30 @@
     state: directory
     mode: '0755'
 
+# helm-diff lets kubernetes.core.helm compare rendered manifests and skip
+# releases that wouldn't change (they used to upgrade on every deploy).
+# Unpacked from the release tarball (checksum-pinned) instead of
+# `helm plugin install`, which runs the plugin's install script.
+- name: Ensure Helm plugins directory exists
+  ansible.builtin.file:
+    path: "{{ k3s_apps_helm_plugins_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Download helm-diff plugin
+  ansible.builtin.get_url:
+    url: "https://github.com/databus23/helm-diff/releases/download/v{{ k3s_apps_helm_diff_version }}/diff-{{ k3s_apps_helm_diff_version }}-linux-amd64.tgz"
+    dest: "/tmp/helm-diff-{{ k3s_apps_helm_diff_version }}.tgz"
+    checksum: "{{ k3s_apps_helm_diff_checksum }}"
+    mode: '0644'
+
+- name: Install helm-diff plugin
+  ansible.builtin.unarchive:
+    src: "/tmp/helm-diff-{{ k3s_apps_helm_diff_version }}.tgz"
+    dest: "{{ k3s_apps_helm_plugins_dir }}"
+    remote_src: true
+    creates: "{{ k3s_apps_helm_plugins_dir }}/diff/plugin.yaml"
+
 - name: Add ingress-nginx Helm repo
   ansible.builtin.command:
     cmd: helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
@@ -178,20 +202,26 @@
 
 # ── cert-manager via Helm ────────────────────────────────────────────────────
 - name: Deploy cert-manager via Helm
-  ansible.builtin.command:
-    cmd: >
-      helm upgrade --install cert-manager jetstack/cert-manager
-      --namespace cert-manager
-      --create-namespace
-      --set crds.enabled=true
-      --set 'extraArgs={--dns01-recursive-nameservers-only,--dns01-recursive-nameservers=1.1.1.1:53\,8.8.8.8:53}'
-      --wait
-      --timeout 5m
+  kubernetes.core.helm:
+    name: cert-manager
+    chart_ref: jetstack/cert-manager
+    chart_version: "{{ k3s_apps_cert_manager_chart_version }}"
+    release_namespace: cert-manager
+    create_namespace: true
+    release_values:
+      crds:
+        enabled: true
+      extraArgs:
+        - --dns01-recursive-nameservers-only
+        - --dns01-recursive-nameservers=1.1.1.1:53,8.8.8.8:53
+    update_repo_cache: false
+    wait: true
+    wait_timeout: 5m
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
   environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
     HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
     HELM_REPOSITORY_CACHE: /etc/helm/cache
-  changed_when: true
+    HELM_PLUGINS: "{{ k3s_apps_helm_plugins_dir }}"
 
 - name: Create cert-manager CA secret from local CA
   ansible.builtin.shell:
@@ -227,18 +257,20 @@
 
 # ── MetalLB via Helm ─────────────────────────────────────────────────────────
 - name: Deploy MetalLB via Helm
-  ansible.builtin.command:
-    cmd: >
-      helm upgrade --install metallb metallb/metallb
-      --namespace metallb-system
-      --create-namespace
-      --wait
-      --timeout 5m
+  kubernetes.core.helm:
+    name: metallb
+    chart_ref: metallb/metallb
+    chart_version: "{{ k3s_apps_metallb_chart_version }}"
+    release_namespace: metallb-system
+    create_namespace: true
+    update_repo_cache: false
+    wait: true
+    wait_timeout: 5m
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
   environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
     HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
     HELM_REPOSITORY_CACHE: /etc/helm/cache
-  changed_when: true
+    HELM_PLUGINS: "{{ k3s_apps_helm_plugins_dir }}"
 
 - name: Template MetalLB IP pool config
   ansible.builtin.template:
@@ -266,19 +298,22 @@
     mode: '0600'
 
 - name: Deploy ingress-nginx via Helm
-  ansible.builtin.command:
-    cmd: >
-      helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx
-      --namespace ingress-nginx
-      --create-namespace
-      --values /tmp/ingress-nginx-values.yml
-      --wait
-      --timeout 5m
+  kubernetes.core.helm:
+    name: ingress-nginx
+    chart_ref: ingress-nginx/ingress-nginx
+    chart_version: "{{ k3s_apps_ingress_nginx_chart_version }}"
+    release_namespace: ingress-nginx
+    create_namespace: true
+    values_files:
+      - /tmp/ingress-nginx-values.yml
+    update_repo_cache: false
+    wait: true
+    wait_timeout: 5m
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
   environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
     HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
     HELM_REPOSITORY_CACHE: /etc/helm/cache
-  changed_when: true
+    HELM_PLUGINS: "{{ k3s_apps_helm_plugins_dir }}"
 
 - name: Remove ingress-nginx values tempfile
   ansible.builtin.file:
@@ -358,19 +393,22 @@
     mode: '0600'
 
 - name: Deploy ArgoCD via Helm
-  ansible.builtin.command:
-    cmd: >
-      helm upgrade --install argocd argo/argo-cd
-      --namespace argocd
-      --create-namespace
-      --values /tmp/argocd-values.yml
-      --wait
-      --timeout 5m
+  kubernetes.core.helm:
+    name: argocd
+    chart_ref: argo/argo-cd
+    chart_version: "{{ k3s_apps_argocd_chart_version }}"
+    release_namespace: argocd
+    create_namespace: true
+    values_files:
+      - /tmp/argocd-values.yml
+    update_repo_cache: false
+    wait: true
+    wait_timeout: 5m
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
   environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
     HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
     HELM_REPOSITORY_CACHE: /etc/helm/cache
-  changed_when: true
+    HELM_PLUGINS: "{{ k3s_apps_helm_plugins_dir }}"
 
 - name: Remove ArgoCD values tempfile
   ansible.builtin.file:
@@ -386,20 +424,20 @@
   # Pinned to the last chart release before the app switched from
   # annotation-driven config (Application annotations, what we use below)
   # to the CRD-based model in v1.0.0+ (argoproj-labs/argocd-image-updater#1170).
-  ansible.builtin.command:
-    cmd: >
-      helm upgrade --install argocd-image-updater
-      argo/argocd-image-updater
-      --version 0.8.5
-      --namespace argocd
-      --create-namespace
-      --wait
-      --timeout 5m
+  kubernetes.core.helm:
+    name: argocd-image-updater
+    chart_ref: argo/argocd-image-updater
+    chart_version: "0.8.5"
+    release_namespace: argocd
+    create_namespace: true
+    update_repo_cache: false
+    wait: true
+    wait_timeout: 5m
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
   environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
     HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
     HELM_REPOSITORY_CACHE: /etc/helm/cache
-  changed_when: true
+    HELM_PLUGINS: "{{ k3s_apps_helm_plugins_dir }}"
 
 - name: Read controller SSH private key
   ansible.builtin.set_fact:
@@ -475,21 +513,23 @@
 
 # ── alert-forwarder via Helm ──────────────────────────────────────────────────
 - name: Deploy alert-forwarder via Helm
-  ansible.builtin.command:
-    cmd: >
-      helm upgrade --install alert-forwarder
-      {{ playbook_dir }}/apps/alert-forwarder/chart
-      --namespace monitoring
-      --create-namespace
-      --set image.tag={{ k3s_apps_alert_forwarder_image_tag }}
-      --set-string discordWebhookUrl={{ lookup('env', 'DISCORD_WEBHOOK_URL') | quote }}
-      --wait
-      --timeout 5m
+  kubernetes.core.helm:
+    name: alert-forwarder
+    chart_ref: "{{ playbook_dir }}/apps/alert-forwarder/chart"
+    release_namespace: monitoring
+    create_namespace: true
+    release_values:
+      image:
+        tag: "{{ k3s_apps_alert_forwarder_image_tag }}"
+      discordWebhookUrl: "{{ lookup('env', 'DISCORD_WEBHOOK_URL') }}"
+    update_repo_cache: false
+    wait: true
+    wait_timeout: 5m
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
   environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
     HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
     HELM_REPOSITORY_CACHE: /etc/helm/cache
-  changed_when: true
+    HELM_PLUGINS: "{{ k3s_apps_helm_plugins_dir }}"
   no_log: true
 
 # ── Istio service mesh via Helm ───────────────────────────────────────────────
@@ -514,19 +554,20 @@
   changed_when: false
 
 - name: Deploy Istio base (CRDs) via Helm
-  ansible.builtin.command:
-    cmd: >
-      helm upgrade --install istio-base istio/base
-      --namespace istio-system
-      --version {{ k3s_apps_istio_version }}
-      --create-namespace
-      --wait
-      --timeout 5m
+  kubernetes.core.helm:
+    name: istio-base
+    chart_ref: istio/base
+    chart_version: "{{ k3s_apps_istio_version }}"
+    release_namespace: istio-system
+    create_namespace: true
+    update_repo_cache: false
+    wait: true
+    wait_timeout: 5m
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
   environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
     HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
     HELM_REPOSITORY_CACHE: /etc/helm/cache
-  changed_when: true
+    HELM_PLUGINS: "{{ k3s_apps_helm_plugins_dir }}"
 
 # ── Tempo (tracing backend) ───────────────────────────────────────────────────
 - name: Template Tempo manifest
@@ -550,30 +591,42 @@
   changed_when: false
 
 - name: Deploy Istiod via Helm
-  ansible.builtin.command:
-    cmd: >
-      helm upgrade --install istiod istio/istiod
-      --namespace istio-system
-      --version {{ k3s_apps_istio_version }}
-      --set profile=ambient
-      --set nodeSelector."kubernetes\.io/hostname"=git-k3s-server
-      --set meshConfig.enablePrometheusMerge=true
-      --set global.proxy.resources.requests.cpu=20m
-      --set global.proxy.resources.requests.memory=64Mi
-      --set global.proxy.resources.limits.cpu=200m
-      --set global.proxy.resources.limits.memory=128Mi
-      --set meshConfig.defaultConfig.tracing.zipkin.address=tempo.istio-system.svc.cluster.local:9411
-      --set meshConfig.enableTracing=true
-      --set meshConfig.defaultConfig.tracing.sampling=100
-      --set meshConfig.accessLogFile=/dev/stdout
-      --set meshConfig.accessLogEncoding=JSON
-      --wait
-      --timeout 5m
+  kubernetes.core.helm:
+    name: istiod
+    chart_ref: istio/istiod
+    chart_version: "{{ k3s_apps_istio_version }}"
+    release_namespace: istio-system
+    release_values:
+      profile: ambient
+      nodeSelector:
+        kubernetes.io/hostname: git-k3s-server
+      global:
+        proxy:
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      meshConfig:
+        enablePrometheusMerge: true
+        enableTracing: true
+        accessLogFile: /dev/stdout
+        accessLogEncoding: JSON
+        defaultConfig:
+          tracing:
+            sampling: 100
+            zipkin:
+              address: tempo.istio-system.svc.cluster.local:9411
+    update_repo_cache: false
+    wait: true
+    wait_timeout: 5m
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
   environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
     HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
     HELM_REPOSITORY_CACHE: /etc/helm/cache
-  changed_when: true
+    HELM_PLUGINS: "{{ k3s_apps_helm_plugins_dir }}"
 
 # ── Istio ambient data plane ─────────────────────────────────────────────────
 # Ambient replaces per-pod sidecars with one ztunnel per node (L4 + mTLS) and
@@ -599,40 +652,50 @@
   changed_when: true
 
 - name: Deploy istio-cni via Helm
-  ansible.builtin.command:
-    cmd: >
-      helm upgrade --install istio-cni istio/cni
-      --namespace istio-system
-      --version {{ k3s_apps_istio_version }}
-      --set profile=ambient
-      --set global.platform=k3s
-      --set resources.requests.cpu=10m
-      --set resources.requests.memory=32Mi
-      --wait
-      --timeout 5m
+  kubernetes.core.helm:
+    name: istio-cni
+    chart_ref: istio/cni
+    chart_version: "{{ k3s_apps_istio_version }}"
+    release_namespace: istio-system
+    release_values:
+      profile: ambient
+      global:
+        platform: k3s
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+    update_repo_cache: false
+    wait: true
+    wait_timeout: 5m
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
   environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
     HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
     HELM_REPOSITORY_CACHE: /etc/helm/cache
-  changed_when: true
+    HELM_PLUGINS: "{{ k3s_apps_helm_plugins_dir }}"
 
 - name: Deploy ztunnel via Helm
-  ansible.builtin.command:
-    cmd: >
-      helm upgrade --install ztunnel istio/ztunnel
-      --namespace istio-system
-      --version {{ k3s_apps_istio_version }}
-      --set profile=ambient
-      --set global.platform=k3s
-      --set resources.requests.cpu=20m
-      --set resources.requests.memory=48Mi
-      --wait
-      --timeout 5m
+  kubernetes.core.helm:
+    name: ztunnel
+    chart_ref: istio/ztunnel
+    chart_version: "{{ k3s_apps_istio_version }}"
+    release_namespace: istio-system
+    release_values:
+      profile: ambient
+      global:
+        platform: k3s
+      resources:
+        requests:
+          cpu: 20m
+          memory: 48Mi
+    update_repo_cache: false
+    wait: true
+    wait_timeout: 5m
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
   environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
     HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
     HELM_REPOSITORY_CACHE: /etc/helm/cache
-  changed_when: true
+    HELM_PLUGINS: "{{ k3s_apps_helm_plugins_dir }}"
 
 # Pods move to ambient when they restart; running sidecar pods keep working
 # alongside them until then.
@@ -789,16 +852,18 @@
     mode: '0600'
 
 - name: Install Homarr via Helm
-  ansible.builtin.command:
-    cmd: >
-      helm upgrade --install homarr homarr-labs/homarr
-      --namespace {{ k3s_apps_homarr_namespace }}
-      --version {{ k3s_apps_homarr_chart_version }}
-      --values /tmp/homarr-values.yml
-      --wait
-      --timeout 5m
+  kubernetes.core.helm:
+    name: homarr
+    chart_ref: homarr-labs/homarr
+    chart_version: "{{ k3s_apps_homarr_chart_version }}"
+    release_namespace: "{{ k3s_apps_homarr_namespace }}"
+    values_files:
+      - /tmp/homarr-values.yml
+    update_repo_cache: false
+    wait: true
+    wait_timeout: 5m
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
   environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
     HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
     HELM_REPOSITORY_CACHE: /etc/helm/cache
-  changed_when: true
+    HELM_PLUGINS: "{{ k3s_apps_helm_plugins_dir }}"
