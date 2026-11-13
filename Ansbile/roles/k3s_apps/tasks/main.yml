@@ -499,23 +499,41 @@
   become: false
   register: k3s_apps_argocd_app_manifests
 
+# The runner (Ansible controller) is a separate machine, so the files go to
+# the server first — kubectl runs there and can't see the runner's checkout.
+- name: Copy ArgoCD Application manifests to the server
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ k3s_apps_manifest_dir }}/argocd-apps/"
+    mode: '0644'
+  loop: "{{ k3s_apps_argocd_app_manifests.files | map(attribute='path') | sort }}"
+
 # Applied by discovery rather than a hardcoded list, so adding a new
 # argocd-apps/<name>-app.yaml is enough to register it — no role edit,
 # and no manual kubectl apply on a fresh cluster.
 - name: Apply ArgoCD Application manifests
   ansible.builtin.command:
-    cmd: "k3s kubectl apply -f {{ playbook_dir }}/argocd-apps/{{ item }}"
+    cmd: "k3s kubectl apply -f {{ k3s_apps_manifest_dir }}/argocd-apps/{{ item }}"
   loop: "{{ k3s_apps_argocd_app_manifests.files
             | map(attribute='path') | map('basename') | sort }}"
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-  changed_when: true
+  register: k3s_apps_argocd_app_apply
+  changed_when: "'unchanged' not in k3s_apps_argocd_app_apply.stdout"
 
 # ── alert-forwarder via Helm ──────────────────────────────────────────────────
+# Helm runs on the server, so the chart is copied there from the checkout.
+- name: Copy the alert-forwarder chart to the server
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/apps/alert-forwarder/chart/"
+    dest: "{{ k3s_apps_chart_dir }}/alert-forwarder/"
+    mode: preserve
+    directory_mode: '0755'
+
 - name: Deploy alert-forwarder via Helm
   kubernetes.core.helm:
     name: alert-forwarder
-    chart_ref: "{{ playbook_dir }}/apps/alert-forwarder/chart"
+    chart_ref: "{{ k3s_apps_chart_dir }}/alert-forwarder"
     release_namespace: monitoring
     create_namespace: true
     release_values:
