@@ -57,6 +57,24 @@
     ci_runner_k3s_api: "https://{{ hostvars['git-k3s-server']['ansible_host'] }}:6443"
   no_log: true
 
+# The same scripts and requirements the CI actions use (repo .github/), for
+# the per-instance pre-warm.
+- name: Create pre-warm script directory
+  ansible.builtin.file:
+    path: "{{ ci_runner_prewarm_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Install pre-warm scripts and pinned CI requirements
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../.github/{{ item.src }}"
+    dest: "{{ ci_runner_prewarm_dir }}/{{ item.src | basename }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { src: scripts/setup-ansible-venv.sh, mode: '0755' }
+    - { src: scripts/seed-terraform-mirror.sh, mode: '0755' }
+    - { src: ci-requirements.txt, mode: '0644' }
+
 - name: Install and register each runner instance
   ansible.builtin.include_tasks: instance.yml
   loop: "{{ ci_runner_instances }}"

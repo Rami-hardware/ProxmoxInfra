@@ -97,9 +97,11 @@ Runners: **GitHub-hosted** (`ubuntu-latest`) for jobs that need no LAN — Detec
 
 - `checks.yml` covers the paths `main.yml` ignores: server-side dry run of `argocd-apps/<ns>` against the live cluster (`-n <ns>` — the shared NetworkPolicy component has no namespace), and the alertops-mcp pytest suite. It deploys nothing.
 - Ansible tool versions are pinned in `.github/ci-requirements.txt`; the venv is cached in `~/.cache/ci-ansible-venv` on the runner (checkout wipes the workspace). Bump pins on purpose.
+- Caches are per runner user. `roles/ci_runner` pre-warms each LXC instance (venv + Terraform provider mirror) with the same `.github/scripts/` the actions run, so a new runner's first job isn't slow.
+- `testing.yml` has two jobs on separate runners: `Lint and validate` (Terraform fmt/validate, syntax check, ansible-lint) and `Gateway dry run` (only when gateway changed).
 
 - `build-image.yml` tags the `alert-forwarder` image `app-<git tree hash of Ansbile/apps/alert-forwarder>` and builds + pushes to GHCR **only if that tag doesn't exist yet** (app changed or never built). Deploy gets the tag as an input → `ALERT_FORWARDER_TAG` → `k3s_apps_alert_forwarder_image_tag`. Unchanged app = same tag = no pod restart.
-- Runner has no registry access — Terraform providers install via filesystem mirror (`setup-terraform-mirror`), currently seeded for `bpg/proxmox 0.70.1` and `telmate/proxmox 2.9.14`. Bumping a provider requires updating the mirror action too.
+- Runner has no registry access — Terraform providers install via filesystem mirror (`setup-terraform-mirror`), currently seeded for `bpg/proxmox 0.70.1` and `telmate/proxmox 2.9.14`. Bumping a provider requires updating `.github/scripts/seed-terraform-mirror.sh` too (shared by the action and the runner pre-warm).
 - `setup-terraform` uses `terraform_wrapper: false` — required for `-detailed-exitcode` to work.
 - No Trivy/CVE scanning in CI (removed on purpose). Committed secrets are caught by GitHub's own secret scanning + push protection (enabled in repo settings).
 - SSH host keys are pinned: Ansible in CI uses `StrictHostKeyChecking=yes` against `.github/ssh_known_hosts` (set by `setup-ssh-vault`). After rebuilding a VM, CI fails with "REMOTE HOST IDENTIFICATION HAS CHANGED" until you update its line (`ssh-keyscan -t ed25519 <ip>`, check the fingerprint against the VM console).

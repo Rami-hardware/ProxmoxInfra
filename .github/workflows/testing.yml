@@ -30,17 +30,16 @@ on:
         required: true
       OVERSEERR_API_KEY:
         required: true
+# Two jobs on different runners: the gateway dry run (~50s) is the slow one,
+# so it runs next to everything else instead of after it.
 jobs:
-  testing:
-    name: Testing Infrastructure Code
+  validate:
+    name: Lint and validate
     runs-on: self-hosted
     timeout-minutes: 30
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      # ── System setup ─────────────────────────────────────────────────────────
 
       - name: Install system dependencies
         run: |
@@ -56,11 +55,17 @@ jobs:
             echo "All packages already installed — skipping apt-get update."
           fi
 
-      - name: Verify installations
-        run: |
-          unzip -v
-          git --version
-          curl --version
+      - name: Set up Ansible virtualenv
+        uses: ./.github/actions/setup-ansible-venv
+
+      - name: Install Ansible collections
+        run: ansible-galaxy collection install -r Ansbile/requirements.yml
+
+      - name: Setup SSH and Vault
+        uses: ./.github/actions/setup-ssh-vault
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
 
       # ── Terraform ────────────────────────────────────────────────────────────
       - name: Setup Terraform
@@ -97,6 +102,42 @@ jobs:
           terraform validate
 
       # ── Ansible ──────────────────────────────────────────────────────────────
+      - name: Ansible syntax check
+        run: |
+          for pb in gateway-server monitoring-server media-server git-k3s-server; do
+            ansible-playbook -i Ansbile/inventory.ini "Ansbile/$pb.yml" --syntax-check --vault-password-file ~/.vault_pass
+          done
+
+      - name: Ansible lint
+        run: ansible-lint Ansbile/
+
+      - name: Cleanup secrets
+        if: always()
+        uses: ./.github/actions/cleanup-secrets
+
+  gateway_check:
+    name: Gateway dry run
+    if: inputs.gateway
+    runs-on: self-hosted
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          need_install=false
+          # Ansible itself comes from the pinned venv, not apt.
+          for pkg in unzip curl git python3-venv python3-pip; do
+            dpkg -s "$pkg" &>/dev/null || { need_install=true; break; }
+          done
+          if $need_install; then
+            sudo apt-get update -o Acquire::Retries=3
+            sudo apt-get install -y unzip curl git python3-venv python3-pip
+          else
+            echo "All packages already installed — skipping apt-get update."
+          fi
+
       - name: Set up Ansible virtualenv
         uses: ./.github/actions/setup-ansible-venv
 
@@ -108,15 +149,6 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
           ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
-
-      - name: Ansible syntax check
-        run: |
-          for pb in gateway-server monitoring-server media-server git-k3s-server; do
-            ansible-playbook -i Ansbile/inventory.ini "Ansbile/$pb.yml" --syntax-check --vault-password-file ~/.vault_pass
-          done
-
-      - name: Ansible lint
-        run: ansible-lint Ansbile/
 
       # gateway and media use Docker command/shell tasks that break in check mode
       # --check is limited to template-driven playbooks only

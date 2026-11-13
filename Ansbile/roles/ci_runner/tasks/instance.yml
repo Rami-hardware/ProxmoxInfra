@@ -106,6 +106,9 @@
     src: "{{ ci_runner_inst_dir }}/.service"
   register: ci_runner_service_file
 
+- name: Pre-warm CI caches
+  ansible.builtin.include_tasks: prewarm.yml
+
 # Never restarted here: the job running this playbook may be on this runner.
 - name: Enable and start runner service
   ansible.builtin.systemd:
