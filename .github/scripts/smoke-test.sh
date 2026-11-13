@@ -20,7 +20,7 @@ exec 3>&1  # warnings from inside a check's $( ) still reach the log
 
 # deploy.yml host key → Prometheus `instance` label.
 declare -A instance=([gateway]=gateway-server [monitoring]=monitoring-server [media]=media-server
-                     [git_k3s]=git-k3s-server [host_node]=host-node)
+                     [git_k3s]=git-k3s-server [host_node]=host-node [ci_runners]='ci-runner-.*')
 instances=$(for h in "$@"; do [ -n "${instance[$h]:-}" ] && echo "${instance[$h]}"; done | paste -sd'|' -)
 
 # Each check prints why it failed on stdout and returns non-zero.

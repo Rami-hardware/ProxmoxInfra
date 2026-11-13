@@ -271,8 +271,10 @@ groups:
           summary: "{{ $labels.instance }} memory usage at {{ humanize $value }}%"
           description: "Memory usage on {{ $labels.instance }} is elevated. Check running workloads and consider whether this node is undersized for what's scheduled on it."
 
+      # The ci-runner LXCs share the Proxmox kernel: their /proc/loadavg and
+      # /proc/vmstat are the host's, so load and OOM kills are left to host-node.
       - alert: NodeLoadAverageHighNormalizedPerCore
-        expr: (node_load1{job="nodes",instance!="host-node"} / count without (cpu, mode) (node_cpu_seconds_total{job="nodes", mode="idle" ,instance!="host-node"})) > 2
+        expr: (node_load1{job="nodes",instance!~"host-node|ci-runner-.*"} / count without (cpu, mode) (node_cpu_seconds_total{job="nodes", mode="idle" ,instance!~"host-node|ci-runner-.*"})) > 2
         for: 1m
         labels:
           severity: warning
@@ -282,7 +284,7 @@ groups:
           description: "1-minute load average on {{ $labels.instance }} exceeds 2x its core count — check for a runaway process."
 
       - alert: NodeOOMKills
-        expr: (increase(node_vmstat_oom_kill{job="nodes"}[15m])) > 0
+        expr: (increase(node_vmstat_oom_kill{job="nodes",instance!~"ci-runner-.*"}[15m])) > 0
         for: 1m
         labels:
           severity: warning

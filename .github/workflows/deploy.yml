@@ -88,6 +88,11 @@ on:
         required: true
       CF_DNS_API_TOKEN:
         required: true
+      RUNNER_ADMIN_TOKEN:
+        # Fine-grained PAT (this repo, Administration: read and write). Only
+        # the ci-runners job gets it: registers a runner that isn't yet
+        # (a new or rebuilt LXC). See roles/ci_runner/defaults/main.yml.
+        required: false
       PVE_EXPORTER_TOKEN:
         # Read-only PVE API token for prometheus-pve-exporter on host-node.
         # Until it is set, the host-node playbook skips the pve-exporter install
@@ -540,6 +545,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
+      - name: Silence warning alerts while this job runs
+        id: silence
+        continue-on-error: true
+        run: .github/scripts/am-silence.sh create "${{ github.job }}" 'instance=~ci-runner-.*'
+
       - name: Prepare Ansible
         uses: ./.github/actions/ansible-prep
         with:
@@ -549,9 +559,15 @@ jobs:
       - name: ansible-playbook ci-runners
         env:
           TAGS: ${{ inputs.ci_runners_tags }}
+          RUNNER_ADMIN_TOKEN: ${{ secrets.RUNNER_ADMIN_TOKEN }}
         run: |
           [ -n "$TAGS" ] && echo "Only roles: $TAGS" || echo "Whole playbook"
           ansible-playbook -i Ansbile/inventory.ini Ansbile/ci-runners.yml --vault-password-file ~/.vault_pass ${TAGS:+--tags "$TAGS"}
+
+      - name: Remove this job's silence
+        if: always() && steps.silence.outputs.id != ''
+        continue-on-error: true
+        run: .github/scripts/am-silence.sh delete "${{ steps.silence.outputs.id }}"
 
       - name: Cleanup secrets
         if: always()

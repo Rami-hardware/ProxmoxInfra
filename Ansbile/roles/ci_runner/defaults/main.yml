@@ -32,5 +32,7 @@ ci_runner_packages:
   - python3-venv
   - python3-pip
 # Fine-grained PAT, this repo only, "Administration: read and write". Only
-# used to fetch a one-hour registration token when a runner isn't registered.
-ci_runner_github_pat: "{{ vault_github_runner_pat | default('') }}"
+# used to fetch a one-hour registration token when a runner isn't registered
+# (a new or rebuilt LXC). CI passes the RUNNER_ADMIN_TOKEN secret to the
+# ci-runners job only; vault_github_runner_pat is the fallback for a run by hand.
+ci_runner_github_pat: "{{ lookup('env', 'RUNNER_ADMIN_TOKEN') | default(vault_github_runner_pat | default(''), true) }}"

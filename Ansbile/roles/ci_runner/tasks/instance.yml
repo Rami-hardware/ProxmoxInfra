@@ -65,7 +65,7 @@
     - name: Require the registration PAT
       ansible.builtin.assert:
         that: ci_runner_github_pat | length > 0
-        fail_msg: "Add vault_github_runner_pat to group_vars/all/vault.yml (see roles/ci_runner/defaults/main.yml)."
+        fail_msg: "Set the RUNNER_ADMIN_TOKEN secret (or vault_github_runner_pat) — see roles/ci_runner/defaults/main.yml."
         quiet: true
 
     - name: Get a registration token
