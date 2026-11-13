@@ -7,6 +7,9 @@ on:
       gateway:
         type: boolean
         default: true
+      gateway_tags:
+        type: string
+        default: ''
       terraform:
         type: boolean
         default: true
@@ -115,9 +118,12 @@ jobs:
         if: always()
         uses: ./.github/actions/cleanup-secrets
 
+  # Only on development, which never deploys. On staging the real deploy is
+  # the test (canary), and on main staging already ran it — a dry run there
+  # only repeated the deploy's work on the critical path (~50s).
   gateway_check:
     name: Gateway dry run
-    if: inputs.gateway
+    if: inputs.gateway && github.ref_name == 'development'
     runs-on: self-hosted
     timeout-minutes: 30
     steps:
@@ -155,8 +161,9 @@ jobs:
       - name: Ansible dry run (check + diff)
         if: inputs.gateway
         run: |
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --check --diff --vault-password-file ~/.vault_pass
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --check --diff --vault-password-file ~/.vault_pass ${TAGS:+--tags "$TAGS"}
         env:
+          TAGS: ${{ inputs.gateway_tags }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           SONARR_API_KEY: ${{ secrets.SONARR_API_KEY }}
           BAZARR_API_KEY: ${{ secrets.BAZARR_API_KEY }}

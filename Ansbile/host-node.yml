@@ -8,4 +8,4 @@
   hosts: host-node
   become: true
   roles:
-    - proxmox_exporters
+    - { role: proxmox_exporters, tags: [proxmox_exporters] }

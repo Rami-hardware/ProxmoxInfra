@@ -37,6 +37,26 @@ on:
       host_node:
         type: boolean
         default: true
+      # Roles to run per host (ansible-playbook --tags), from the `changes`
+      # job; empty = the whole playbook.
+      gateway_tags:
+        type: string
+        default: ''
+      monitoring_tags:
+        type: string
+        default: ''
+      media_tags:
+        type: string
+        default: ''
+      git_k3s_tags:
+        type: string
+        default: ''
+      ci_runners_tags:
+        type: string
+        default: ''
+      host_node_tags:
+        type: string
+        default: ''
     secrets:
       PM_API_URL:
         required: true
@@ -335,7 +355,11 @@ jobs:
           ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
 
       - name: ansible-playbook gateway-server
-        run: ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --vault-password-file ~/.vault_pass
+        env:
+          TAGS: ${{ inputs.gateway_tags }}
+        run: |
+          [ -n "$TAGS" ] && echo "Only roles: $TAGS" || echo "Whole playbook"
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --vault-password-file ~/.vault_pass ${TAGS:+--tags "$TAGS"}
 
       - name: Cleanup secrets
         if: always()
@@ -359,7 +383,11 @@ jobs:
           ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
 
       - name: ansible-playbook monitoring-server
-        run: ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml --vault-password-file ~/.vault_pass
+        env:
+          TAGS: ${{ inputs.monitoring_tags }}
+        run: |
+          [ -n "$TAGS" ] && echo "Only roles: $TAGS" || echo "Whole playbook"
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml --vault-password-file ~/.vault_pass ${TAGS:+--tags "$TAGS"}
 
       - name: Cleanup secrets
         if: always()
@@ -383,7 +411,11 @@ jobs:
           ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
 
       - name: ansible-playbook media-server
-        run: ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml --vault-password-file ~/.vault_pass
+        env:
+          TAGS: ${{ inputs.media_tags }}
+        run: |
+          [ -n "$TAGS" ] && echo "Only roles: $TAGS" || echo "Whole playbook"
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml --vault-password-file ~/.vault_pass ${TAGS:+--tags "$TAGS"}
 
       - name: Cleanup secrets
         if: always()
@@ -408,7 +440,11 @@ jobs:
           ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
 
       - name: ansible-playbook host-node
-        run: ansible-playbook -i Ansbile/inventory.ini Ansbile/host-node.yml --vault-password-file ~/.vault_pass
+        env:
+          TAGS: ${{ inputs.host_node_tags }}
+        run: |
+          [ -n "$TAGS" ] && echo "Only roles: $TAGS" || echo "Whole playbook"
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/host-node.yml --vault-password-file ~/.vault_pass ${TAGS:+--tags "$TAGS"}
 
       - name: Cleanup secrets
         if: always()
@@ -432,7 +468,11 @@ jobs:
           ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
 
       - name: ansible-playbook git-k3s-server
-        run: ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml --vault-password-file ~/.vault_pass
+        env:
+          TAGS: ${{ inputs.git_k3s_tags }}
+        run: |
+          [ -n "$TAGS" ] && echo "Only roles: $TAGS" || echo "Whole playbook"
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml --vault-password-file ~/.vault_pass ${TAGS:+--tags "$TAGS"}
 
       - name: Cleanup secrets
         if: always()
@@ -457,7 +497,11 @@ jobs:
           ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
 
       - name: ansible-playbook ci-runners
-        run: ansible-playbook -i Ansbile/inventory.ini Ansbile/ci-runners.yml --vault-password-file ~/.vault_pass
+        env:
+          TAGS: ${{ inputs.ci_runners_tags }}
+        run: |
+          [ -n "$TAGS" ] && echo "Only roles: $TAGS" || echo "Whole playbook"
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/ci-runners.yml --vault-password-file ~/.vault_pass ${TAGS:+--tags "$TAGS"}
 
       - name: Cleanup secrets
         if: always()

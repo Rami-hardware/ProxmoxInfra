@@ -3,7 +3,7 @@
   hosts: media-server
   become: true
   roles:
-    - common
-    - intel_arc
-    - k3s_agent
-    - scraparr
+    - { role: common, tags: [common] }
+    - { role: intel_arc, tags: [intel_arc] }
+    - { role: k3s_agent, tags: [k3s_agent] }
+    - { role: scraparr, tags: [scraparr] }
