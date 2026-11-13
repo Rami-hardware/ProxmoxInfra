@@ -1,6 +1,6 @@
 ---
-# LXC containers from Terraform `containers` (ci_runner_1/2).
+# LXC containers from Terraform `containers` (ci_runner_1/2). Two runner
+# instances each (users runner-a / runner-b) → 4 parallel CI slots on 2 LXCs.
 ci_runner_install: true
-ci_runner_user: runner
-ci_runner_dir: /home/runner/actions-runner
+ci_runner_instances: [a, b]
 ci_runner_labels: [lxc]

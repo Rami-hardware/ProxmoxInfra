@@ -68,33 +68,55 @@ on:
         # Until it is set, the host-node playbook skips the pve-exporter install
         # (see roles/proxmox_exporters, docs/runbooks/exporters.md).
         required: false
-jobs:
-  Deploy:
-    name: Deploy Infrastructure Code
-    runs-on: self-hosted
-    env:
-      # Alertmanager API (NodePort on monitoring-server), for deploy silences.
-      # Repo variable (Settings → Secrets and variables → Variables).
-      ALERTMANAGER_URL: ${{ vars.ALERTMANAGER_URL }}
-    timeout-minutes: 60
-    # The only job bound to an environment, so each environment's Deployments
-    # page is real deploy history. Production requires a reviewer.
-    environment: ${{ github.ref_name == 'main' && 'Production' || github.ref_name == 'staging' && 'Staging' || 'Development' }}
+# Secrets the playbooks read via lookup('env', ...). Workflow-level so every
+# per-host job gets them; the SSH key and vault password go through
+# ansible-prep instead.
+env:
+  ANSIBLE_VAULT_PASSWORD_FILE: ~/.vault_pass
+  ADGUARD_EXPORTER_PASSWORD: ${{ secrets.ADGUARD_EXPORTER_PASSWORD }}
+  ADGUARD_EXPORTER_USERNAME: ${{ secrets.ADGUARD_EXPORTER_USERNAME }}
+  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+  SONARR_API_KEY: ${{ secrets.SONARR_API_KEY }}
+  BAZARR_API_KEY: ${{ secrets.BAZARR_API_KEY }}
+  PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
+  RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
+  OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
+  CF_DNS_API_TOKEN: ${{ secrets.CF_DNS_API_TOKEN }}
+  HEALTHCHECKS_PING_URL: ${{ secrets.HEALTHCHECKS_PING_URL }}
+  PVE_EXPORTER_TOKEN: ${{ secrets.PVE_EXPORTER_TOKEN }}
+  ALERT_FORWARDER_TAG: ${{ inputs.alert_forwarder_tag }}
+  # Alertmanager API (NodePort on monitoring-server), for deploy silences.
+  ALERTMANAGER_URL: ${{ vars.ALERTMANAGER_URL }}
 
+# Hosts deploy in waves so independent playbooks run at the same time on
+# different runners:
+#   gate → gateway (DNS first) → monitoring | media | host-node → git-k3s → ci-runners
+# k3s_agent on monitoring/media only *reads* from git-k3s, so that wave is safe
+# in parallel. git-k3s keeps its old place after monitoring and media.
+jobs:
+  # The only job bound to an environment: one Production approval per deploy,
+  # and each environment's Deployments page is real deploy history.
+  gate:
+    name: Plan and silence
+    runs-on: self-hosted
+    timeout-minutes: 20
+    environment: ${{ github.ref_name == 'main' && 'Production' || github.ref_name == 'staging' && 'Staging' || 'Development' }}
+    outputs:
+      silence_id: ${{ steps.am_silence.outputs.id }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # ── Terraform ────────────────────────────────────────────────────────────
+      # ── Terraform (VM drift, plan only) ──────────────────────────────────────
       - name: Setup Terraform
-        if: inputs.terraform || inputs.cloudflare
+        if: inputs.terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.0
           terraform_wrapper: false  # wrapper intercepts exit codes; breaks -detailed-exitcode
 
       - name: Setup Terraform provider mirror
-        if: inputs.terraform || inputs.cloudflare
+        if: inputs.terraform
         uses: ./.github/actions/setup-terraform-mirror
 
       - name: Terraform init
@@ -166,35 +188,10 @@ jobs:
           fi
           echo "No destroys detected — safe to proceed."
 
-      # ── Ansible ──────────────────────────────────────────────────────────────
-      - name: Install system dependencies
-        run: |
-          need_install=false
-          for pkg in ansible python3-venv python3-pip; do
-            dpkg -s "$pkg" &>/dev/null || { need_install=true; break; }
-          done
-          if $need_install; then
-            sudo apt-get update -o Acquire::Retries=3
-            sudo apt-get install -y ansible python3-venv python3-pip
-          else
-            echo "All packages already installed — skipping apt-get update."
-          fi
-
-      - name: Set up Ansible virtualenv
-        uses: ./.github/actions/setup-ansible-venv
-
-      - name: Install Ansible collections
-        run: ansible-galaxy collection install -r Ansbile/requirements.yml
-
-      - name: Setup SSH and Vault
-        uses: ./.github/actions/setup-ssh-vault
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-          ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
 
       # Deploys restart pods and briefly fail probes, which used to page as
-      # warnings. Silence warnings (not criticals) while Ansible runs; the next
-      # step removes the silence, and it expires by itself after 45 minutes.
+      # warnings. Silence warnings (not criticals) while the host jobs run;
+      # `finish` removes it, and it expires by itself after 45 minutes.
       - name: Silence warning alerts during the deploy
         id: am_silence
         if: inputs.gateway || inputs.monitoring || inputs.media || inputs.git_k3s || inputs.ci_runners || inputs.host_node
@@ -209,66 +206,193 @@ jobs:
           echo "id=$id" >> "$GITHUB_OUTPUT"
           echo "Silenced warnings until $end (silence $id)"
 
-      - name: Run Ansible playbooks
-        if: inputs.gateway || inputs.monitoring || inputs.media || inputs.git_k3s || inputs.ci_runners || inputs.host_node
-        env:
-          ANSIBLE_VAULT_PASSWORD_FILE: ~/.vault_pass
-          ADGUARD_EXPORTER_PASSWORD: ${{ secrets.ADGUARD_EXPORTER_PASSWORD }}
-          ADGUARD_EXPORTER_USERNAME: ${{ secrets.ADGUARD_EXPORTER_USERNAME }}
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          SONARR_API_KEY: ${{ secrets.SONARR_API_KEY }}
-          BAZARR_API_KEY: ${{ secrets.BAZARR_API_KEY }}
-          PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
-          RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
-          OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
-          CF_DNS_API_TOKEN: ${{ secrets.CF_DNS_API_TOKEN }}
-          HEALTHCHECKS_PING_URL: ${{ secrets.HEALTHCHECKS_PING_URL }}
-          PVE_EXPORTER_TOKEN: ${{ secrets.PVE_EXPORTER_TOKEN }}
-          ALERT_FORWARDER_TAG: ${{ inputs.alert_forwarder_tag }}
-          RUN_GATEWAY: ${{ inputs.gateway }}
-          RUN_MONITORING: ${{ inputs.monitoring }}
-          RUN_MEDIA: ${{ inputs.media }}
-          RUN_GIT_K3S: ${{ inputs.git_k3s }}
-          RUN_CI_RUNNERS: ${{ inputs.ci_runners }}
-          RUN_HOST_NODE: ${{ inputs.host_node }}
-        run: |
-          # Order matters: gateway → monitoring → media → git-k3s → runners
-          # (the runners copy their kubeconfig from k3s). A failed playbook
-          # stops the ones after it. host-node (the Proxmox host, exporters
-          # only) is independent and runs last.
-          play() {
-            if [ "$1" != true ]; then echo "Skipping $2 — no changes for it."; return; fi
-            echo "::group::$2"
-            ansible-playbook -i Ansbile/inventory.ini "Ansbile/$2.yml" --vault-password-file ~/.vault_pass
-            echo "::endgroup::"
-          }
-          play "$RUN_GATEWAY" gateway-server
-          play "$RUN_MONITORING" monitoring-server
-          play "$RUN_MEDIA" media-server
-          play "$RUN_GIT_K3S" git-k3s-server
-          play "$RUN_CI_RUNNERS" ci-runners
-          play "$RUN_HOST_NODE" host-node
+  gateway:
+    name: "Ansible: gateway-server"
+    needs: [gate]
+    # Run when this host changed and nothing before it failed (skipped is fine).
+    if: ${{ !cancelled() && !failure() && inputs.gateway }}
+    runs-on: self-hosted
+    timeout-minutes: 40
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare Ansible
+        uses: ./.github/actions/ansible-prep
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+
+      - name: ansible-playbook gateway-server
+        run: ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --vault-password-file ~/.vault_pass
+
+      - name: Cleanup secrets
+        if: always()
+        uses: ./.github/actions/cleanup-secrets
+
+  monitoring:
+    name: "Ansible: monitoring-server"
+    needs: [gate, gateway]
+    # Run when this host changed and nothing before it failed (skipped is fine).
+    if: ${{ !cancelled() && !failure() && inputs.monitoring }}
+    runs-on: self-hosted
+    timeout-minutes: 40
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare Ansible
+        uses: ./.github/actions/ansible-prep
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+
+      - name: ansible-playbook monitoring-server
+        run: ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml --vault-password-file ~/.vault_pass
+
+      - name: Cleanup secrets
+        if: always()
+        uses: ./.github/actions/cleanup-secrets
+
+  media:
+    name: "Ansible: media-server"
+    needs: [gate, gateway]
+    # Run when this host changed and nothing before it failed (skipped is fine).
+    if: ${{ !cancelled() && !failure() && inputs.media }}
+    runs-on: self-hosted
+    timeout-minutes: 40
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare Ansible
+        uses: ./.github/actions/ansible-prep
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+
+      - name: ansible-playbook media-server
+        run: ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml --vault-password-file ~/.vault_pass
+
+      - name: Cleanup secrets
+        if: always()
+        uses: ./.github/actions/cleanup-secrets
+
+  # The Proxmox host itself (exporters only); independent of the VMs.
+  host_node:
+    name: "Ansible: host-node"
+    needs: [gate, gateway]
+    # Run when this host changed and nothing before it failed (skipped is fine).
+    if: ${{ !cancelled() && !failure() && inputs.host_node }}
+    runs-on: self-hosted
+    timeout-minutes: 40
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare Ansible
+        uses: ./.github/actions/ansible-prep
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+
+      - name: ansible-playbook host-node
+        run: ansible-playbook -i Ansbile/inventory.ini Ansbile/host-node.yml --vault-password-file ~/.vault_pass
+
+      - name: Cleanup secrets
+        if: always()
+        uses: ./.github/actions/cleanup-secrets
+
+  git_k3s:
+    name: "Ansible: git-k3s-server"
+    needs: [gate, gateway, monitoring, media]
+    # Run when this host changed and nothing before it failed (skipped is fine).
+    if: ${{ !cancelled() && !failure() && inputs.git_k3s }}
+    runs-on: self-hosted
+    timeout-minutes: 40
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare Ansible
+        uses: ./.github/actions/ansible-prep
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+
+      - name: ansible-playbook git-k3s-server
+        run: ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml --vault-password-file ~/.vault_pass
+
+      - name: Cleanup secrets
+        if: always()
+        uses: ./.github/actions/cleanup-secrets
+
+  # The runner LXCs copy their kubeconfig from k3s, so after git-k3s.
+  ci_runners:
+    name: "Ansible: ci-runners"
+    needs: [gate, git_k3s]
+    # Run when this host changed and nothing before it failed (skipped is fine).
+    if: ${{ !cancelled() && !failure() && inputs.ci_runners }}
+    runs-on: self-hosted
+    timeout-minutes: 40
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare Ansible
+        uses: ./.github/actions/ansible-prep
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+
+      - name: ansible-playbook ci-runners
+        run: ansible-playbook -i Ansbile/inventory.ini Ansbile/ci-runners.yml --vault-password-file ~/.vault_pass
+
+      - name: Cleanup secrets
+        if: always()
+        uses: ./.github/actions/cleanup-secrets
+
+  finish:
+    name: Unsilence and Cloudflare
+    needs: [gate, gateway, monitoring, media, host_node, git_k3s, ci_runners]
+    if: always() && needs.gate.result == 'success'
+    runs-on: self-hosted
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        if: inputs.cloudflare
+        uses: actions/checkout@v4
 
       - name: Remove the deploy silence
-        if: always() && steps.am_silence.outputs.id != ''
+        if: needs.gate.outputs.silence_id != ''
         continue-on-error: true
-        run: curl -sf -X DELETE "$ALERTMANAGER_URL/api/v2/silence/${{ steps.am_silence.outputs.id }}"
+        run: curl -sf -X DELETE "$ALERTMANAGER_URL/api/v2/silence/${{ needs.gate.outputs.silence_id }}"
 
+      - name: Setup Terraform
+        if: inputs.cloudflare && !contains(needs.*.result, 'failure')
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+          terraform_wrapper: false
+
+      - name: Setup Terraform provider mirror
+        if: inputs.cloudflare && !contains(needs.*.result, 'failure')
+        uses: ./.github/actions/setup-terraform-mirror
 
       # ── Cloudflare (Terraform/cloudflare) ───────────────────────────────────
       # Unlike the Proxmox module, CI applies this one: zone settings and cache
       # rules are safe to reconcile automatically, and dashboard edits get
       # reverted to what is in git. Same destroy/replace guard as the VM plan.
-      # Runs after Ansible so a Cloudflare API problem never blocks a server
-      # deploy (it still fails the job).
+      # Runs after the host jobs so a Cloudflare API problem never blocks a
+      # server deploy (it still fails the run).
       - name: Ensure Terraform state namespace exists
-        if: inputs.cloudflare
+        if: inputs.cloudflare && !contains(needs.*.result, 'failure')
         run: |
           kubectl create namespace terraform --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Cloudflare plan
         id: cf_plan
-        if: inputs.cloudflare
+        if: inputs.cloudflare && !contains(needs.*.result, 'failure')
         working-directory: Terraform/cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DNS_API_TOKEN }}
@@ -300,14 +424,10 @@ jobs:
       # cloudflared (k3s_apps role) reads its connector token from this Secret.
       # Piped so the token never appears in the log or the process list.
       - name: Store Cloudflare Tunnel token for cloudflared
-        if: inputs.cloudflare && github.ref_name == 'main'
+        if: inputs.cloudflare && github.ref_name == 'main' && !contains(needs.*.result, 'failure')
         working-directory: Terraform/cloudflare
         run: |
           terraform output -raw tunnel_token \
             | kubectl -n cloudflared create secret generic cloudflared-token \
                 --from-file=token=/dev/stdin --dry-run=client -o yaml \
             | kubectl apply -f -
-
-      - name: Cleanup secrets
-        if: always()
-        uses: ./.github/actions/cleanup-secrets

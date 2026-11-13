@@ -36,7 +36,7 @@ concurrency:
 jobs:
   changes:
     name: Detect Changed Hosts
-    runs-on: self-hosted
+    runs-on: ubuntu-latest  # git + GitHub API only
     timeout-minutes: 5
     permissions:
       actions: read   # find the last successful run to diff against

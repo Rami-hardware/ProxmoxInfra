@@ -3,14 +3,16 @@
 # Each runner auto-update leaves a full copy of the previous version
 # (bin.<ver>, externals.<ver>, ~700 MB) plus its download in _work/_update.
 set -euo pipefail
-dir={{ ci_runner_dir }}
-live_bin=$(readlink -f "$dir/bin")
-live_ext=$(readlink -f "$dir/externals")
-for d in "$dir"/bin.* "$dir"/externals.*; do
-  [ -d "$d" ] || continue
-  [ "$d" = "$live_bin" ] || [ "$d" = "$live_ext" ] || rm -rf "$d"
+for dir in {{ ci_runner_cleanup_dirs | join(' ') }}; do
+  [ -d "$dir" ] || continue
+  live_bin=$(readlink -f "$dir/bin")
+  live_ext=$(readlink -f "$dir/externals")
+  for d in "$dir"/bin.* "$dir"/externals.*; do
+    [ -d "$d" ] || continue
+    [ "$d" = "$live_bin" ] || [ "$d" = "$live_ext" ] || rm -rf "$d"
+  done
+  rm -rf "$dir/_work/_update" "$dir"/actions-runner-linux-*.tar.gz
 done
-rm -rf "$dir/_work/_update" "$dir"/actions-runner-linux-*.tar.gz
 # Dangling layers from CI image builds.
 docker image prune -f >/dev/null
 apt-get clean
