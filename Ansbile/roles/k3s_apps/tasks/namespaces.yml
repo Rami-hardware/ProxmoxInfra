@@ -1,0 +1,13 @@
+---
+# ── Namespaces ────────────────────────────────────────────────────────────────
+# ArgoCD creates the app namespaces on first sync; create any that are missing
+# so the Istio ambient labels (set after Istio is installed) can always apply.
+- name: Ensure managed namespaces exist
+  ansible.builtin.command:
+    cmd: "k3s kubectl create namespace {{ item }}"
+  register: k3s_apps_ns_create_result
+  loop: "{{ k3s_apps_ambient_namespaces }}"
+  changed_when: k3s_apps_ns_create_result.rc == 0
+  failed_when: >-
+    k3s_apps_ns_create_result.rc != 0
+    and 'AlreadyExists' not in k3s_apps_ns_create_result.stderr

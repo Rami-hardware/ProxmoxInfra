@@ -115,15 +115,40 @@ roles_of() { sed -nE 's/^[[:space:]]*- \{ role: ([a-z0-9_]+),.*/\1/p' "Ansbile/$
 
 host_all() { want[$1]=true; tags[$1]=ALL; }
 
-# Run role $1 on every host whose playbook has it.
+# Run role $1 (or only its tags $2..., default: the whole role) on every
+# host whose playbook has it.
 run_role() {
-  local found=false h
+  local role=$1 found=false h; shift
+  local want_tags=${*:-$role}
   for h in "${hosts[@]}"; do
-    roles_of "$h" | grep -qx "$1" || continue
+    roles_of "$h" | grep -qx "$role" || continue
     found=true; want[$h]=true
-    [ "${tags[$h]:-}" = ALL ] || tags[$h]="${tags[$h]:-} $1"
+    [ "${tags[$h]:-}" = ALL ] || tags[$h]="${tags[$h]:-} $want_tags"
   done
-  $found || all "role $1 is in no playbook (a dependency?)"
+  $found || all "role $role is in no playbook (a dependency?)"
+}
+
+# A role may split its tasks into tasks/<part>.yml, imported in main.yml with
+# `tags: [<role>_<part>]` (k3s_apps does). Print the tags that cover changed
+# file $2 of role $1: its own part for tasks/<part>.yml, or every part that
+# references a template/file by name. Prints the role name (= whole role) for
+# main.yml, defaults, handlers, or anything it can't pin to a part.
+role_parts() {
+  local role=$1 rel=$2 dir="Ansbile/roles/$1" part out="" f
+  part_tag() { grep -qE "^[[:space:]]*tags: \[${role}_$1\]" "$dir/tasks/main.yml" 2>/dev/null && echo "${role}_$1"; }
+  case "$rel" in
+    tasks/main.yml) ;;
+    tasks/*.yml)
+      part=${rel#tasks/}; out=$(part_tag "${part%.yml}") ;;
+    templates/* | files/*)
+      for f in $(grep -lF "$(basename "$rel")" "$dir"/tasks/*.yml 2>/dev/null); do
+        part=$(basename "$f" .yml)
+        [ "$part" = main ] && { out=""; break; }
+        t=$(part_tag "$part") || { out=""; break; }
+        out="$out $t"
+      done ;;
+  esac
+  echo "${out:-$role}"
 }
 
 while IFS= read -r f; do
@@ -131,9 +156,11 @@ while IFS= read -r f; do
     '') ;;
     Ansbile/argocd-apps/*) ;;  # ArgoCD syncs these itself
     Ansbile/roles/*/*)
-      r=${f#Ansbile/roles/}; run_role "${r%%/*}" ;;
-    # The alert-forwarder image, which k3s_apps deploys.
-    Ansbile/apps/*) run_role k3s_apps ;;
+      r=${f#Ansbile/roles/}
+      # shellcheck disable=SC2046  # word-split the tag list on purpose
+      run_role "${r%%/*}" $(role_parts "${r%%/*}" "${r#*/}") ;;
+    # The alert-forwarder image + chart, which k3s_apps deploys.
+    Ansbile/apps/*) run_role k3s_apps k3s_apps_alert_forwarder ;;
     # Only adguard and unbound read the local DNS names.
     Ansbile/group_vars/all/local_dns.yml) run_role adguard; run_role unbound ;;
     Ansbile/*.yml | Ansbile/group_vars/*.yml)

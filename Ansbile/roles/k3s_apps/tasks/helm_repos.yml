@@ -1,0 +1,121 @@
+---
+# ── Helm Repos ────────────────────────────────────────────────────────────────
+# Use a system-wide repo config so all users (root, github, etc.) share the same repos
+- name: Ensure system-wide Helm config directory exists
+  ansible.builtin.file:
+    path: /etc/helm
+    state: directory
+    mode: '0755'
+
+- name: Ensure system-wide Helm cache directory exists
+  ansible.builtin.file:
+    path: /etc/helm/cache
+    state: directory
+    mode: '0755'
+
+# helm-diff lets kubernetes.core.helm compare rendered manifests and skip
+# releases that wouldn't change (they used to upgrade on every deploy).
+# Unpacked from the release tarball (checksum-pinned) instead of
+# `helm plugin install`, which runs the plugin's install script.
+- name: Ensure Helm plugins directory exists
+  ansible.builtin.file:
+    path: "{{ k3s_apps_helm_plugins_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Download helm-diff plugin
+  ansible.builtin.get_url:
+    url: "https://github.com/databus23/helm-diff/releases/download/v{{ k3s_apps_helm_diff_version }}/diff-{{ k3s_apps_helm_diff_version }}-linux-amd64.tgz"
+    dest: "/tmp/helm-diff-{{ k3s_apps_helm_diff_version }}.tgz"
+    checksum: "{{ k3s_apps_helm_diff_checksum }}"
+    mode: '0644'
+
+- name: Install helm-diff plugin
+  ansible.builtin.unarchive:
+    src: "/tmp/helm-diff-{{ k3s_apps_helm_diff_version }}.tgz"
+    dest: "{{ k3s_apps_helm_plugins_dir }}"
+    remote_src: true
+    creates: "{{ k3s_apps_helm_plugins_dir }}/diff/plugin.yaml"
+
+- name: Add ingress-nginx Helm repo
+  ansible.builtin.command:
+    cmd: helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  register: k3s_apps_helm_repo_nginx
+  changed_when: "'already exists' not in k3s_apps_helm_repo_nginx.stdout"
+  failed_when: k3s_apps_helm_repo_nginx.rc != 0 and 'already exists' not in k3s_apps_helm_repo_nginx.stdout
+
+- name: Add cert-manager Helm repo
+  ansible.builtin.command:
+    cmd: helm repo add jetstack https://charts.jetstack.io
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  register: k3s_apps_helm_repo_certmanager
+  changed_when: "'already exists' not in k3s_apps_helm_repo_certmanager.stdout"
+  failed_when: k3s_apps_helm_repo_certmanager.rc != 0 and 'already exists' not in k3s_apps_helm_repo_certmanager.stdout
+
+- name: Add MetalLB Helm repo
+  ansible.builtin.command:
+    cmd: helm repo add metallb https://metallb.github.io/metallb
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  register: k3s_apps_helm_repo_metallb
+  changed_when: "'already exists' not in k3s_apps_helm_repo_metallb.stdout"
+  failed_when: k3s_apps_helm_repo_metallb.rc != 0 and 'already exists' not in k3s_apps_helm_repo_metallb.stdout
+
+- name: Add Argo Helm repo
+  ansible.builtin.command:
+    cmd: helm repo add argo https://argoproj.github.io/argo-helm
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  register: k3s_apps_helm_repo_argo
+  changed_when: "'already exists' not in k3s_apps_helm_repo_argo.stdout"
+  failed_when: k3s_apps_helm_repo_argo.rc != 0 and 'already exists' not in k3s_apps_helm_repo_argo.stdout
+
+- name: Add homarr Helm repo
+  ansible.builtin.command:
+    cmd: helm repo add homarr-labs https://homarr-labs.github.io/charts/
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  register: k3s_apps_helm_repo_homarr
+  changed_when: "'already exists' not in k3s_apps_helm_repo_homarr.stdout"
+  failed_when: k3s_apps_helm_repo_homarr.rc != 0 and 'already exists' not in k3s_apps_helm_repo_homarr.stdout
+
+- name: Ensure Helm repositories file is world-readable
+  ansible.builtin.file:
+    path: /etc/helm/repositories.yaml
+    mode: '0644'
+  failed_when: false
+
+- name: Update Helm repos
+  ansible.builtin.command:
+    cmd: helm repo update
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  changed_when: false
+
+- name: Ensure Helm cache is world-writable
+  ansible.builtin.file:
+    path: /etc/helm/cache
+    state: directory
+    mode: '0777'
+    recurse: true
+
+- name: Ensure K3s manifests directory exists
+  ansible.builtin.file:
+    path: "{{ k3s_apps_manifest_dir }}"
+    state: directory
+    mode: '0755'

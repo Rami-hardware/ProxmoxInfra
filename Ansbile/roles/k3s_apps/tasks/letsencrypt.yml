@@ -1,0 +1,46 @@
+---
+# ── Let's Encrypt wildcard for the public domain ─────────────────────────────
+# One publicly trusted cert, served by ingress-nginx as its default certificate,
+# so the same *.{{ k3s_apps_public_domain }} URL works through Cloudflare (Full
+# strict) and directly on the LAN (split-horizon DNS in the adguard role).
+# DNS-01 via the Cloudflare API with CF_DNS_API_TOKEN (Zone.DNS edit on this
+# zone only — CF_API_TOKEN belongs to the Cloudflare exporter). cert-manager
+# checks propagation against public resolvers only (extraArgs above), since
+# local DNS answers this zone itself.
+- name: Create Cloudflare API token secret for cert-manager
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      k3s kubectl create secret generic cloudflare-api-token \
+        --from-literal=api-token="$CF_DNS_API_TOKEN" \
+        --namespace=cert-manager \
+        --dry-run=client -o yaml | k3s kubectl apply -f -
+    executable: /bin/bash
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    CF_DNS_API_TOKEN: "{{ lookup('env', 'CF_DNS_API_TOKEN') }}"
+  no_log: true
+  changed_when: true
+
+- name: Template Let's Encrypt issuer and wildcard certificate
+  ansible.builtin.template:
+    src: letsencrypt-wildcard.yml.j2
+    dest: "{{ k3s_apps_manifest_dir }}/letsencrypt-wildcard.yml"
+    mode: '0644'
+
+- name: Apply Let's Encrypt issuer and wildcard certificate
+  ansible.builtin.command:
+    cmd: "k3s kubectl apply -f {{ k3s_apps_manifest_dir }}/letsencrypt-wildcard.yml"
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+
+# DNS-01 takes 1-3 minutes on first issue; renewals happen in place.
+- name: Wait for the wildcard certificate to be issued
+  ansible.builtin.command:
+    cmd: >
+      k3s kubectl wait certificate/{{ k3s_apps_public_cert_name }}
+      -n ingress-nginx --for=condition=Ready --timeout=600s
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: false

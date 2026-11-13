@@ -1,0 +1,103 @@
+---
+# ── Istio ambient data plane ─────────────────────────────────────────────────
+# Ambient replaces per-pod sidecars with one ztunnel per node (L4 + mTLS) and
+# an optional per-namespace waypoint proxy (L7 metrics and traces).
+# global.platform=k3s points istio-cni at k3s's CNI dirs
+# (/var/lib/rancher/k3s/agent/etc/cni/net.d, /var/lib/rancher/k3s/data/cni).
+- name: Download Gateway API CRDs (needed for waypoints)
+  ansible.builtin.get_url:
+    url: "https://github.com/kubernetes-sigs/gateway-api/releases/download/{{ k3s_apps_gateway_api_version }}/standard-install.yaml"
+    dest: "{{ k3s_apps_manifest_dir }}/gateway-api-crds.yml"
+    mode: '0644'
+    timeout: 60
+  register: k3s_apps_gateway_api_download
+  retries: 3
+  delay: 10
+  until: k3s_apps_gateway_api_download is succeeded
+
+- name: Apply Gateway API CRDs
+  ansible.builtin.command:
+    cmd: k3s kubectl apply --server-side --force-conflicts -f {{ k3s_apps_manifest_dir }}/gateway-api-crds.yml
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+
+- name: Deploy istio-cni via Helm
+  kubernetes.core.helm:
+    name: istio-cni
+    chart_ref: istio/cni
+    chart_version: "{{ k3s_apps_istio_version }}"
+    release_namespace: istio-system
+    release_values:
+      profile: ambient
+      global:
+        platform: k3s
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+    update_repo_cache: false
+    wait: true
+    wait_timeout: 5m
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+  environment:
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+    HELM_PLUGINS: "{{ k3s_apps_helm_plugins_dir }}"
+
+- name: Deploy ztunnel via Helm
+  kubernetes.core.helm:
+    name: ztunnel
+    chart_ref: istio/ztunnel
+    chart_version: "{{ k3s_apps_istio_version }}"
+    release_namespace: istio-system
+    release_values:
+      profile: ambient
+      global:
+        platform: k3s
+      resources:
+        requests:
+          cpu: 20m
+          memory: 48Mi
+    update_repo_cache: false
+    wait: true
+    wait_timeout: 5m
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+  environment:
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+    HELM_PLUGINS: "{{ k3s_apps_helm_plugins_dir }}"
+
+# Pods move to ambient when they restart; running sidecar pods keep working
+# alongside them until then.
+- name: Enroll managed namespaces in Istio ambient mode
+  ansible.builtin.command:
+    cmd: >
+      k3s kubectl label namespace {{ item }}
+      istio.io/dataplane-mode=ambient istio-injection-
+      --overwrite
+  loop: "{{ k3s_apps_ambient_namespaces }}"
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+
+- name: Template waypoint proxies
+  ansible.builtin.template:
+    src: istio-waypoints.yml.j2
+    dest: "{{ k3s_apps_manifest_dir }}/istio-waypoints.yml"
+    mode: '0644'
+
+- name: Apply waypoint proxies
+  ansible.builtin.command:
+    cmd: k3s kubectl apply -f {{ k3s_apps_manifest_dir }}/istio-waypoints.yml
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+
+- name: Route namespace Service traffic through its waypoint
+  ansible.builtin.command:
+    cmd: "k3s kubectl label namespace {{ item }} istio.io/use-waypoint=waypoint --overwrite"
+  loop: "{{ k3s_apps_waypoint_namespaces }}"
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true

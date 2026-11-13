@@ -1,0 +1,30 @@
+---
+# ── ingress-nginx via Helm ────────────────────────────────────────────────────
+- name: Template ingress-nginx Helm values
+  ansible.builtin.template:
+    src: ingress-nginx-values.yml.j2
+    dest: /tmp/ingress-nginx-values.yml
+    mode: '0600'
+
+- name: Deploy ingress-nginx via Helm
+  kubernetes.core.helm:
+    name: ingress-nginx
+    chart_ref: ingress-nginx/ingress-nginx
+    chart_version: "{{ k3s_apps_ingress_nginx_chart_version }}"
+    release_namespace: ingress-nginx
+    create_namespace: true
+    values_files:
+      - /tmp/ingress-nginx-values.yml
+    update_repo_cache: false
+    wait: true
+    wait_timeout: 5m
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+  environment:
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+    HELM_PLUGINS: "{{ k3s_apps_helm_plugins_dir }}"
+
+- name: Remove ingress-nginx values tempfile
+  ansible.builtin.file:
+    path: /tmp/ingress-nginx-values.yml
+    state: absent

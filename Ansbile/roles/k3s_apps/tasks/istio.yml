@@ -1,0 +1,37 @@
+---
+# ── Istio service mesh via Helm ───────────────────────────────────────────────
+- name: Add Istio Helm repo
+  ansible.builtin.command:
+    cmd: helm repo add istio https://istio-release.storage.googleapis.com/charts
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  register: k3s_apps_helm_repo_istio
+  changed_when: "'already exists' not in k3s_apps_helm_repo_istio.stdout"
+  failed_when: k3s_apps_helm_repo_istio.rc != 0 and 'already exists' not in k3s_apps_helm_repo_istio.stdout
+
+- name: Update Helm repos (Istio)
+  ansible.builtin.command:
+    cmd: helm repo update
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+  changed_when: false
+
+- name: Deploy Istio base (CRDs) via Helm
+  kubernetes.core.helm:
+    name: istio-base
+    chart_ref: istio/base
+    chart_version: "{{ k3s_apps_istio_version }}"
+    release_namespace: istio-system
+    create_namespace: true
+    update_repo_cache: false
+    wait: true
+    wait_timeout: 5m
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+  environment:
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+    HELM_PLUGINS: "{{ k3s_apps_helm_plugins_dir }}"

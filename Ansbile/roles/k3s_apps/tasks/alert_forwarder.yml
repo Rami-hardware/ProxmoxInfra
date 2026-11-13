@@ -1,0 +1,31 @@
+---
+# ── alert-forwarder via Helm ──────────────────────────────────────────────────
+# Helm runs on the server, so the chart is copied there from the checkout.
+# copy never deletes: a template removed from the chart stays on the server
+# (and in the release) until it's deleted from /opt/k3s/charts by hand.
+- name: Copy the alert-forwarder chart to the server
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/apps/alert-forwarder/chart/"
+    dest: "{{ k3s_apps_chart_dir }}/alert-forwarder/"
+    mode: preserve
+    directory_mode: '0755'
+
+- name: Deploy alert-forwarder via Helm
+  kubernetes.core.helm:
+    name: alert-forwarder
+    chart_ref: "{{ k3s_apps_chart_dir }}/alert-forwarder"
+    release_namespace: monitoring
+    create_namespace: true
+    release_values:
+      image:
+        tag: "{{ k3s_apps_alert_forwarder_image_tag }}"
+      discordWebhookUrl: "{{ lookup('env', 'DISCORD_WEBHOOK_URL') }}"
+    update_repo_cache: false
+    wait: true
+    wait_timeout: 5m
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+  environment:
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+    HELM_PLUGINS: "{{ k3s_apps_helm_plugins_dir }}"
+  no_log: true
