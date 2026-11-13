@@ -45,13 +45,13 @@
     group: "{{ ci_runner_inst_user }}"
     mode: '0700'
 
+# No owner/group here: the file module follows the link and would chown the
+# shared kubeconfig itself to this instance's user (locking the others out).
 - name: Point ~/.kube/config at the shared kubeconfig
   ansible.builtin.file:
     src: /etc/rancher/k3s/k3s.yaml
     dest: "/home/{{ ci_runner_inst_user }}/.kube/config"
     state: link
-    owner: "{{ ci_runner_inst_user }}"
-    group: "{{ ci_runner_inst_user }}"
     force: true
 
 - name: Check whether the runner is registered
