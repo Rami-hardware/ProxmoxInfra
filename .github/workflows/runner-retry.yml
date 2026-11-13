@@ -1,0 +1,50 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+# Re-runs the failed jobs of a pipeline run once when a job failed because
+# its self-hosted runner died (LXC/VM restart, OOM, network loss) — not for
+# real failures. Only the first attempt is retried. On main the re-run waits
+# for the Production approval again.
+name: Retry on runner loss
+
+on:
+  workflow_run:
+    workflows: [Homelab CI/CD]
+    types: [completed]
+
+permissions:
+  actions: write  # re-run
+  checks: read    # job annotations
+
+jobs:
+  retry:
+    name: Retry jobs lost with their runner
+    if: >-
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.run_attempt == 1 &&
+      github.event.workflow_run.event != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Re-run failed jobs if a runner was lost
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          WEBHOOK: ${{ secrets.DISCORD_CD_ALERT_URL }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          lost=""
+          for job in $(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs?per_page=100" \
+              -q '.jobs[] | select(.conclusion == "failure") | .id'); do
+            if gh api "repos/$GITHUB_REPOSITORY/check-runs/$job/annotations" -q '.[].message' \
+                | grep -qE 'lost communication with the server|runner has received a shutdown signal'; then
+              lost="$lost $(gh api "repos/$GITHUB_REPOSITORY/actions/jobs/$job" -q '"\(.name) (\(.runner_name // "?"))"');"
+            fi
+          done
+          if [ -z "$lost" ]; then
+            echo "No job failed from a lost runner — not retrying."
+            exit 0
+          fi
+          echo "Lost with their runner:$lost"
+          gh run rerun "$RUN_ID" --failed --repo "$GITHUB_REPOSITORY"
+          jq -n --arg d "Runner lost:$lost Re-running the failed jobs once." --arg u "$RUN_URL" \
+            '{embeds: [{title: "🔁 CI job retried (runner lost)", description: $d, color: 15844367, url: $u}]}' \
+            | curl -sS -f -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK"

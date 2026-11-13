@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
-# Decide which Ansible playbooks this CI run must apply, and write
-# gateway/monitoring/media/git_k3s=true|false to $GITHUB_OUTPUT.
+# Decide which playbooks — and which roles inside them — this CI run must
+# apply. Writes <host>=true|false and <host>_tags=<comma list> to
+# $GITHUB_OUTPUT; an empty <host>_tags means the whole playbook.
 #
-# A full redeploy CPU-starves the Proxmox host (Envoy watchdog / ingress 5xx
-# alerts), so a push only re-runs the playbooks whose files changed. Anything
-# not clearly owned by one host runs all four — an extra deploy is cheap, a
+# A changed file under roles/<r>/ runs only role r (ansible-playbook --tags r;
+# every playbook tags each role with its own name) on every host whose
+# playbook lists it — read from the playbooks, so there is no list to keep in
+# sync. A host's playbook or group_vars runs that whole host. Anything not
+# clearly owned by a role or host runs everything: an extra deploy is cheap, a
 # skipped one leaves a host out of date.
+#
+# Also writes lint_paths (the roles/playbooks/vars files ansible-lint checks:
+# only what changed, or Ansbile/ when everything runs) and syntax_playbooks
+# (the playbooks of the hosts that deploy).
 #
 # The diff base is the last commit that passed the whole pipeline on this
 # branch, not github.event.before: the concurrency group drops queued runs, so
@@ -24,24 +31,61 @@ set -euo pipefail
 # full runs, and state-only commits plan and report, but never apply.
 declare -A want=([gateway]=false [monitoring]=false [media]=false [git_k3s]=false [ci_runners]=false [host_node]=false [terraform]=false [terraform_apply]=false [cloudflare]=false)
 
+hosts=(gateway monitoring media git_k3s ci_runners host_node)
+# Playbook and group_vars file per host.
+declare -A playbook=([gateway]=gateway-server [monitoring]=monitoring-server [media]=media-server
+                     [git_k3s]=git-k3s-server [ci_runners]=ci-runners [host_node]=host-node)
+declare -A hostvars_file=([gateway]=gateway-vm [monitoring]=monitoring-vm [media]=media-vm
+                          [git_k3s]=git-k3s-server-vm [ci_runners]=ci-runner-lxc [host_node]=host-node)
+# Roles to run per host: ALL = the whole playbook, else a space list.
+declare -A tags=()
+# Ansible paths ansible-lint checks (keys; ALL = the whole Ansbile/ tree).
+declare -A lint=()
+
+# Comma list for --tags, or empty for the whole playbook.
+tag_list() {
+  [ "${tags[$1]:-}" = ALL ] && return
+  tr ' ' '\n' <<< "${tags[$1]:-}" | sed '/^$/d' | sort -u | paste -sd, -
+}
+
 finish() {
   echo "Reason: $1"
+  local lint_paths="" syntax=""
+  if [ -n "${lint[ALL]:-}" ]; then lint_paths=Ansbile/
+  else
+    # Existing paths only: a deleted role or playbook has nothing to lint.
+    for p in "${!lint[@]}"; do [ -e "$p" ] && lint_paths="$lint_paths $p"; done
+    lint_paths=$(tr ' ' '\n' <<< "$lint_paths" | sed '/^$/d' | sort | paste -sd' ' -)
+  fi
+  for h in "${hosts[@]}"; do ${want[$h]} && syntax="$syntax Ansbile/${playbook[$h]}.yml"; done
   {
-    for h in gateway monitoring media git_k3s ci_runners host_node terraform terraform_apply cloudflare; do echo "$h=${want[$h]}"; done
+    for h in "${hosts[@]}"; do echo "$h=${want[$h]}"; echo "${h}_tags=$(tag_list "$h")"; done
+    for h in terraform terraform_apply cloudflare; do echo "$h=${want[$h]}"; done
+    echo "lint_paths=$lint_paths"
+    echo "syntax_playbooks=${syntax# }"
   } >> "$GITHUB_OUTPUT"
   {
     echo "### Deploy targets"
     echo "$1"
     echo
-    for h in gateway monitoring media git_k3s ci_runners host_node terraform terraform_apply cloudflare; do echo "- \`$h\`: ${want[$h]}"; done
+    for h in "${hosts[@]}"; do
+      if ! ${want[$h]}; then echo "- \`$h\`: —"
+      elif [ -z "$(tag_list "$h")" ]; then echo "- \`$h\`: **whole playbook**"
+      else echo "- \`$h\`: roles \`$(tag_list "$h")\`"; fi
+    done
+    for h in terraform terraform_apply cloudflare; do echo "- \`$h\`: ${want[$h]}"; done
+    echo "- ansible-lint: \`${lint_paths:-—}\`"
   } >> "$GITHUB_STEP_SUMMARY"
   exit 0
 }
 
 all() {
-  # Everything is planned and deployed, but nothing is applied to Proxmox:
-  # "deploy everything" is not a Terraform code change.
+  # Everything is planned and deployed. terraform_apply keeps its own value:
+  # "deploy everything" is not a Terraform code change, but a shared-file
+  # change in the same diff must not hide one (set below, before the loop).
   for h in "${!want[@]}"; do [ "$h" = terraform_apply ] || want[$h]=true; done
+  for h in "${hosts[@]}"; do tags[$h]=ALL; done
+  lint[ALL]=1
   finish "$1"
 }
 
@@ -80,47 +124,79 @@ if [ "$GITHUB_REF_NAME" = main ]; then
   done
 fi
 
-# Role lists mirror the playbooks. A role missing here falls through to the
-# Ansbile/* catch-all and deploys every host, so forgetting to update this is
-# safe, just slower. `common` is in every playbook, hence the catch-all.
+# Decided over the whole diff first: the loop below may stop early at a
+# shared file (all) before it reaches the Terraform paths.
+grep -qE '^Terraform/([^/]+\.(tf|tfvars)|modules/.+)$' <<< "$changed" && want[terraform_apply]=true
+
+# Roles a host's playbook runs (each listed as `- { role: x, tags: [x] }`).
+roles_of() { sed -nE 's/^[[:space:]]*- \{ role: ([a-z0-9_]+),.*/\1/p' "Ansbile/${playbook[$1]}.yml"; }
+
+host_all() { want[$1]=true; tags[$1]=ALL; }
+
+# Run role $1 (or only its tags $2..., default: the whole role) on every
+# host whose playbook has it.
+run_role() {
+  local role=$1 found=false h; shift
+  local want_tags=${*:-$role}
+  lint[Ansbile/roles/$role]=1
+  for h in "${hosts[@]}"; do
+    roles_of "$h" | grep -qx "$role" || continue
+    found=true; want[$h]=true
+    [ "${tags[$h]:-}" = ALL ] || tags[$h]="${tags[$h]:-} $want_tags"
+  done
+  $found || all "role $role is in no playbook (a dependency?)"
+}
+
+# A role may split its tasks into tasks/<part>.yml, imported in main.yml with
+# `tags: [<role>_<part>]` (k3s_apps does). Print the tags that cover changed
+# file $2 of role $1: its own part for tasks/<part>.yml, or every part that
+# references a template/file by name. Prints the role name (= whole role) for
+# main.yml, defaults, handlers, or anything it can't pin to a part.
+role_parts() {
+  local role=$1 rel=$2 dir="Ansbile/roles/$1" part out="" f
+  part_tag() { grep -qE "^[[:space:]]*tags: \[${role}_$1\]" "$dir/tasks/main.yml" 2>/dev/null && echo "${role}_$1"; }
+  case "$rel" in
+    tasks/main.yml) ;;
+    tasks/*.yml)
+      part=${rel#tasks/}; out=$(part_tag "${part%.yml}") ;;
+    templates/* | files/*)
+      for f in $(grep -lF "$(basename "$rel")" "$dir"/tasks/*.yml 2>/dev/null); do
+        part=$(basename "$f" .yml)
+        [ "$part" = main ] && { out=""; break; }
+        t=$(part_tag "$part") || { out=""; break; }
+        out="$out $t"
+      done ;;
+  esac
+  echo "${out:-$role}"
+}
+
 while IFS= read -r f; do
   case "$f" in
     '') ;;
     Ansbile/argocd-apps/*) ;;  # ArgoCD syncs these itself
-    Ansbile/gateway-server.yml | Ansbile/group_vars/gateway-vm.yml | \
-    Ansbile/roles/adguard/* | Ansbile/roles/nginx_config/* | Ansbile/roles/ufw/*)
-      want[gateway]=true ;;
-    Ansbile/monitoring-server.yml | Ansbile/group_vars/monitoring-vm.yml | \
-    Ansbile/roles/unbound/* | Ansbile/roles/prometheus/* | Ansbile/roles/loki/* | \
-    Ansbile/roles/alertmanager/* | Ansbile/roles/grafana/*)
-      want[monitoring]=true ;;
-    Ansbile/media-server.yml | Ansbile/group_vars/media-vm.yml | \
-    Ansbile/roles/intel_arc/* | Ansbile/roles/scraparr/*)
-      want[media]=true ;;
-    # Shared by the k3s server (hand-installed runner) and the runner LXCs.
-    Ansbile/roles/docker_setup/* | Ansbile/roles/ci_runner/*)
-      want[git_k3s]=true; want[ci_runners]=true ;;
-    # Ansbile/apps/ is the alert-forwarder image, which k3s_apps deploys.
-    Ansbile/git-k3s-server.yml | Ansbile/group_vars/git-k3s-server-vm.yml | \
-    Ansbile/roles/dns/* | Ansbile/roles/k3s_server/* | Ansbile/roles/k3s_apps/* | Ansbile/apps/*)
-      want[git_k3s]=true ;;
-    Ansbile/ci-runners.yml | Ansbile/group_vars/ci-runner-lxc.yml)
-      want[ci_runners]=true ;;
-    Ansbile/host-node.yml | Ansbile/group_vars/host-node.yml | \
-    Ansbile/roles/proxmox_exporters/*)
-      want[host_node]=true ;;
-    # Shared Ansible files (common role, group_vars/all, inventory, collections)
-    # and the pipeline itself.
+    Ansbile/roles/*/*)
+      r=${f#Ansbile/roles/}
+      # shellcheck disable=SC2046  # word-split the tag list on purpose
+      run_role "${r%%/*}" $(role_parts "${r%%/*}" "${r#*/}") ;;
+    # The alert-forwarder image + chart, which k3s_apps deploys.
+    Ansbile/apps/*) run_role k3s_apps k3s_apps_alert_forwarder ;;
+    # Only adguard and unbound read the local DNS names.
+    Ansbile/group_vars/all/local_dns.yml) lint[$f]=1; run_role adguard; run_role unbound ;;
+    Ansbile/*.yml | Ansbile/group_vars/*.yml)
+      matched=false
+      for h in "${hosts[@]}"; do
+        if [ "$f" = "Ansbile/${playbook[$h]}.yml" ] || [ "$f" = "Ansbile/group_vars/${hostvars_file[$h]}.yml" ]; then
+          host_all "$h"; matched=true; lint[$f]=1
+        fi
+      done
+      $matched || all "shared file changed: $f" ;;
+    # Shared Ansible files (vault, inventory, collections) and the pipeline.
     Ansbile/* | .github/*)
       all "shared file changed: $f" ;;
     Terraform/cloudflare/*) want[cloudflare]=true ;;
-    # Written by tf_apply / hand applies: worth a plan, not an apply.
-    Terraform/terraform.tfstate*) want[terraform]=true ;;
-    Terraform/*.tf | Terraform/*.tfvars | Terraform/modules/*)
-      want[terraform]=true; want[terraform_apply]=true ;;
     Terraform/*) want[terraform]=true ;;
     *) ;;  # docs, tools: nothing to deploy
   esac
 done <<< "$changed"
 
-finish "only playbooks whose files changed since $base"
+finish "only roles/playbooks whose files changed since $base"

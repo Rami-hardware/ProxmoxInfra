@@ -14,6 +14,7 @@ Every alert annotation links here. One runbook per alert family.
 | [argocd-alertmanager.md](argocd-alertmanager.md) | GitOps + notification path |
 | [exporters.md](exporters.md) | SMART, ZFS, scraparr, qBittorrent, Intel GPU, cert-manager |
 | [slo.md](slo.md) | SLO burn alerts and the error budget |
+| [ci-runners.md](ci-runners.md) | GitHub Actions runners: offline, lost jobs (Discord, not Prometheus) |
 
 Conventions: diagnosis commands first, then fixes, then escalation. If a fix
 isn't written here yet, add it after the incident — the runbook is the memory.

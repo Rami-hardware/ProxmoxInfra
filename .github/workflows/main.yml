@@ -48,9 +48,17 @@ jobs:
       git_k3s: ${{ steps.detect.outputs.git_k3s }}
       ci_runners: ${{ steps.detect.outputs.ci_runners }}
       host_node: ${{ steps.detect.outputs.host_node }}
+      gateway_tags: ${{ steps.detect.outputs.gateway_tags }}
+      monitoring_tags: ${{ steps.detect.outputs.monitoring_tags }}
+      media_tags: ${{ steps.detect.outputs.media_tags }}
+      git_k3s_tags: ${{ steps.detect.outputs.git_k3s_tags }}
+      ci_runners_tags: ${{ steps.detect.outputs.ci_runners_tags }}
+      host_node_tags: ${{ steps.detect.outputs.host_node_tags }}
       terraform: ${{ steps.detect.outputs.terraform }}
       terraform_apply: ${{ steps.detect.outputs.terraform_apply }}
       cloudflare: ${{ steps.detect.outputs.cloudflare }}
+      lint_paths: ${{ steps.detect.outputs.lint_paths }}
+      syntax_playbooks: ${{ steps.detect.outputs.syntax_playbooks }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -102,12 +110,17 @@ jobs:
 
   testing:
     name: Testing Infrastructure Code
-    needs: [changes, build-image]
+    # Not after build-image: tests don't use the image, so they start as soon
+    # as the changes are known (Deploy still waits for both).
+    needs: [changes]
     uses: ./.github/workflows/testing.yml
     with:
       gateway: ${{ needs.changes.outputs.gateway == 'true' }}
+      gateway_tags: ${{ needs.changes.outputs.gateway_tags }}
       terraform: ${{ needs.changes.outputs.terraform == 'true' }}
       cloudflare: ${{ needs.changes.outputs.cloudflare == 'true' }}
+      lint_paths: ${{ needs.changes.outputs.lint_paths }}
+      syntax_playbooks: ${{ needs.changes.outputs.syntax_playbooks }}
     secrets:
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
@@ -145,6 +158,13 @@ jobs:
       terraform_apply: ${{ needs.changes.outputs.terraform_apply == 'true' }}
       cloudflare: ${{ needs.changes.outputs.cloudflare == 'true' }}
       host_node: ${{ needs.changes.outputs.host_node == 'true' }}
+      # Roles to run per host (--tags); empty = the whole playbook.
+      gateway_tags: ${{ needs.changes.outputs.gateway_tags }}
+      monitoring_tags: ${{ needs.changes.outputs.monitoring_tags }}
+      media_tags: ${{ needs.changes.outputs.media_tags }}
+      git_k3s_tags: ${{ needs.changes.outputs.git_k3s_tags }}
+      ci_runners_tags: ${{ needs.changes.outputs.ci_runners_tags }}
+      host_node_tags: ${{ needs.changes.outputs.host_node_tags }}
     secrets:
       PM_API_URL: ${{ secrets.PM_API_URL }}
       PM_API_TOKEN: ${{ secrets.PM_API_TOKEN }}

@@ -1,0 +1,35 @@
+---
+# ── ArgoCD via Helm ────────────────────────────────────────────────────────────
+# NodePort exposes argocd-server so the gateway's nginx (nginx_services_local
+# in group_vars/gateway-vm.yml) can proxy argocd.homelab.lan to it, same
+# pattern as grafana/prometheus/tempo. Uses a values file rather than --set
+# strings because the RBAC policy.csv value contains commas, which Helm's
+# --set/--set-string parser treats as field separators.
+- name: Template ArgoCD Helm values
+  ansible.builtin.template:
+    src: argocd-values.yml.j2
+    dest: /tmp/argocd-values.yml
+    mode: '0600'
+
+- name: Deploy ArgoCD via Helm
+  kubernetes.core.helm:
+    name: argocd
+    chart_ref: argo/argo-cd
+    chart_version: "{{ k3s_apps_argocd_chart_version }}"
+    release_namespace: argocd
+    create_namespace: true
+    values_files:
+      - /tmp/argocd-values.yml
+    update_repo_cache: false
+    wait: true
+    wait_timeout: 5m
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+  environment:
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+    HELM_PLUGINS: "{{ k3s_apps_helm_plugins_dir }}"
+
+- name: Remove ArgoCD values tempfile
+  ansible.builtin.file:
+    path: /tmp/argocd-values.yml
+    state: absent

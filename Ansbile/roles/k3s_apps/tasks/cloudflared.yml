@@ -1,0 +1,14 @@
+---
+# ── Cloudflare Tunnel connector ──────────────────────────────────────────────
+- name: Template cloudflared manifest
+  ansible.builtin.template:
+    src: cloudflared.yml.j2
+    dest: "{{ k3s_apps_manifest_dir }}/cloudflared.yml"
+    mode: '0644'
+
+- name: Apply cloudflared manifest
+  ansible.builtin.command:
+    cmd: k3s kubectl apply -f {{ k3s_apps_manifest_dir }}/cloudflared.yml
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true

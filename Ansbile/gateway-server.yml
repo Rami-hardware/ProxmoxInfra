@@ -3,8 +3,8 @@
   hosts: gateway-server
   become: true
   roles:
-    - common
-    - adguard
-    - nginx_config
-    - ufw
-    - k3s_agent
+    - { role: common, tags: [common] }
+    - { role: adguard, tags: [adguard] }
+    - { role: nginx_config, tags: [nginx_config] }
+    - { role: ufw, tags: [ufw] }
+    - { role: k3s_agent, tags: [k3s_agent] }

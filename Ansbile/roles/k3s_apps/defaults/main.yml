@@ -1,5 +1,7 @@
 ---
 k3s_apps_manifest_dir: /opt/k3s/manifests
+# Local charts (alert-forwarder) copied from the CI checkout for Helm.
+k3s_apps_chart_dir: /opt/k3s/charts
 k3s_apps_falco_config_dir: /opt/falco
 k3s_apps_metallb_ip_range: "192.168.10.210-192.168.10.220"
 k3s_apps_ingress_nginx_ip: "192.168.10.210"

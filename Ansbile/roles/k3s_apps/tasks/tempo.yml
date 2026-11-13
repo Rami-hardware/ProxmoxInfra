@@ -1,0 +1,59 @@
+---
+# ── Tempo (tracing backend) ───────────────────────────────────────────────────
+- name: Template Tempo manifest
+  ansible.builtin.template:
+    src: tempo.yml.j2
+    dest: "{{ k3s_apps_manifest_dir }}/tempo.yml"
+    mode: '0644'
+
+- name: Apply Tempo manifest
+  ansible.builtin.command:
+    cmd: "k3s kubectl apply --server-side --force-conflicts -f {{ k3s_apps_manifest_dir }}/tempo.yml"
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+
+- name: Wait for Tempo deployment to be ready
+  ansible.builtin.command:
+    cmd: "k3s kubectl rollout status deployment/tempo -n istio-system --timeout=120s"
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: false
+
+- name: Deploy Istiod via Helm
+  kubernetes.core.helm:
+    name: istiod
+    chart_ref: istio/istiod
+    chart_version: "{{ k3s_apps_istio_version }}"
+    release_namespace: istio-system
+    release_values:
+      profile: ambient
+      nodeSelector:
+        kubernetes.io/hostname: git-k3s-server
+      global:
+        proxy:
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      meshConfig:
+        enablePrometheusMerge: true
+        enableTracing: true
+        accessLogFile: /dev/stdout
+        accessLogEncoding: JSON
+        defaultConfig:
+          tracing:
+            sampling: 100
+            zipkin:
+              address: tempo.istio-system.svc.cluster.local:9411
+    update_repo_cache: false
+    wait: true
+    wait_timeout: 5m
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+  environment:
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+    HELM_PLUGINS: "{{ k3s_apps_helm_plugins_dir }}"

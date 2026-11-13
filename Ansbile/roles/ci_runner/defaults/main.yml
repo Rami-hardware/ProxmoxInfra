@@ -14,6 +14,9 @@ ci_runner_group: ci-runners
 ci_runner_inst_user: "runner-{{ ci_runner_instance }}"
 ci_runner_inst_dir: "/home/runner-{{ ci_runner_instance }}/actions-runner"
 ci_runner_inst_name: "{{ inventory_hostname }}-{{ ci_runner_instance }}"
+# Copies of .github/scripts/{setup-ansible-venv,seed-terraform-mirror}.sh and
+# ci-requirements.txt, used to pre-warm each instance's caches.
+ci_runner_prewarm_dir: /usr/local/lib/ci-runner
 # Directories the weekly cleanup timer tidies.
 ci_runner_cleanup_dirs: >-
   {{ (ci_runner_instances | map('regex_replace', '^', '/home/runner-') | map('regex_replace', '$', '/actions-runner') | list)

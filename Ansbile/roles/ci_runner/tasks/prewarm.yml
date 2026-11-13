@@ -1,0 +1,19 @@
+---
+# Build this instance's caches now, so its first CI job doesn't spend minutes
+# on pip and provider downloads. Same scripts the CI actions run, as the
+# runner user, so the paths and cache keys match exactly.
+- name: "Pre-warm the Ansible virtualenv for {{ ci_runner_inst_user }}"
+  ansible.builtin.command:
+    cmd: "{{ ci_runner_prewarm_dir }}/setup-ansible-venv.sh {{ ci_runner_prewarm_dir }}/ci-requirements.txt"
+  become: true
+  become_user: "{{ ci_runner_inst_user }}"
+  register: ci_runner_prewarm_venv
+  changed_when: "'Building' in ci_runner_prewarm_venv.stderr"
+
+- name: "Pre-warm the Terraform provider mirror for {{ ci_runner_inst_user }}"
+  ansible.builtin.command:
+    cmd: "{{ ci_runner_prewarm_dir }}/seed-terraform-mirror.sh"
+  become: true
+  become_user: "{{ ci_runner_inst_user }}"
+  register: ci_runner_prewarm_tf
+  changed_when: "'Downloading' in ci_runner_prewarm_tf.stdout"

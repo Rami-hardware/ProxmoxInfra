@@ -1,0 +1,55 @@
+---
+# ── cert-manager via Helm ────────────────────────────────────────────────────
+- name: Deploy cert-manager via Helm
+  kubernetes.core.helm:
+    name: cert-manager
+    chart_ref: jetstack/cert-manager
+    chart_version: "{{ k3s_apps_cert_manager_chart_version }}"
+    release_namespace: cert-manager
+    create_namespace: true
+    release_values:
+      crds:
+        enabled: true
+      extraArgs:
+        - --dns01-recursive-nameservers-only
+        - --dns01-recursive-nameservers=1.1.1.1:53,8.8.8.8:53
+    update_repo_cache: false
+    wait: true
+    wait_timeout: 5m
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+  environment:
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+    HELM_PLUGINS: "{{ k3s_apps_helm_plugins_dir }}"
+
+- name: Create cert-manager CA secret from local CA
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      k3s kubectl create secret tls homelab-ca-secret \
+        --cert=/opt/k3s/local-tls/ca.crt \
+        --key=/opt/k3s/local-tls/ca.key \
+        --namespace=cert-manager \
+        --dry-run=client -o yaml | k3s kubectl apply -f -
+    executable: /bin/bash
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+
+- name: Template cert-manager ClusterIssuer
+  ansible.builtin.template:
+    src: cert-manager-issuer.yml.j2
+    dest: /tmp/cert-manager-issuer.yml
+    mode: '0600'
+
+- name: Apply cert-manager ClusterIssuer
+  ansible.builtin.command:
+    cmd: k3s kubectl apply -f /tmp/cert-manager-issuer.yml
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+
+- name: Remove cert-manager issuer tempfile
+  ansible.builtin.file:
+    path: /tmp/cert-manager-issuer.yml
+    state: absent

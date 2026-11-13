@@ -1,0 +1,106 @@
+---
+# ── ArgoCD Image Updater ──────────────────────────────────────────────────────
+# Watches image digests on :latest tags and commits the resolved digest back
+# into argocd-apps/*.yaml so ArgoCD redeploys — the SSH key here is the same
+# one Ansible uses to log into the VMs, registered separately as a GitHub
+# Deploy Key (write access) so it can also push commits to this repo.
+- name: Deploy ArgoCD Image Updater via Helm
+  # Pinned to the last chart release before the app switched from
+  # annotation-driven config (Application annotations, what we use below)
+  # to the CRD-based model in v1.0.0+ (argoproj-labs/argocd-image-updater#1170).
+  kubernetes.core.helm:
+    name: argocd-image-updater
+    chart_ref: argo/argocd-image-updater
+    chart_version: "0.8.5"
+    release_namespace: argocd
+    create_namespace: true
+    update_repo_cache: false
+    wait: true
+    wait_timeout: 5m
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+  environment:
+    HELM_REPOSITORY_CONFIG: /etc/helm/repositories.yaml
+    HELM_REPOSITORY_CACHE: /etc/helm/cache
+    HELM_PLUGINS: "{{ k3s_apps_helm_plugins_dir }}"
+
+- name: Read controller SSH private key
+  ansible.builtin.set_fact:
+    k3s_apps_git_ssh_key: "{{ lookup('file', '~/.ssh/id_rsa') }}"
+  no_log: true
+  delegate_to: localhost
+
+- name: Template git SSH secret manifest for Image Updater
+  ansible.builtin.template:
+    src: image-updater-git-secret.yml.j2
+    dest: /tmp/image-updater-git-secret.yml
+    mode: '0600'
+  no_log: true
+
+- name: Apply git SSH secret for Image Updater
+  ansible.builtin.command:
+    cmd: k3s kubectl apply -f /tmp/image-updater-git-secret.yml
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+  no_log: true
+
+- name: Remove git SSH secret tempfile
+  ansible.builtin.file:
+    path: /tmp/image-updater-git-secret.yml
+    state: absent
+
+# ArgoCD itself also needs credentials to clone/pull the repo over SSH
+# (argocd-apps-app.yaml sources use git@github.com:... now that write-back
+# needs SSH) — registered as a repo-creds Secret per ArgoCD's own convention.
+- name: Template ArgoCD repo credentials secret manifest
+  ansible.builtin.template:
+    src: argocd-repo-creds-secret.yml.j2
+    dest: /tmp/argocd-repo-creds-secret.yml
+    mode: '0600'
+  no_log: true
+
+- name: Apply ArgoCD repo credentials secret
+  ansible.builtin.command:
+    cmd: k3s kubectl apply -f /tmp/argocd-repo-creds-secret.yml
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+  no_log: true
+
+- name: Remove ArgoCD repo credentials tempfile
+  ansible.builtin.file:
+    path: /tmp/argocd-repo-creds-secret.yml
+    state: absent
+
+# Apply ArgoCD Application manifests — these point ArgoCD at paths in this
+# repo (argocd-apps/) and it takes over syncing them from there.
+- name: Find ArgoCD Application manifests
+  ansible.builtin.find:
+    paths: "{{ playbook_dir }}/argocd-apps"
+    patterns: "*-app.yaml"
+    recurse: false
+  delegate_to: localhost
+  become: false
+  register: k3s_apps_argocd_app_manifests
+
+# The runner (Ansible controller) is a separate machine, so the files go to
+# the server first — kubectl runs there and can't see the runner's checkout.
+- name: Copy ArgoCD Application manifests to the server
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ k3s_apps_manifest_dir }}/argocd-apps/"
+    mode: '0644'
+  loop: "{{ k3s_apps_argocd_app_manifests.files | map(attribute='path') | sort }}"
+
+# Applied by discovery rather than a hardcoded list, so adding a new
+# argocd-apps/<name>-app.yaml is enough to register it — no role edit,
+# and no manual kubectl apply on a fresh cluster.
+- name: Apply ArgoCD Application manifests
+  ansible.builtin.command:
+    cmd: "k3s kubectl apply -f {{ k3s_apps_manifest_dir }}/argocd-apps/{{ item }}"
+  loop: "{{ k3s_apps_argocd_app_manifests.files
+            | map(attribute='path') | map('basename') | sort }}"
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: k3s_apps_argocd_app_apply
+  changed_when: "'unchanged' not in k3s_apps_argocd_app_apply.stdout"

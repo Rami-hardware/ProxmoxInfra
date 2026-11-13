@@ -7,12 +7,22 @@ on:
       gateway:
         type: boolean
         default: true
+      gateway_tags:
+        type: string
+        default: ''
       terraform:
         type: boolean
         default: true
       cloudflare:
         type: boolean
         default: true
+      # From detect-changed-hosts.sh: only what this push changed ('' = none).
+      lint_paths:
+        type: string
+        default: Ansbile/
+      syntax_playbooks:
+        type: string
+        default: Ansbile/gateway-server.yml Ansbile/monitoring-server.yml Ansbile/media-server.yml Ansbile/git-k3s-server.yml Ansbile/ci-runners.yml Ansbile/host-node.yml
     secrets:
       SSH_PRIVATE_KEY:
         required: true
@@ -30,17 +40,16 @@ on:
         required: true
       OVERSEERR_API_KEY:
         required: true
+# Two jobs on different runners: the gateway dry run (~50s) is the slow one,
+# so it runs next to everything else instead of after it.
 jobs:
-  testing:
-    name: Testing Infrastructure Code
+  validate:
+    name: Lint and validate
     runs-on: self-hosted
     timeout-minutes: 30
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      # ── System setup ─────────────────────────────────────────────────────────
 
       - name: Install system dependencies
         run: |
@@ -56,11 +65,17 @@ jobs:
             echo "All packages already installed — skipping apt-get update."
           fi
 
-      - name: Verify installations
-        run: |
-          unzip -v
-          git --version
-          curl --version
+      - name: Set up Ansible virtualenv
+        uses: ./.github/actions/setup-ansible-venv
+
+      - name: Install Ansible collections
+        run: ansible-galaxy collection install -r Ansbile/requirements.yml
+
+      - name: Setup SSH and Vault
+        uses: ./.github/actions/setup-ssh-vault
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
 
       # ── Terraform ────────────────────────────────────────────────────────────
       - name: Setup Terraform
@@ -97,6 +112,58 @@ jobs:
           terraform validate
 
       # ── Ansible ──────────────────────────────────────────────────────────────
+      # Only the playbooks that deploy this run and the roles/files that
+      # changed; Ansbile/ when everything runs (shared file, schedule).
+      - name: Ansible syntax check
+        if: inputs.syntax_playbooks != ''
+        env:
+          PLAYBOOKS: ${{ inputs.syntax_playbooks }}
+        run: |
+          for pb in $PLAYBOOKS; do
+            ansible-playbook -i Ansbile/inventory.ini "$pb" --syntax-check --vault-password-file ~/.vault_pass
+          done
+
+      # --offline: the collections are installed above; don't let ansible-lint
+      # re-check requirements.yml against Galaxy.
+      - name: Ansible lint
+        if: inputs.lint_paths != ''
+        env:
+          LINT_PATHS: ${{ inputs.lint_paths }}
+        run: |
+          echo "Linting: $LINT_PATHS"
+          # shellcheck disable=SC2086  # word-split the path list on purpose
+          ansible-lint --offline $LINT_PATHS
+
+      - name: Cleanup secrets
+        if: always()
+        uses: ./.github/actions/cleanup-secrets
+
+  # Only on development, which never deploys. On staging the real deploy is
+  # the test (canary), and on main staging already ran it — a dry run there
+  # only repeated the deploy's work on the critical path (~50s).
+  gateway_check:
+    name: Gateway dry run
+    if: inputs.gateway && github.ref_name == 'development'
+    runs-on: self-hosted
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          need_install=false
+          # Ansible itself comes from the pinned venv, not apt.
+          for pkg in unzip curl git python3-venv python3-pip; do
+            dpkg -s "$pkg" &>/dev/null || { need_install=true; break; }
+          done
+          if $need_install; then
+            sudo apt-get update -o Acquire::Retries=3
+            sudo apt-get install -y unzip curl git python3-venv python3-pip
+          else
+            echo "All packages already installed — skipping apt-get update."
+          fi
+
       - name: Set up Ansible virtualenv
         uses: ./.github/actions/setup-ansible-venv
 
@@ -109,22 +176,14 @@ jobs:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
           ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
 
-      - name: Ansible syntax check
-        run: |
-          for pb in gateway-server monitoring-server media-server git-k3s-server; do
-            ansible-playbook -i Ansbile/inventory.ini "Ansbile/$pb.yml" --syntax-check --vault-password-file ~/.vault_pass
-          done
-
-      - name: Ansible lint
-        run: ansible-lint Ansbile/
-
       # gateway and media use Docker command/shell tasks that break in check mode
       # --check is limited to template-driven playbooks only
       - name: Ansible dry run (check + diff)
         if: inputs.gateway
         run: |
-          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --check --diff --vault-password-file ~/.vault_pass
+          ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --check --diff --vault-password-file ~/.vault_pass ${TAGS:+--tags "$TAGS"}
         env:
+          TAGS: ${{ inputs.gateway_tags }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           SONARR_API_KEY: ${{ secrets.SONARR_API_KEY }}
           BAZARR_API_KEY: ${{ secrets.BAZARR_API_KEY }}

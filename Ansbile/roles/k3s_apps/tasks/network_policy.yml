@@ -1,0 +1,47 @@
+---
+# ── NetworkPolicy engine ─────────────────────────────────────────────────────
+# k3s's built-in kube-router controller enforces NetworkPolicy. Calico used to
+# be installed in policy-only mode as well, but its rules only match cali*
+# interfaces and flannel's pods use veth*, so it never enforced anything.
+# Remove it if an older run installed it.
+- name: Check for the old Calico policy-only manifest
+  ansible.builtin.stat:
+    path: "{{ k3s_apps_manifest_dir }}/calico-policy-only.yml"
+  register: k3s_apps_calico_manifest
+
+- name: Remove Calico policy-only
+  ansible.builtin.command:
+    cmd: >
+      k3s kubectl delete -f {{ k3s_apps_manifest_dir }}/calico-policy-only.yml
+      --ignore-not-found --wait=true --timeout=300s
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  when: k3s_apps_calico_manifest.stat.exists
+  changed_when: true
+
+- name: Remove the old Calico policy-only manifest
+  ansible.builtin.file:
+    path: "{{ k3s_apps_manifest_dir }}/calico-policy-only.yml"
+    state: absent
+
+# Calico's CNI files stay behind in /etc/cni/net.d. k3s reads its own CNI dir
+# (/var/lib/rancher/k3s/agent/etc/cni/net.d), so they are inert, just clutter.
+- name: Remove leftover Calico CNI files on all nodes
+  ansible.builtin.file:
+    path: "/etc/cni/net.d/{{ item.1 }}"
+    state: absent
+  delegate_to: "{{ item.0 }}"
+  loop: "{{ k3s_apps_nodes | product(['10-calico.conflist', 'calico-kubeconfig']) | list }}"
+  loop_control:
+    label: "{{ item.0 }}: {{ item.1 }}"
+
+# Hand-applied 2026-09-28 and never in git, so ArgoCD can't prune it. It
+# allowed all of 10.42.0.0/16 (every pod) into media; the mesh policies in
+# argocd-apps/components/mesh-network-policy replace it.
+- name: Remove the interim allow-all-pods NetworkPolicy in media
+  ansible.builtin.command:
+    cmd: k3s kubectl delete networkpolicy allow-flannel-crossnode-interim -n media --ignore-not-found
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: k3s_apps_interim_np
+  changed_when: "'deleted' in k3s_apps_interim_np.stdout"

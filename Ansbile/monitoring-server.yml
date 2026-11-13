@@ -3,10 +3,10 @@
   hosts: monitoring-server
   become: true
   roles:
-    - common
-    - unbound
-    - k3s_agent
-    - prometheus
-    - loki
-    - alertmanager
-    - grafana
+    - { role: common, tags: [common] }
+    - { role: unbound, tags: [unbound] }
+    - { role: k3s_agent, tags: [k3s_agent] }
+    - { role: prometheus, tags: [prometheus] }
+    - { role: loki, tags: [loki] }
+    - { role: alertmanager, tags: [alertmanager] }
+    - { role: grafana, tags: [grafana] }
