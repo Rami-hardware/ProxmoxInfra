@@ -27,7 +27,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       # Server-side dry run against the live cluster: catches bad kustomize,
       # unknown fields, CRD schema errors and immutable-field changes — what
@@ -49,7 +49,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       # Venv cached in ~/.cache (checkout cleans the workspace), rebuilt when
       # pyproject.toml changes.
