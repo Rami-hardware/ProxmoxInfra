@@ -43,12 +43,36 @@ jobs:
 
           [ "$staging" != "$main" ] || fail "main is already at staging (${staging:0:8}) — nothing to promote."
 
+          run_of() {  # <workflow file> <sha> → "<status> <conclusion>" of its newest staging run
+            gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$1/runs?branch=staging&head_sha=$2&per_page=1" \
+              -q '.workflow_runs[0] | "\(.status // "none") \(.conclusion // "none")"'
+          }
+
           # The canary verdict: the newest main.yml run for staging's exact commit.
-          read -r status conclusion < <(gh api \
-            "repos/$GITHUB_REPOSITORY/actions/workflows/main.yml/runs?branch=staging&head_sha=$staging&per_page=1" \
-            -q '.workflow_runs[0] | "\(.status // "none") \(.conclusion // "none")"')
-          [ "$status" = completed ] || fail "staging's run for ${staging:0:8} is $status — wait for it to finish."
-          [ "$conclusion" = success ] || fail "staging's run for ${staging:0:8} ended '$conclusion' — fix it on staging first."
+          tested=$staging
+          read -r status conclusion < <(run_of main.yml "$staging")
+          if [ "$status" = none ]; then
+            # main.yml ignores ArgoCD manifests, docs and tools, so such a push
+            # starts no pipeline run. Judge by the newest staging commit that
+            # has one, and allow only ignored paths on top of it.
+            for c in $(git rev-list --first-parent -n 50 origin/staging | tail -n +2); do
+              read -r status conclusion < <(run_of main.yml "$c")
+              [ "$status" = none ] || { tested=$c; break; }
+            done
+            [ "$tested" != "$staging" ] || fail "no pipeline run found for staging's last 50 commits."
+            changed=$(git diff --name-only "$tested" "$staging")
+            other=$(grep -vE '^(docs/|tools/|scripts/|\.claude/|Ansbile/argocd-apps/)|\.md$|^\.mcp\.json$' <<< "$changed" || true)
+            [ -z "$other" ] || fail "staging ${staging:0:8} has no pipeline run, yet changes files the pipeline tests: $(echo $other | head -c 200)"
+            # ArgoCD manifests and alertops-mcp are tested by checks.yml instead.
+            if grep -qE '^(Ansbile/argocd-apps/|tools/alertops-mcp/)' <<< "$changed"; then
+              read -r cs cc < <(run_of checks.yml "$staging")
+              [ "$cs" = completed ] && [ "$cc" = success ] \
+                || fail "checks.yml for staging ${staging:0:8} is $cs/$cc — it must pass first."
+            fi
+            echo "Staging ${staging:0:8} changes only pipeline-ignored files since ${tested:0:8}; using that run."
+          fi
+          [ "$status" = completed ] || fail "staging's run for ${tested:0:8} is $status — wait for it to finish."
+          [ "$conclusion" = success ] || fail "staging's run for ${tested:0:8} ended '$conclusion' — fix it on staging first."
 
           # Image Updater commits straight to main (.argocd-source-*.yaml only),
           # and so does the CI Terraform apply (terraform.tfstate). Those may be
