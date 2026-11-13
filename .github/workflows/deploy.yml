@@ -142,7 +142,7 @@ jobs:
       fingerprint: ${{ steps.plan.outputs.fingerprint }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -261,7 +261,7 @@ jobs:
       TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -346,7 +346,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Silence warning alerts while this job runs
         id: silence
@@ -384,7 +384,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Silence warning alerts while this job runs
         id: silence
@@ -422,7 +422,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Silence warning alerts while this job runs
         id: silence
@@ -461,7 +461,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Silence warning alerts while this job runs
         id: silence
@@ -499,7 +499,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Silence warning alerts while this job runs
         id: silence
@@ -538,7 +538,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Prepare Ansible
         uses: ./.github/actions/ansible-prep
@@ -566,7 +566,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Terraform
         if: inputs.cloudflare && !contains(needs.*.result, 'failure')
@@ -645,7 +645,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Smoke test
         env:
