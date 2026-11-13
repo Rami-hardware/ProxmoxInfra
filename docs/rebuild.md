@@ -30,11 +30,16 @@ for id in 115 505 511 911; do
   qmrestore "$dump" $id --storage local-lvm
 done
 # VM 100 (owner's macOS test VM) is intentionally NOT restored from backup.
-qm start 115   # git-k3s first (control plane + CI runner)
+qm start 115   # git-k3s first (control plane)
 qm start 505   # gateway (DNS for everything else)
 qm start 511   # monitoring
 qm start 911   # media
 ```
+CI runs only on the runner LXCs (`pct start 205 206 207`). If they are gone,
+`terraform apply` recreates them (`containers` map); then pin their host keys
+in `.github/ssh_known_hosts` and register them (`ci-runners.yml`, needs
+`vault_github_runner_pat`) — see `docs/runbooks/ci-runners.md`.
+
 VM specs live in `Terraform/terraform.tfvars` — after restore, verify memory
 matches (`qm config <id> | grep memory`).
 

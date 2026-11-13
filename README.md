@@ -19,7 +19,7 @@ A fully automated homelab running on Proxmox, provisioned with Terraform, config
 | gateway-server    | 192.168.10.200 | 1     | 3 GB | DNS (AdGuard Home, systemd)               |
 | media-server      | 192.168.10.201 | 6     | 10 GB | Media stack — K3s worker                 |
 | monitoring-server | 192.168.10.203 | 1     | 8 GB | Observability stack — K3s worker          |
-| git-k3s-server    | 192.168.10.204 | 3     | 7 GB | GitHub Actions runner + K3s control plane |
+| git-k3s-server    | 192.168.10.204 | 3     | 7 GB | K3s control plane                         |
 | VM 100 (macOS)    | — | — | 16 GB cfg | Owner's test VM — stopped, not Terraform-managed, excluded from backups |
 
 ---
@@ -90,8 +90,6 @@ Gateway also runs: **AdGuard Home** (systemd service — DNS :53, UI :8081; see 
 ### Git / K3s (192.168.10.204)
 
 - **K3s control plane** — Kubernetes API server
-- **Docker** — host daemon used by the CI runner for image builds
-- **GitHub Actions self-hosted runner** — executes CI/CD pipeline
 - **ArgoCD + ArgoCD Image Updater** — GitOps sync + auto image updates
 - **cert-manager** — TLS via internal CA (`homelab-ca-issuer`)
 - **ingress-nginx** — Kubernetes ingress controller (Helm-managed, LoadBalancer at `192.168.10.210`)
@@ -229,7 +227,7 @@ App-level changes (editing anything under `Ansbile/argocd-apps/`) don't need a C
 | Orchestration  | K3s (Kubernetes)                                                          |
 | GitOps         | ArgoCD, ArgoCD Image Updater                                              |
 | Service Mesh   | Istio, Tempo                                                              |
-| CI/CD          | GitHub Actions (self-hosted runner on git-k3s-server)                     |
+| CI/CD          | GitHub Actions (self-hosted runners on LXCs ci-runner-1..3)               |
 | Metrics        | Prometheus, node-exporter, kubelet-cAdvisor, kube-state-metrics, Scraparr |
 | Visualization  | Grafana                                                                   |
 | Logging        | Loki, Grafana Alloy                                                            |
