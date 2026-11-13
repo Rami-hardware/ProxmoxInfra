@@ -19,7 +19,7 @@ on:
 jobs:
   notify:
     name: Notify Discord
-    runs-on: self-hosted
+    runs-on: ubuntu-latest  # one curl to Discord
     timeout-minutes: 5
     steps:
       - name: Send Discord notification

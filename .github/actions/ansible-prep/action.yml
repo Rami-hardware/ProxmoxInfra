@@ -1,0 +1,39 @@
+name: Prepare Ansible
+description: >
+  Everything a job needs before ansible-playbook: system packages, the pinned
+  virtualenv, collections, SSH key + vault password, pinned host keys. Shared by
+  the per-host deploy jobs so each stays a few lines.
+
+inputs:
+  ssh-private-key:
+    required: true
+  ansible-vault-password:
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install system dependencies
+      shell: bash
+      run: |
+        need_install=false
+        for pkg in python3-venv python3-pip jq; do
+          dpkg -s "$pkg" &>/dev/null || { need_install=true; break; }
+        done
+        if $need_install; then
+          sudo apt-get update -o Acquire::Retries=3
+          sudo apt-get install -y python3-venv python3-pip jq
+        fi
+
+    - name: Set up Ansible virtualenv
+      uses: ./.github/actions/setup-ansible-venv
+
+    - name: Install Ansible collections
+      shell: bash
+      run: ansible-galaxy collection install -r Ansbile/requirements.yml
+
+    - name: Setup SSH and Vault
+      uses: ./.github/actions/setup-ssh-vault
+      with:
+        ssh-private-key: ${{ inputs.ssh-private-key }}
+        ansible-vault-password: ${{ inputs.ansible-vault-password }}

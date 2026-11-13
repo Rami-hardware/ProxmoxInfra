@@ -1,3 +1,3 @@
-# Managed by Ansible (roles/ci_runner). CI jobs call sudo (docker, apt-get)
+# Managed by Ansible (roles/ci_runner). CI jobs call sudo (apt-get)
 # and Ansible uses become on the controller (this host).
-{{ ci_runner_user }} ALL=(ALL) NOPASSWD:ALL
+%{{ ci_runner_group }} ALL=(ALL) NOPASSWD:ALL

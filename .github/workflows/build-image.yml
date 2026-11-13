@@ -10,7 +10,9 @@ on:
 jobs:
   build-image:
     name: Build Docker Image
-    runs-on: self-hosted
+    # GitHub-hosted: needs only GHCR, keeps Docker builds off the k3s control
+    # plane, and its disk is thrown away after the job (no prune needed).
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read
@@ -65,9 +67,3 @@ jobs:
           tags: |
             ghcr.io/rami-hardware/alert-forwarder:${{ steps.tag.outputs.tag }}
             ${{ github.ref_name == 'main' && 'ghcr.io/rami-hardware/alert-forwarder:latest' || '' }}
-
-      # Runner has a small disk — unused image layers accumulate run over run
-      # and can fill it (previously caused CI to fail with ENOSPC).
-      - name: Prune unused Docker images
-        if: always() && steps.exists.outputs.built == 'false'
-        run: sudo docker image prune -af

@@ -26,6 +26,11 @@ on:
       terraform:
         type: boolean
         default: true
+      # Apply the Proxmox plan (main, after approval). Only true when this
+      # deploy contains a Terraform code change; otherwise drift is reported.
+      terraform_apply:
+        type: boolean
+        default: false
       cloudflare:
         type: boolean
         default: true
@@ -68,42 +73,64 @@ on:
         # Until it is set, the host-node playbook skips the pve-exporter install
         # (see roles/proxmox_exporters, docs/runbooks/exporters.md).
         required: false
-jobs:
-  Deploy:
-    name: Deploy Infrastructure Code
-    runs-on: self-hosted
-    env:
-      # Alertmanager API (NodePort on monitoring-server), for deploy silences.
-      # Repo variable (Settings → Secrets and variables → Variables).
-      ALERTMANAGER_URL: ${{ vars.ALERTMANAGER_URL }}
-    timeout-minutes: 60
-    # The only job bound to an environment, so each environment's Deployments
-    # page is real deploy history. Production requires a reviewer.
-    environment: ${{ github.ref_name == 'main' && 'Production' || github.ref_name == 'staging' && 'Staging' || 'Development' }}
+# Secrets the playbooks read via lookup('env', ...). Workflow-level so every
+# per-host job gets them; the SSH key and vault password go through
+# ansible-prep instead.
+env:
+  ANSIBLE_VAULT_PASSWORD_FILE: ~/.vault_pass
+  ADGUARD_EXPORTER_PASSWORD: ${{ secrets.ADGUARD_EXPORTER_PASSWORD }}
+  ADGUARD_EXPORTER_USERNAME: ${{ secrets.ADGUARD_EXPORTER_USERNAME }}
+  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+  SONARR_API_KEY: ${{ secrets.SONARR_API_KEY }}
+  BAZARR_API_KEY: ${{ secrets.BAZARR_API_KEY }}
+  PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
+  RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
+  OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
+  CF_DNS_API_TOKEN: ${{ secrets.CF_DNS_API_TOKEN }}
+  HEALTHCHECKS_PING_URL: ${{ secrets.HEALTHCHECKS_PING_URL }}
+  PVE_EXPORTER_TOKEN: ${{ secrets.PVE_EXPORTER_TOKEN }}
+  ALERT_FORWARDER_TAG: ${{ inputs.alert_forwarder_tag }}
+  # Alertmanager API (NodePort on monitoring-server), for deploy silences.
+  ALERTMANAGER_URL: ${{ vars.ALERTMANAGER_URL }}
 
+# Hosts deploy in waves so independent playbooks run at the same time on
+# different runners:
+#   tf_plan → gate (approval) → tf_apply → gateway (DNS first) → monitoring | media | host-node → git-k3s → ci-runners
+# k3s_agent on monitoring/media only *reads* from git-k3s, so that wave is safe
+# in parallel. git-k3s keeps its old place after monitoring and media.
+jobs:
+  # The only job bound to an environment: one Production approval per deploy
+  # (covering the Terraform apply too), and each environment's Deployments
+  # page is real deploy history.
+  # Proxmox VMs/LXCs. Runs BEFORE the approval so the plan is on the run
+  # summary when you click Approve; tf_apply applies exactly this plan.
+  tf_plan:
+    name: Terraform plan
+    if: inputs.terraform
+    runs-on: self-hosted
+    timeout-minutes: 20
+    env:
+      TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
+      TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
+      TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+    outputs:
+      has_changes: ${{ steps.plan.outputs.has_changes }}
+      fingerprint: ${{ steps.plan.outputs.fingerprint }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # ── Terraform ────────────────────────────────────────────────────────────
       - name: Setup Terraform
-        if: inputs.terraform || inputs.cloudflare
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.0
           terraform_wrapper: false  # wrapper intercepts exit codes; breaks -detailed-exitcode
 
       - name: Setup Terraform provider mirror
-        if: inputs.terraform || inputs.cloudflare
         uses: ./.github/actions/setup-terraform-mirror
 
       - name: Terraform init
-        if: inputs.terraform
         working-directory: Terraform
-        env:
-          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-          TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
-          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         run: terraform init
 
       # NOTE: VM imports are intentionally NOT done in CI. Terraform state is
@@ -111,8 +138,8 @@ jobs:
       # (first setup) or after state corruption. Run manually if needed:
       #   terraform import 'module.proxmox_vms["NAME"].proxmox_virtual_environment_vm.vm' pve/VMID
 
-      # Detects drift between code and the live Proxmox server. CI never
-      # applies — changes are applied by hand. Uses -detailed-exitcode, which
+      # Detects drift between code and the live Proxmox server. Uses
+      # -detailed-exitcode, which
       # splits the normal 0/1 into three states:
       #   0 = no changes      -> nothing to report
       #   1 = plan errored    -> fail the job
@@ -123,12 +150,9 @@ jobs:
       # the wrapper rewrites exit codes and would collapse 2 into 0.)
       - name: Terraform plan (compare code vs server)
         id: plan
-        if: inputs.terraform
         working-directory: Terraform
         env:
-          TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
-          TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
-          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+          APPLY: ${{ inputs.terraform_apply }}
         run: |
           set +e
           terraform plan -input=false -no-color -detailed-exitcode -out=tfplan
@@ -139,12 +163,28 @@ jobs:
             exit 1
           elif [ $EXIT_CODE -eq 2 ]; then
             echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "Changes detected — apply manually."
+            echo "fingerprint=$("$GITHUB_WORKSPACE/.github/scripts/tf-plan-fingerprint.sh" tfplan)" >> $GITHUB_OUTPUT
+            echo "Changes detected."
+            [ "$APPLY" = true ] || echo "::warning::Proxmox differs from the Terraform code, but this deploy has no Terraform code change — not applying (see the run summary)."
             {
-              echo "### ⚠️ Terraform drift — Proxmox VMs differ from code (apply manually)"
+              if [ "$GITHUB_REF_NAME" = main ] && [ "$APPLY" = true ]; then
+                echo "### ⚠️ Terraform — applied after the Production approval"
+              elif [ "$APPLY" = true ]; then
+                echo "### ⚠️ Terraform — code change; applied on main after the approval"
+              else
+                echo "### ⚠️ Terraform drift — NOT applied (no Terraform code change)"
+                echo "Proxmox was changed by hand, or a change is not committed. Commit it to code, or apply by hand."
+              fi
               echo '```'
               terraform show -no-color tfplan | grep -E '^ *# |^Plan:' || true
               echo '```'
+              # The attribute-level diff — what you are approving.
+              echo '<details><summary>Full plan</summary>'
+              echo
+              echo '```'
+              terraform show -no-color tfplan
+              echo '```'
+              echo '</details>'
             } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "has_changes=false" >> $GITHUB_OUTPUT
@@ -166,38 +206,24 @@ jobs:
           fi
           echo "No destroys detected — safe to proceed."
 
-      # ── Ansible ──────────────────────────────────────────────────────────────
-      - name: Install system dependencies
-        run: |
-          need_install=false
-          for pkg in ansible python3-venv python3-pip; do
-            dpkg -s "$pkg" &>/dev/null || { need_install=true; break; }
-          done
-          if $need_install; then
-            sudo apt-get update -o Acquire::Retries=3
-            sudo apt-get install -y ansible python3-venv python3-pip
-          else
-            echo "All packages already installed — skipping apt-get update."
-          fi
-
-      - name: Set up Ansible virtualenv
-        uses: ./.github/actions/setup-ansible-venv
-
-      - name: Install Ansible collections
-        run: ansible-galaxy collection install -r Ansbile/requirements.yml
-
-      - name: Setup SSH and Vault
-        uses: ./.github/actions/setup-ssh-vault
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-          ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
-
+  gate:
+    name: Approval and silence
+    needs: [tf_plan]
+    # tf_plan skipped (Terraform untouched) is fine; a failed plan or a
+    # destroy/replace blocks the whole deploy.
+    if: ${{ !cancelled() && !failure() }}
+    runs-on: self-hosted
+    timeout-minutes: 20
+    environment: ${{ github.ref_name == 'main' && 'Production' || github.ref_name == 'staging' && 'Staging' || 'Development' }}
+    outputs:
+      silence_id: ${{ steps.am_silence.outputs.id }}
+    steps:
       # Deploys restart pods and briefly fail probes, which used to page as
-      # warnings. Silence warnings (not criticals) while Ansible runs; the next
-      # step removes the silence, and it expires by itself after 45 minutes.
+      # warnings. Silence warnings (not criticals) while the host jobs run;
+      # `finish` removes it, and it expires by itself after 45 minutes.
       - name: Silence warning alerts during the deploy
         id: am_silence
-        if: inputs.gateway || inputs.monitoring || inputs.media || inputs.git_k3s || inputs.ci_runners || inputs.host_node
+        if: inputs.gateway || inputs.monitoring || inputs.media || inputs.git_k3s || inputs.ci_runners || inputs.host_node || (inputs.terraform_apply && needs.tf_plan.outputs.has_changes == 'true')
         continue-on-error: true
         run: |
           now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -209,66 +235,275 @@ jobs:
           echo "id=$id" >> "$GITHUB_OUTPUT"
           echo "Silenced warnings until $end (silence $id)"
 
-      - name: Run Ansible playbooks
-        if: inputs.gateway || inputs.monitoring || inputs.media || inputs.git_k3s || inputs.ci_runners || inputs.host_node
+  # Applies the reviewed Proxmox plan — main only, after the approval, and
+  # only when this deploy contains a Terraform code change (never for drift).
+  tf_apply:
+    name: Terraform apply
+    needs: [tf_plan, gate]
+    if: ${{ !cancelled() && !failure() && github.ref_name == 'main' && inputs.terraform_apply && needs.tf_plan.outputs.has_changes == 'true' }}
+    # Never on git-k3s-server: a VM change can reboot it (e.g. memory), which
+    # would kill the job mid-apply and lose the new state.
+    runs-on: [self-hosted, lxc]
+    timeout-minutes: 40
+    env:
+      TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
+      TF_VAR_pm_api_token: ${{ secrets.PM_API_TOKEN }}
+      TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+          terraform_wrapper: false
+
+      - name: Setup Terraform provider mirror
+        uses: ./.github/actions/setup-terraform-mirror
+
+      - name: Terraform init
+        working-directory: Terraform
+        run: terraform init
+
+      # Re-plan now and compare with the plan shown before the approval:
+      # anything that moved in between (a hand apply, a console change) means
+      # what you approved is no longer what would happen.
+      - name: Re-plan and check it matches the approved plan
+        working-directory: Terraform
         env:
-          ANSIBLE_VAULT_PASSWORD_FILE: ~/.vault_pass
-          ADGUARD_EXPORTER_PASSWORD: ${{ secrets.ADGUARD_EXPORTER_PASSWORD }}
-          ADGUARD_EXPORTER_USERNAME: ${{ secrets.ADGUARD_EXPORTER_USERNAME }}
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          SONARR_API_KEY: ${{ secrets.SONARR_API_KEY }}
-          BAZARR_API_KEY: ${{ secrets.BAZARR_API_KEY }}
-          PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
-          RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
-          OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
-          CF_DNS_API_TOKEN: ${{ secrets.CF_DNS_API_TOKEN }}
-          HEALTHCHECKS_PING_URL: ${{ secrets.HEALTHCHECKS_PING_URL }}
-          PVE_EXPORTER_TOKEN: ${{ secrets.PVE_EXPORTER_TOKEN }}
-          ALERT_FORWARDER_TAG: ${{ inputs.alert_forwarder_tag }}
-          RUN_GATEWAY: ${{ inputs.gateway }}
-          RUN_MONITORING: ${{ inputs.monitoring }}
-          RUN_MEDIA: ${{ inputs.media }}
-          RUN_GIT_K3S: ${{ inputs.git_k3s }}
-          RUN_CI_RUNNERS: ${{ inputs.ci_runners }}
-          RUN_HOST_NODE: ${{ inputs.host_node }}
+          APPROVED: ${{ needs.tf_plan.outputs.fingerprint }}
         run: |
-          # Order matters: gateway → monitoring → media → git-k3s → runners
-          # (the runners copy their kubeconfig from k3s). A failed playbook
-          # stops the ones after it. host-node (the Proxmox host, exporters
-          # only) is independent and runs last.
-          play() {
-            if [ "$1" != true ]; then echo "Skipping $2 — no changes for it."; return; fi
-            echo "::group::$2"
-            ansible-playbook -i Ansbile/inventory.ini "Ansbile/$2.yml" --vault-password-file ~/.vault_pass
-            echo "::endgroup::"
-          }
-          play "$RUN_GATEWAY" gateway-server
-          play "$RUN_MONITORING" monitoring-server
-          play "$RUN_MEDIA" media-server
-          play "$RUN_GIT_K3S" git-k3s-server
-          play "$RUN_CI_RUNNERS" ci-runners
-          play "$RUN_HOST_NODE" host-node
+          terraform plan -input=false -no-color -out=tfplan > /dev/null
+          now=$("$GITHUB_WORKSPACE/.github/scripts/tf-plan-fingerprint.sh" tfplan)
+          terraform show -no-color tfplan | grep -E '^ *# |^Plan:' || true
+          if [ "$now" != "$APPROVED" ]; then
+            echo "::error::The Terraform plan changed after it was reviewed — not applying. Re-run the pipeline to review the new plan."
+            exit 1
+          fi
+
+      # -parallelism=1: the Proxmox API races on concurrent VM operations.
+      - name: Terraform apply
+        id: apply
+        working-directory: Terraform
+        run: terraform apply -input=false -no-color -parallelism=1 tfplan
+
+      # State lives in git. Commit it even after a failed apply (a partial
+      # apply still changed real resources), to main and to staging so the
+      # canary plans against the same state. GITHUB_TOKEN pushes start no
+      # workflows; promote.yml accepts main-only state commits.
+      - name: Commit the new state to main and staging
+        if: always() && (steps.apply.outcome == 'success' || steps.apply.outcome == 'failure')
+        run: |
+          cp Terraform/terraform.tfstate "$RUNNER_TEMP/terraform.tfstate"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rc=0
+          for branch in main staging; do
+            ok=false
+            for try in 1 2 3; do
+              git fetch -q origin "$branch"
+              git checkout -q -f -B "tfstate-$branch" "origin/$branch"
+              cp "$RUNNER_TEMP/terraform.tfstate" Terraform/terraform.tfstate
+              git add Terraform/terraform.tfstate
+              if git diff --cached --quiet; then ok=true; break; fi
+              git commit -q -m "terraform: state after apply (run $GITHUB_RUN_ID)"
+              if git push -q origin "HEAD:$branch"; then ok=true; break; fi
+              sleep 5
+            done
+            if $ok; then echo "State committed to $branch."; else
+              echo "::error::Could not push the state to $branch — commit Terraform/terraform.tfstate from this run's runner by hand."; rc=1
+            fi
+          done
+          exit $rc
+
+  gateway:
+    name: "Ansible: gateway-server"
+    needs: [gate, tf_apply]
+    # Run when this host changed and nothing before it failed (skipped is fine).
+    if: ${{ !cancelled() && !failure() && inputs.gateway }}
+    runs-on: self-hosted
+    timeout-minutes: 40
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare Ansible
+        uses: ./.github/actions/ansible-prep
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+
+      - name: ansible-playbook gateway-server
+        run: ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --vault-password-file ~/.vault_pass
+
+      - name: Cleanup secrets
+        if: always()
+        uses: ./.github/actions/cleanup-secrets
+
+  monitoring:
+    name: "Ansible: monitoring-server"
+    needs: [gate, gateway]
+    # Run when this host changed and nothing before it failed (skipped is fine).
+    if: ${{ !cancelled() && !failure() && inputs.monitoring }}
+    runs-on: self-hosted
+    timeout-minutes: 40
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare Ansible
+        uses: ./.github/actions/ansible-prep
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+
+      - name: ansible-playbook monitoring-server
+        run: ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml --vault-password-file ~/.vault_pass
+
+      - name: Cleanup secrets
+        if: always()
+        uses: ./.github/actions/cleanup-secrets
+
+  media:
+    name: "Ansible: media-server"
+    needs: [gate, gateway]
+    # Run when this host changed and nothing before it failed (skipped is fine).
+    if: ${{ !cancelled() && !failure() && inputs.media }}
+    runs-on: self-hosted
+    timeout-minutes: 40
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare Ansible
+        uses: ./.github/actions/ansible-prep
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+
+      - name: ansible-playbook media-server
+        run: ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml --vault-password-file ~/.vault_pass
+
+      - name: Cleanup secrets
+        if: always()
+        uses: ./.github/actions/cleanup-secrets
+
+  # The Proxmox host itself (exporters only); independent of the VMs.
+  host_node:
+    name: "Ansible: host-node"
+    needs: [gate, gateway]
+    # Run when this host changed and nothing before it failed (skipped is fine).
+    if: ${{ !cancelled() && !failure() && inputs.host_node }}
+    runs-on: self-hosted
+    timeout-minutes: 40
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare Ansible
+        uses: ./.github/actions/ansible-prep
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+
+      - name: ansible-playbook host-node
+        run: ansible-playbook -i Ansbile/inventory.ini Ansbile/host-node.yml --vault-password-file ~/.vault_pass
+
+      - name: Cleanup secrets
+        if: always()
+        uses: ./.github/actions/cleanup-secrets
+
+  git_k3s:
+    name: "Ansible: git-k3s-server"
+    needs: [gate, gateway, monitoring, media]
+    # Run when this host changed and nothing before it failed (skipped is fine).
+    if: ${{ !cancelled() && !failure() && inputs.git_k3s }}
+    runs-on: self-hosted
+    timeout-minutes: 40
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare Ansible
+        uses: ./.github/actions/ansible-prep
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+
+      - name: ansible-playbook git-k3s-server
+        run: ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml --vault-password-file ~/.vault_pass
+
+      - name: Cleanup secrets
+        if: always()
+        uses: ./.github/actions/cleanup-secrets
+
+  # The runner LXCs copy their kubeconfig from k3s, so after git-k3s.
+  ci_runners:
+    name: "Ansible: ci-runners"
+    needs: [gate, git_k3s]
+    # Run when this host changed and nothing before it failed (skipped is fine).
+    if: ${{ !cancelled() && !failure() && inputs.ci_runners }}
+    runs-on: self-hosted
+    timeout-minutes: 40
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare Ansible
+        uses: ./.github/actions/ansible-prep
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ansible-vault-password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+
+      - name: ansible-playbook ci-runners
+        run: ansible-playbook -i Ansbile/inventory.ini Ansbile/ci-runners.yml --vault-password-file ~/.vault_pass
+
+      - name: Cleanup secrets
+        if: always()
+        uses: ./.github/actions/cleanup-secrets
+
+  finish:
+    name: Unsilence and Cloudflare
+    needs: [gate, tf_apply, gateway, monitoring, media, host_node, git_k3s, ci_runners]
+    if: always() && needs.gate.result == 'success'
+    runs-on: self-hosted
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        if: inputs.cloudflare
+        uses: actions/checkout@v4
 
       - name: Remove the deploy silence
-        if: always() && steps.am_silence.outputs.id != ''
+        if: needs.gate.outputs.silence_id != ''
         continue-on-error: true
-        run: curl -sf -X DELETE "$ALERTMANAGER_URL/api/v2/silence/${{ steps.am_silence.outputs.id }}"
+        run: curl -sf -X DELETE "$ALERTMANAGER_URL/api/v2/silence/${{ needs.gate.outputs.silence_id }}"
 
+      - name: Setup Terraform
+        if: inputs.cloudflare && !contains(needs.*.result, 'failure')
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+          terraform_wrapper: false
+
+      - name: Setup Terraform provider mirror
+        if: inputs.cloudflare && !contains(needs.*.result, 'failure')
+        uses: ./.github/actions/setup-terraform-mirror
 
       # ── Cloudflare (Terraform/cloudflare) ───────────────────────────────────
       # Unlike the Proxmox module, CI applies this one: zone settings and cache
       # rules are safe to reconcile automatically, and dashboard edits get
       # reverted to what is in git. Same destroy/replace guard as the VM plan.
-      # Runs after Ansible so a Cloudflare API problem never blocks a server
-      # deploy (it still fails the job).
+      # Runs after the host jobs so a Cloudflare API problem never blocks a
+      # server deploy (it still fails the run).
       - name: Ensure Terraform state namespace exists
-        if: inputs.cloudflare
+        if: inputs.cloudflare && !contains(needs.*.result, 'failure')
         run: |
           kubectl create namespace terraform --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Cloudflare plan
         id: cf_plan
-        if: inputs.cloudflare
+        if: inputs.cloudflare && !contains(needs.*.result, 'failure')
         working-directory: Terraform/cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DNS_API_TOKEN }}
@@ -300,14 +535,10 @@ jobs:
       # cloudflared (k3s_apps role) reads its connector token from this Secret.
       # Piped so the token never appears in the log or the process list.
       - name: Store Cloudflare Tunnel token for cloudflared
-        if: inputs.cloudflare && github.ref_name == 'main'
+        if: inputs.cloudflare && github.ref_name == 'main' && !contains(needs.*.result, 'failure')
         working-directory: Terraform/cloudflare
         run: |
           terraform output -raw tunnel_token \
             | kubectl -n cloudflared create secret generic cloudflared-token \
                 --from-file=token=/dev/stdin --dry-run=client -o yaml \
             | kubectl apply -f -
-
-      - name: Cleanup secrets
-        if: always()
-        uses: ./.github/actions/cleanup-secrets

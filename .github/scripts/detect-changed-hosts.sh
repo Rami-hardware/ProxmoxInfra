@@ -19,24 +19,29 @@
 set -euo pipefail
 
 # Playbooks per host, plus the two Terraform roots (only planned when touched).
-declare -A want=([gateway]=false [monitoring]=false [media]=false [git_k3s]=false [ci_runners]=false [host_node]=false [terraform]=false [cloudflare]=false)
+# terraform_apply is stricter than terraform: it is true only when this deploy
+# contains a Proxmox Terraform code change (.tf/.tfvars). Drift, scheduled and
+# full runs, and state-only commits plan and report, but never apply.
+declare -A want=([gateway]=false [monitoring]=false [media]=false [git_k3s]=false [ci_runners]=false [host_node]=false [terraform]=false [terraform_apply]=false [cloudflare]=false)
 
 finish() {
   echo "Reason: $1"
   {
-    for h in gateway monitoring media git_k3s ci_runners host_node terraform cloudflare; do echo "$h=${want[$h]}"; done
+    for h in gateway monitoring media git_k3s ci_runners host_node terraform terraform_apply cloudflare; do echo "$h=${want[$h]}"; done
   } >> "$GITHUB_OUTPUT"
   {
     echo "### Deploy targets"
     echo "$1"
     echo
-    for h in gateway monitoring media git_k3s ci_runners host_node terraform cloudflare; do echo "- \`$h\`: ${want[$h]}"; done
+    for h in gateway monitoring media git_k3s ci_runners host_node terraform terraform_apply cloudflare; do echo "- \`$h\`: ${want[$h]}"; done
   } >> "$GITHUB_STEP_SUMMARY"
   exit 0
 }
 
 all() {
-  for h in "${!want[@]}"; do want[$h]=true; done
+  # Everything is planned and deployed, but nothing is applied to Proxmox:
+  # "deploy everything" is not a Terraform code change.
+  for h in "${!want[@]}"; do [ "$h" = terraform_apply ] || want[$h]=true; done
   finish "$1"
 }
 
@@ -109,6 +114,10 @@ while IFS= read -r f; do
     Ansbile/* | .github/*)
       all "shared file changed: $f" ;;
     Terraform/cloudflare/*) want[cloudflare]=true ;;
+    # Written by tf_apply / hand applies: worth a plan, not an apply.
+    Terraform/terraform.tfstate*) want[terraform]=true ;;
+    Terraform/*.tf | Terraform/*.tfvars | Terraform/modules/*)
+      want[terraform]=true; want[terraform_apply]=true ;;
     Terraform/*) want[terraform]=true ;;
     *) ;;  # docs, tools: nothing to deploy
   esac

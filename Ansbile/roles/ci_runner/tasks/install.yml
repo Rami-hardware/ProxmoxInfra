@@ -6,51 +6,20 @@
     update_cache: true
     cache_valid_time: 3600
 
-- name: Create runner user
-  ansible.builtin.user:
-    name: "{{ ci_runner_user }}"
-    shell: /bin/bash
-    groups: docker
-    append: true
+- name: Create runner group
+  ansible.builtin.group:
+    name: "{{ ci_runner_group }}"
 
-- name: Allow runner user passwordless sudo
+# CI steps call sudo (apt-get) and Ansible uses become on the
+# controller (this host).
+- name: Allow runner users passwordless sudo
   ansible.builtin.template:
     src: sudoers-runner.j2
-    dest: "/etc/sudoers.d/{{ ci_runner_user }}"
+    dest: /etc/sudoers.d/ci-runners
     owner: root
     group: root
     mode: '0440'
     validate: visudo -cf %s
-
-- name: Create runner directory
-  ansible.builtin.file:
-    path: "{{ ci_runner_dir }}"
-    state: directory
-    owner: "{{ ci_runner_user }}"
-    group: "{{ ci_runner_user }}"
-    mode: '0755'
-
-- name: Check whether the runner is unpacked
-  ansible.builtin.stat:
-    path: "{{ ci_runner_dir }}/config.sh"
-  register: ci_runner_unpacked
-
-- name: Download runner release
-  ansible.builtin.get_url:
-    url: "https://github.com/actions/runner/releases/download/v{{ ci_runner_version }}/actions-runner-linux-x64-{{ ci_runner_version }}.tar.gz"
-    dest: "/tmp/actions-runner-{{ ci_runner_version }}.tar.gz"
-    checksum: "{{ ci_runner_checksum }}"
-    mode: '0644'
-  when: not ci_runner_unpacked.stat.exists
-
-- name: Unpack runner
-  ansible.builtin.unarchive:
-    src: "/tmp/actions-runner-{{ ci_runner_version }}.tar.gz"
-    dest: "{{ ci_runner_dir }}"
-    remote_src: true
-    owner: "{{ ci_runner_user }}"
-    group: "{{ ci_runner_user }}"
-    creates: "{{ ci_runner_dir }}/config.sh"
 
 - name: Install kubectl
   ansible.builtin.get_url:
@@ -69,86 +38,27 @@
   register: ci_runner_k3s_kubeconfig
   no_log: true
 
-- name: Create kubeconfig directories
+- name: Create k3s config directory
   ansible.builtin.file:
-    path: "{{ item }}"
+    path: /etc/rancher/k3s
     state: directory
-    owner: "{{ ci_runner_user }}"
-    group: "{{ ci_runner_user }}"
-    mode: '0750'
-  loop:
-    - /etc/rancher/k3s
-    - "/home/{{ ci_runner_user }}/.kube"
+    mode: '0755'
 
-- name: Install kubeconfig pointing at the k3s server
+# Shared by every instance (group-readable) — the Cloudflare Terraform
+# backend reads this exact path.
+- name: Install shared kubeconfig pointing at the k3s server
   ansible.builtin.copy:
     content: "{{ ci_runner_k3s_kubeconfig.content | b64decode | replace('https://127.0.0.1:6443', ci_runner_k3s_api) }}"
-    dest: "{{ item }}"
-    owner: "{{ ci_runner_user }}"
-    group: "{{ ci_runner_user }}"
-    mode: '0600'
-  loop:
-    - /etc/rancher/k3s/k3s.yaml
-    - "/home/{{ ci_runner_user }}/.kube/config"
+    dest: /etc/rancher/k3s/k3s.yaml
+    owner: root
+    group: "{{ ci_runner_group }}"
+    mode: '0640'
   vars:
     ci_runner_k3s_api: "https://{{ hostvars['git-k3s-server']['ansible_host'] }}:6443"
   no_log: true
 
-- name: Check whether the runner is registered
-  ansible.builtin.stat:
-    path: "{{ ci_runner_dir }}/.runner"
-  register: ci_runner_registered
-
-- name: Register the runner with GitHub
-  when: not ci_runner_registered.stat.exists
-  block:
-    - name: Require the registration PAT
-      ansible.builtin.assert:
-        that: ci_runner_github_pat | length > 0
-        fail_msg: "Add vault_github_runner_pat to group_vars/all/vault.yml (see roles/ci_runner/defaults/main.yml)."
-        quiet: true
-
-    - name: Get a registration token
-      ansible.builtin.uri:
-        url: "https://api.github.com/repos/{{ ci_runner_repo }}/actions/runners/registration-token"
-        method: POST
-        headers:
-          Authorization: "Bearer {{ ci_runner_github_pat }}"
-          Accept: application/vnd.github+json
-        status_code: 201
-      register: ci_runner_reg_token
-      no_log: true
-
-    - name: Configure the runner
-      ansible.builtin.command:
-        cmd: >-
-          ./config.sh --unattended --replace
-          --url https://github.com/{{ ci_runner_repo }}
-          --token {{ ci_runner_reg_token.json.token }}
-          --name {{ inventory_hostname }}
-          --labels {{ ci_runner_labels | join(',') }}
-          --work _work
-        chdir: "{{ ci_runner_dir }}"
-        creates: "{{ ci_runner_dir }}/.runner"
-      become: true
-      become_user: "{{ ci_runner_user }}"
-      no_log: true
-
-- name: Install runner as a systemd service
-  ansible.builtin.command:
-    cmd: "./svc.sh install {{ ci_runner_user }}"
-    chdir: "{{ ci_runner_dir }}"
-    creates: "{{ ci_runner_dir }}/.service"
-
-# svc.sh records the unit name it generated (actions.runner.<repo>.<name>).
-- name: Read runner service name
-  ansible.builtin.slurp:
-    src: "{{ ci_runner_dir }}/.service"
-  register: ci_runner_service_file
-
-# Never restarted here: the job running this playbook may be on this runner.
-- name: Enable and start runner service
-  ansible.builtin.systemd:
-    name: "{{ ci_runner_service_file.content | b64decode | trim }}"
-    enabled: true
-    state: started
+- name: Install and register each runner instance
+  ansible.builtin.include_tasks: instance.yml
+  loop: "{{ ci_runner_instances }}"
+  loop_control:
+    loop_var: ci_runner_instance

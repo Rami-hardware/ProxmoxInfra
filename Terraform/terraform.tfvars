@@ -119,4 +119,14 @@ containers = {
     memory      = 2048
     disk_size   = 25
   }
+  # Replaces the runner that used to live on git-k3s-server.
+  ci_runner_3 = {
+    name        = "ci-runner-3"
+    vmid        = 207
+    description = "GitHub Actions runner (managed by Terraform + Ansible ci-runners.yml)"
+    ip          = "192.168.10.207/24"
+    cores       = 2
+    memory      = 2048
+    disk_size   = 25
+  }
 }

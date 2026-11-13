@@ -1,0 +1,114 @@
+---
+# One runner instance: user runner-<x>, its own home, service and registration.
+- name: "Create runner user {{ ci_runner_inst_user }}"
+  ansible.builtin.user:
+    name: "{{ ci_runner_inst_user }}"
+    shell: /bin/bash
+    groups: ["{{ ci_runner_group }}"]
+    append: true
+
+- name: "Create runner directory for {{ ci_runner_inst_user }}"
+  ansible.builtin.file:
+    path: "{{ ci_runner_inst_dir }}"
+    state: directory
+    owner: "{{ ci_runner_inst_user }}"
+    group: "{{ ci_runner_inst_user }}"
+    mode: '0755'
+
+- name: Check whether the runner is unpacked
+  ansible.builtin.stat:
+    path: "{{ ci_runner_inst_dir }}/config.sh"
+  register: ci_runner_unpacked
+
+- name: Download runner release
+  ansible.builtin.get_url:
+    url: "https://github.com/actions/runner/releases/download/v{{ ci_runner_version }}/actions-runner-linux-x64-{{ ci_runner_version }}.tar.gz"
+    dest: "/tmp/actions-runner-{{ ci_runner_version }}.tar.gz"
+    checksum: "{{ ci_runner_checksum }}"
+    mode: '0644'
+  when: not ci_runner_unpacked.stat.exists
+
+- name: Unpack runner
+  ansible.builtin.unarchive:
+    src: "/tmp/actions-runner-{{ ci_runner_version }}.tar.gz"
+    dest: "{{ ci_runner_inst_dir }}"
+    remote_src: true
+    owner: "{{ ci_runner_inst_user }}"
+    group: "{{ ci_runner_inst_user }}"
+    creates: "{{ ci_runner_inst_dir }}/config.sh"
+
+- name: Create ~/.kube for {{ ci_runner_inst_user }}
+  ansible.builtin.file:
+    path: "/home/{{ ci_runner_inst_user }}/.kube"
+    state: directory
+    owner: "{{ ci_runner_inst_user }}"
+    group: "{{ ci_runner_inst_user }}"
+    mode: '0700'
+
+- name: Point ~/.kube/config at the shared kubeconfig
+  ansible.builtin.file:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: "/home/{{ ci_runner_inst_user }}/.kube/config"
+    state: link
+    owner: "{{ ci_runner_inst_user }}"
+    group: "{{ ci_runner_inst_user }}"
+    force: true
+
+- name: Check whether the runner is registered
+  ansible.builtin.stat:
+    path: "{{ ci_runner_inst_dir }}/.runner"
+  register: ci_runner_registered
+
+- name: Register the runner with GitHub
+  when: not ci_runner_registered.stat.exists
+  block:
+    - name: Require the registration PAT
+      ansible.builtin.assert:
+        that: ci_runner_github_pat | length > 0
+        fail_msg: "Add vault_github_runner_pat to group_vars/all/vault.yml (see roles/ci_runner/defaults/main.yml)."
+        quiet: true
+
+    - name: Get a registration token
+      ansible.builtin.uri:
+        url: "https://api.github.com/repos/{{ ci_runner_repo }}/actions/runners/registration-token"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ ci_runner_github_pat }}"
+          Accept: application/vnd.github+json
+        status_code: 201
+      register: ci_runner_reg_token
+      no_log: true
+
+    - name: Configure the runner
+      ansible.builtin.command:
+        cmd: >-
+          ./config.sh --unattended --replace
+          --url https://github.com/{{ ci_runner_repo }}
+          --token {{ ci_runner_reg_token.json.token }}
+          --name {{ ci_runner_inst_name }}
+          --labels {{ ci_runner_labels | join(',') }}
+          --work _work
+        chdir: "{{ ci_runner_inst_dir }}"
+        creates: "{{ ci_runner_inst_dir }}/.runner"
+      become: true
+      become_user: "{{ ci_runner_inst_user }}"
+      no_log: true
+
+- name: Install runner as a systemd service
+  ansible.builtin.command:
+    cmd: "./svc.sh install {{ ci_runner_inst_user }}"
+    chdir: "{{ ci_runner_inst_dir }}"
+    creates: "{{ ci_runner_inst_dir }}/.service"
+
+# svc.sh records the unit name it generated (actions.runner.<repo>.<name>).
+- name: Read runner service name
+  ansible.builtin.slurp:
+    src: "{{ ci_runner_inst_dir }}/.service"
+  register: ci_runner_service_file
+
+# Never restarted here: the job running this playbook may be on this runner.
+- name: Enable and start runner service
+  ansible.builtin.systemd:
+    name: "{{ ci_runner_service_file.content | b64decode | trim }}"
+    enabled: true
+    state: started

@@ -6,6 +6,19 @@ ci_runner_install: false
 ci_runner_user: github
 ci_runner_dir: /home/github/actions-runner
 
+# Install mode only: runner instances per host. Each gets its own user
+# (runner-<x>), home and service, so two jobs on one host never share
+# ~/.ssh/id_rsa or ~/.vault_pass (CI writes and deletes them per job).
+ci_runner_instances: [a]
+ci_runner_group: ci-runners
+ci_runner_inst_user: "runner-{{ ci_runner_instance }}"
+ci_runner_inst_dir: "/home/runner-{{ ci_runner_instance }}/actions-runner"
+ci_runner_inst_name: "{{ inventory_hostname }}-{{ ci_runner_instance }}"
+# Directories the weekly cleanup timer tidies.
+ci_runner_cleanup_dirs: >-
+  {{ (ci_runner_instances | map('regex_replace', '^', '/home/runner-') | map('regex_replace', '$', '/actions-runner') | list)
+     if ci_runner_install else [ci_runner_dir] }}
+
 # Used only when ci_runner_install is true.
 ci_runner_repo: Rami-hardware/ProxmoxInfra
 ci_runner_labels: [lxc]
