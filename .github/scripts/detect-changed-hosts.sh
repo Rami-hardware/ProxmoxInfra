@@ -39,8 +39,9 @@ finish() {
 }
 
 all() {
-  # Everything is planned and deployed, but nothing is applied to Proxmox:
-  # "deploy everything" is not a Terraform code change.
+  # Everything is planned and deployed. terraform_apply keeps its own value:
+  # "deploy everything" is not a Terraform code change, but a shared-file
+  # change in the same diff must not hide one (set below, before the loop).
   for h in "${!want[@]}"; do [ "$h" = terraform_apply ] || want[$h]=true; done
   finish "$1"
 }
@@ -80,6 +81,10 @@ if [ "$GITHUB_REF_NAME" = main ]; then
   done
 fi
 
+# Decided over the whole diff first: the loop below may stop early at a
+# shared file (all) before it reaches the Terraform paths.
+grep -qE '^Terraform/([^/]+\.(tf|tfvars)|modules/.+)$' <<< "$changed" && want[terraform_apply]=true
+
 # Role lists mirror the playbooks. A role missing here falls through to the
 # Ansbile/* catch-all and deploys every host, so forgetting to update this is
 # safe, just slower. `common` is in every playbook, hence the catch-all.
@@ -116,8 +121,6 @@ while IFS= read -r f; do
     Terraform/cloudflare/*) want[cloudflare]=true ;;
     # Written by tf_apply / hand applies: worth a plan, not an apply.
     Terraform/terraform.tfstate*) want[terraform]=true ;;
-    Terraform/*.tf | Terraform/*.tfvars | Terraform/modules/*)
-      want[terraform]=true; want[terraform_apply]=true ;;
     Terraform/*) want[terraform]=true ;;
     *) ;;  # docs, tools: nothing to deploy
   esac
