@@ -17,17 +17,9 @@ module "proxmox_vms" {
   ssh_public_key = var.ssh_public_key
 }
 
-# Groups the runner containers in the Proxmox UI (Datacenter → Pools) and
-# gives one place to scope permissions or backups to them.
-resource "proxmox_virtual_environment_pool" "ci_runners" {
-  pool_id = "ci-runners"
-  comment = "GitHub Actions runner LXCs (managed by Terraform)"
-}
-
 module "proxmox_containers" {
   source           = "./modules/proxmox_lxc"
   for_each         = var.containers
-  pool_id          = proxmox_virtual_environment_pool.ci_runners.pool_id
   name             = each.value.name
   vmid             = each.value.vmid
   description      = each.value.description

@@ -57,9 +57,3 @@ variable "ssh_public_key" {
   type        = string
   description = "Public SSH key installed for root"
 }
-
-variable "pool_id" {
-  type        = string
-  description = "Proxmox resource pool the container joins at creation"
-  default     = null
-}

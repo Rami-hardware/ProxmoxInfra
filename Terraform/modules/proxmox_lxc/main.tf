@@ -8,7 +8,6 @@ resource "proxmox_virtual_environment_container" "ct" {
   unprivileged  = true
   start_on_boot = true
   started       = true
-  pool_id       = var.pool_id
 
   features {
     nesting = true
@@ -61,9 +60,6 @@ resource "proxmox_virtual_environment_container" "ct" {
       initialization,
       operating_system,
       disk,
-      # Containers created before the pool existed were moved into it by
-      # hand (pvesh); a pool change must never recreate a runner.
-      pool_id,
     ]
   }
 }
