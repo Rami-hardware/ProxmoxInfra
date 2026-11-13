@@ -85,11 +85,12 @@ jobs:
             git_k3s=${{ needs.changes.outputs.git_k3s }}
             ci_runners=${{ needs.changes.outputs.ci_runners }}
             host_node=${{ needs.changes.outputs.host_node }}
+            terraform=${{ needs.changes.outputs.terraform }}
         run: |
           hosts=$(echo "$HOSTS" | tr ' ' '\n' | awk -F= '$2=="true"{print $1}' | paste -sd, -)
-          jq -n --arg u "$RUN_URL" --arg c "${COMMIT:0:8}" --arg h "${hosts:-none (Terraform/Cloudflare only)}" \
+          jq -n --arg u "$RUN_URL" --arg c "${COMMIT:0:8}" --arg h "${hosts:-none (Cloudflare only)}" \
             '{embeds:[{title:"🚦 Production deploy waiting for approval", url:$u, color:15844367,
-              description:"Tests passed. Open the run → **Review deployments** → Approve.",
+              description:"Tests passed. Open the run → **Review deployments** → Approve. If `terraform` is listed, check the **Terraform plan** summary first: approving also applies it.",
               fields:[{name:"Commit", value:("`"+$c+"`"), inline:true},
                       {name:"Hosts", value:$h, inline:true}]}]}' \
             | curl -sS -f -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK"
@@ -129,6 +130,8 @@ jobs:
     concurrency:
       group: deploy-hosts
       cancel-in-progress: false
+    permissions:
+      contents: write  # tf_apply commits the Terraform state back to main/staging
     uses: ./.github/workflows/deploy.yml
     with:
       gateway: ${{ needs.changes.outputs.gateway == 'true' }}

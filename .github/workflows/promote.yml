@@ -50,11 +50,12 @@ jobs:
           [ "$status" = completed ] || fail "staging's run for ${staging:0:8} is $status — wait for it to finish."
           [ "$conclusion" = success ] || fail "staging's run for ${staging:0:8} ended '$conclusion' — fix it on staging first."
 
-          # Image Updater commits straight to main (.argocd-source-*.yaml only).
-          # Those may be merged across; anything else on main must reach
-          # staging first so the canary has tested it.
+          # Image Updater commits straight to main (.argocd-source-*.yaml only),
+          # and so does the CI Terraform apply (terraform.tfstate). Those may be
+          # merged across; anything else on main must reach staging first so
+          # the canary has tested it.
           extra=$(git diff --name-only "$(git merge-base origin/main origin/staging)" origin/main \
-                  | grep -vE '^Ansbile/argocd-apps/[^/]+/\.argocd-source-[^/]+\.yaml$' || true)
+                  | grep -vE '^Ansbile/argocd-apps/[^/]+/\.argocd-source-[^/]+\.yaml$|^Terraform/terraform\.tfstate$' || true)
           [ -z "$extra" ] || fail "main has changes staging never tested: $(echo $extra | head -c 300). Merge main into staging, let the canary run, then promote."
 
           git config user.name "github-actions[bot]"
