@@ -1,0 +1,6 @@
+---
+- name: Update CA trust store on controller
+  ansible.builtin.command: update-ca-certificates
+  delegate_to: localhost
+  become: true
+  changed_when: true

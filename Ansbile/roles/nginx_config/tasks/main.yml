@@ -173,11 +173,4 @@
     mode: "0644"
   delegate_to: localhost
   become: true
-  register: nginx_config_ca_controller
-
-- name: Update CA trust store on controller
-  ansible.builtin.command: update-ca-certificates
-  delegate_to: localhost
-  become: true
-  changed_when: true
-  when: nginx_config_ca_controller is changed
+  notify: Update CA trust store on controller
