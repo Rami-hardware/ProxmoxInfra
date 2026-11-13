@@ -113,11 +113,13 @@ env:
   # Alertmanager API (NodePort on monitoring-server), for deploy silences.
   ALERTMANAGER_URL: ${{ vars.ALERTMANAGER_URL }}
 
-# Hosts deploy in waves so independent playbooks run at the same time on
-# different runners:
-#   tf_plan → gate (approval) → tf_apply → gateway (DNS first) → monitoring | media | host-node → git-k3s → ci-runners
-# k3s_agent on monitoring/media only *reads* from git-k3s, so that wave is safe
-# in parallel. git-k3s keeps its old place after monitoring and media.
+# Every host job starts at once after the approval (and the Terraform apply),
+# each on its own runner:
+#   tf_plan → gate (approval) → tf_apply → gateway | monitoring | media | host-node | git-k3s | ci-runners → finish
+# Safe on a running cluster: k3s_agent and ci_runner only *read* the token /
+# kubeconfig from git-k3s, and with per-role --tags a push rarely restarts k3s
+# and an agent together. A failing host no longer holds the others back. A
+# fresh cluster is bootstrapped in order by hand (docs/rebuild.md).
 jobs:
   # The only job bound to an environment: one Production approval per deploy
   # (covering the Terraform apply too), and each environment's Deployments
@@ -367,7 +369,7 @@ jobs:
 
   monitoring:
     name: "Ansible: monitoring-server"
-    needs: [gate, gateway]
+    needs: [gate, tf_apply]
     # Run when this host changed and nothing before it failed (skipped is fine).
     if: ${{ !cancelled() && !failure() && inputs.monitoring }}
     runs-on: self-hosted
@@ -395,7 +397,7 @@ jobs:
 
   media:
     name: "Ansible: media-server"
-    needs: [gate, gateway]
+    needs: [gate, tf_apply]
     # Run when this host changed and nothing before it failed (skipped is fine).
     if: ${{ !cancelled() && !failure() && inputs.media }}
     runs-on: self-hosted
@@ -424,7 +426,7 @@ jobs:
   # The Proxmox host itself (exporters only); independent of the VMs.
   host_node:
     name: "Ansible: host-node"
-    needs: [gate, gateway]
+    needs: [gate, tf_apply]
     # Run when this host changed and nothing before it failed (skipped is fine).
     if: ${{ !cancelled() && !failure() && inputs.host_node }}
     runs-on: self-hosted
@@ -452,7 +454,7 @@ jobs:
 
   git_k3s:
     name: "Ansible: git-k3s-server"
-    needs: [gate, gateway, monitoring, media]
+    needs: [gate, tf_apply]
     # Run when this host changed and nothing before it failed (skipped is fine).
     if: ${{ !cancelled() && !failure() && inputs.git_k3s }}
     runs-on: self-hosted
@@ -478,10 +480,10 @@ jobs:
         if: always()
         uses: ./.github/actions/cleanup-secrets
 
-  # The runner LXCs copy their kubeconfig from k3s, so after git-k3s.
+  # The runner LXCs copy their kubeconfig from k3s (a file read; fine in parallel).
   ci_runners:
     name: "Ansible: ci-runners"
-    needs: [gate, git_k3s]
+    needs: [gate, tf_apply]
     # Run when this host changed and nothing before it failed (skipped is fine).
     if: ${{ !cancelled() && !failure() && inputs.ci_runners }}
     runs-on: self-hosted
