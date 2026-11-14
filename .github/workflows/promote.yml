@@ -61,7 +61,7 @@ jobs:
             done
             [ "$tested" != "$staging" ] || fail "no pipeline run found for staging's last 50 commits."
             changed=$(git diff --name-only "$tested" "$staging")
-            other=$(grep -vE '^(docs/|tools/|scripts/|\.claude/|Ansbile/argocd-apps/)|\.md$|^\.mcp\.json$' <<< "$changed" || true)
+            other=$(grep -vE '^(docs/|tools/|scripts/|\.claude/|Ansbile/argocd-apps/[^/]+/)|\.md$|^\.mcp\.json$' <<< "$changed" || true)
             [ -z "$other" ] || fail "staging ${staging:0:8} has no pipeline run, yet changes files the pipeline tests: $(echo $other | head -c 200)"
             # ArgoCD manifests and alertops-mcp are tested by checks.yml instead.
             # checks.yml only runs on pushes touching those paths, so judge by

@@ -69,6 +69,10 @@
   ansible.builtin.import_tasks: network_policy.yml
   tags: [k3s_apps_network_policy]
 
+- name: "Intel GPU device plugin"
+  ansible.builtin.import_tasks: gpu_plugin.yml
+  tags: [k3s_apps_gpu_plugin]
+
 - name: "Homarr"
   ansible.builtin.import_tasks: homarr.yml
   tags: [k3s_apps_homarr]

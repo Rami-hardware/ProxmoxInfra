@@ -73,8 +73,9 @@ spec:
           # GPU access enables VAAPI hwaccel for ffmpeg during audio
           # extraction, which is what ffsubsync/subsync use to align
           # subs to audio tracks.
-          securityContext:
-            privileged: true
+          # The GPU comes from the Intel device plugin (k3s_apps gpu_plugin):
+          # it puts /dev/dri/renderD128 in the container, so no privileged
+          # mode and no /dev/dri hostPath.
           ports:
             - containerPort: 6767
           env:
@@ -95,8 +96,6 @@ spec:
               mountPath: /tv
             - name: movies
               mountPath: /movies
-            - name: dri
-              mountPath: /dev/dri
           # Sync passes run ffmpeg + ffsubsync/subsync — CPU heavy per-file,
           # memory grows with audio buffer length on long files.
           resources:
@@ -106,6 +105,7 @@ spec:
             limits:
               memory: "1Gi"
               cpu: "1000m"
+              gpu.intel.com/i915: "1"
       volumes:
         - name: config
           persistentVolumeClaim:
@@ -116,9 +116,6 @@ spec:
         - name: movies
           hostPath:
             path: /mnt/media/movies
-        - name: dri
-          hostPath:
-            path: /dev/dri
 ---
 apiVersion: v1
 kind: Service

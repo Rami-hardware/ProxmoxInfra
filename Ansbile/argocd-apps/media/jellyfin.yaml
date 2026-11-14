@@ -70,8 +70,11 @@ spec:
       containers:
         - name: jellyfin
           image: jellyfin/jellyfin:latest
+          # The GPU comes from the Intel device plugin (k3s_apps gpu_plugin):
+          # it puts /dev/dri/renderD128 in the container, so no privileged
+          # mode and no /dev/dri hostPath.
           securityContext:
-            privileged: true
+            allowPrivilegeEscalation: false
           ports:
             - containerPort: 8096
           env:
@@ -94,8 +97,6 @@ spec:
               mountPath: /media
             - name: cache
               mountPath: /cache
-            - name: dri
-              mountPath: /dev/dri
           resources:
             requests:
               memory: "2Gi"
@@ -105,6 +106,7 @@ spec:
               # without letting one pod own the 6-core node's limit budget
               memory: "3Gi"
               cpu: "3000m"
+              gpu.intel.com/i915: "1"
       volumes:
         - name: config
           persistentVolumeClaim:
@@ -115,9 +117,6 @@ spec:
         - name: cache
           hostPath:
             path: /opt/jellyfin/cache
-        - name: dri
-          hostPath:
-            path: /dev/dri
 ---
 apiVersion: v1
 kind: Service
