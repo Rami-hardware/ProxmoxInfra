@@ -89,10 +89,11 @@ k3s_apps_homarr_encryption_secret: homarr-db-encryption
 
 # ── Intel GPU device plugin ───────────────────────────────────────────────────
 # Hands the media node's Arc GPU (i915) to pods as the resource
-# gpu.intel.com/i915, so Jellyfin and Bazarr get /dev/dri without running
-# privileged.
+# gpu.intel.com/i915, so Jellyfin, Bazarr and intel-gpu-exporter get
+# /dev/dri without running privileged.
 k3s_apps_gpu_plugin_version: "0.37.1"
 k3s_apps_gpu_plugin_node: media-server
-# One GPU, shared by up to this many pods at once: Jellyfin + Bazarr + 1
-# spare, so a rolling update's surge pod is not stuck Pending.
-k3s_apps_gpu_plugin_shared_dev_num: 3
+# One GPU, shared by up to this many pods at once: Jellyfin + Bazarr +
+# intel-gpu-exporter + 1 spare, so a rolling update's surge pod is not stuck
+# Pending.
+k3s_apps_gpu_plugin_shared_dev_num: 4

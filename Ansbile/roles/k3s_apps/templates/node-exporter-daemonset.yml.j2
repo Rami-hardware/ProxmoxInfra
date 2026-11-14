@@ -28,6 +28,8 @@ spec:
             privileged: true
           args:
             - "--path.rootfs=/host"
+            # *.prom files written by host jobs (e.g. k3s_server's datastore snapshot).
+            - "--collector.textfile.directory=/host/var/lib/node_exporter/textfile_collector"
           env:
             - name: TZ
               value: "Asia/Riyadh"

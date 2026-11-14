@@ -5,6 +5,7 @@ Every alert annotation links here. One runbook per alert family.
 | Runbook | Alerts |
 |---|---|
 | [nodes.md](nodes.md) | node/VM health: disk, memory, load, OOM, clock, network |
+| [k3s-datastore.md](k3s-datastore.md) | nightly k3s sqlite snapshot; restoring the control plane from it |
 | [sites.md](sites.md) | HTTP probes, SLO burn (local/public), blackbox, speedtest |
 | [dns.md](dns.md) | AdGuard Home + CoreDNS chain |
 | [k8s-workloads.md](k8s-workloads.md) | deployments, pods, PVCs, jobs, nodes, kubelet |

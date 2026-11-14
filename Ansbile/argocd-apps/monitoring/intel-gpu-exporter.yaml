@@ -32,16 +32,18 @@ spec:
       containers:
         - name: intel-gpu-exporter
           image: ghcr.io/onedr0p/intel-gpu-exporter:rolling
+          # intel_gpu_top reads the i915 PMU: perf events need CAP_PERFMON
+          # (media's kernel.perf_event_paranoid is 4), and the GPU comes from
+          # the Intel device plugin (k3s_apps gpu_plugin) — no privileged mode.
           securityContext:
-            privileged: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              add: ["PERFMON"]
           ports:
             - containerPort: 8080
           env:
             - name: TZ
               value: "Asia/Riyadh"
-          volumeMounts:
-            - name: dri
-              mountPath: /dev/dri
           resources:
             requests:
               memory: "32Mi"
@@ -49,10 +51,7 @@ spec:
             limits:
               memory: "128Mi"
               cpu: "100m"
-      volumes:
-        - name: dri
-          hostPath:
-            path: /dev/dri
+              gpu.intel.com/i915: "1"
 ---
 apiVersion: v1
 kind: Service

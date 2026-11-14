@@ -369,6 +369,28 @@ groups:
           description: "Based on the last 6h trend, {{ $labels.mountpoint }} on {{ $labels.instance }} runs out of space within ~7 days ({{ humanize $value }} bytes projected). Trend, not a guarantee — clean up or grow before NodeFilesystemLowSpace fires."
 
   # Ported from Grafana UI rules (group 'CoreDNS evaluation') — rule names renamed to alert: CamelCase.
+
+      # Nightly k3s datastore snapshot (roles/k3s_server, k3s-db-snapshot.timer),
+      # reported through node-exporter's textfile collector.
+      - alert: K3sDatastoreSnapshotStale
+        expr: time() - k3s_db_snapshot_last_success_timestamp_seconds > 36 * 3600
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/k3s-datastore.md"
+          summary: "k3s datastore snapshot is {{ $value | humanizeDuration }} old"
+          description: "No good k3s datastore snapshot in 36h on {{ $labels.instance }}. Check `systemctl status k3s-db-snapshot.service` and its journal (sqlite backup, integrity check, disk space)."
+
+      - alert: K3sDatastoreSnapshotMissing
+        expr: absent(k3s_db_snapshot_last_success_timestamp_seconds)
+        for: 2h
+        labels:
+          severity: warning
+        annotations:
+          runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/k3s-datastore.md"
+          summary: "No k3s datastore snapshot metric"
+          description: "k3s_db_snapshot_last_success_timestamp_seconds is missing: the snapshot never ran, its .prom file is gone, or node-exporter on git-k3s-server lost its textfile collector."
   - name: coredns
     rules:
       - alert: CoreDNSDNSResponseErrors

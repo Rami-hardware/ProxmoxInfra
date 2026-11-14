@@ -1,0 +1,10 @@
+# Managed by Ansible (roles/k3s_server).
+[Unit]
+Description=Snapshot the k3s sqlite datastore
+After=k3s.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/k3s-db-snapshot
+Nice=10
+IOSchedulingClass=idle

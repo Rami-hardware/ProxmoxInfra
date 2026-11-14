@@ -57,10 +57,12 @@ spec:
       serviceAccountName: jellyfin
       dnsPolicy: None
       dnsConfig:
+        # Cluster DNS only. CoreDNS already falls back from AdGuard to public
+        # resolvers and unbound (k3s_server). Public servers listed here were
+        # queried in parallel with it by musl-based images, so every lookup
+        # skipped AdGuard and leaked *.cluster.local names to Google.
         nameservers:
           - "10.43.0.10"
-          - "8.8.8.8"
-          - "8.8.4.4"
         searches:
           - "media.svc.cluster.local"
           - "svc.cluster.local"
