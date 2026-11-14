@@ -39,7 +39,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
       }
     }
     user_account {
-      keys     = [trimspace(var.ssh_public_key)]
+      keys     = split("\n", trimspace(var.ssh_public_key)) # one key per line (owner, CI)
       username = var.ciuser
       password = var.cipassword
     }

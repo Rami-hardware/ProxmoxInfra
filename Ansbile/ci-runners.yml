@@ -3,5 +3,6 @@
   hosts: ci-runner-lxc
   become: true
   roles:
+    - { role: ssh_access, tags: [ssh_access] }
     - { role: common, tags: [common] }
     - { role: ci_runner, tags: [ci_runner] }

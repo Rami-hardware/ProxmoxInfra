@@ -1,0 +1,11 @@
+---
+# Public keys allowed to log in as each host's Ansible user (ansible_user in
+# inventory.ini: the VM's cloud-init user, root on the runners and host-node),
+# one file per consumer in files/<name>.pub, so one can be revoked without
+# locking out the rest: set its state to absent, deploy, then delete it.
+# Other keys in authorized_keys are left alone (no `exclusive`).
+ssh_access_authorized_keys:
+  - name: owner  # the owner's desktop; also alertops-mcp and manual runs
+    state: present
+  - name: ci  # GitHub Actions (secret SSH_PRIVATE_KEY)
+    state: present

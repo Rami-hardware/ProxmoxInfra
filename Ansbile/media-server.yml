@@ -3,6 +3,7 @@
   hosts: media-server
   become: true
   roles:
+    - { role: ssh_access, tags: [ssh_access] }
     - { role: common, tags: [common] }
     - { role: intel_arc, tags: [intel_arc] }
     - { role: k3s_agent, tags: [k3s_agent] }

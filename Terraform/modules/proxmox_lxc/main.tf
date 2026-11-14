@@ -49,7 +49,7 @@ resource "proxmox_virtual_environment_container" "ct" {
       servers = var.dns_servers
     }
     user_account {
-      keys = [trimspace(var.ssh_public_key)]
+      keys = split("\n", trimspace(var.ssh_public_key)) # one key per line (owner, CI)
     }
   }
 

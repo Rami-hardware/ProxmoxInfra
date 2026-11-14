@@ -3,6 +3,7 @@
   hosts: monitoring-server
   become: true
   roles:
+    - { role: ssh_access, tags: [ssh_access] }
     - { role: common, tags: [common] }
     - { role: unbound, tags: [unbound] }
     - { role: k3s_agent, tags: [k3s_agent] }

@@ -3,6 +3,7 @@
   hosts: gateway-server
   become: true
   roles:
+    - { role: ssh_access, tags: [ssh_access] }
     - { role: common, tags: [common] }
     - { role: adguard, tags: [adguard] }
     - { role: nginx_config, tags: [nginx_config] }
