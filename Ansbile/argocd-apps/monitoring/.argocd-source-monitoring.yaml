@@ -1,6 +1,6 @@
 kustomize:
   images:
-  - grafana/grafana@sha256:0615ec4fbd4072004b7d86b46ded63013a74b7d6eb1119273dd89e8fa25c13cf
+  - grafana/grafana:13.3.1
   - prom/prometheus@sha256:e04987641b57704f408e31f6373ba4138ecf27cb4a165d24aabb6c38fddd0f06
   - grafana/loki@sha256:b43c257ccfc925d4a50b8717cac61a3b51df8c48d01847936057e5c4075a24a7
   - prom/alertmanager@sha256:e638797febd034838eca8b98cdbd46f951e9bf7f178777aa8669167406a9946c
