@@ -20,6 +20,16 @@
     enabled: true
     state: started
 
+# Terraform verifies the Proxmox API certificate (providers.tf has no
+# `insecure`): trust the PVE cluster CA that signs it. Public cert, copied
+# from /etc/pve/pve-root-ca.pem on host-node.
+- name: Trust the Proxmox VE cluster CA
+  ansible.builtin.copy:
+    src: pve-root-ca.crt
+    dest: /usr/local/share/ca-certificates/pve-root-ca.crt
+    mode: '0644'
+  notify: Update CA certificates
+
 - name: Create runner group
   ansible.builtin.group:
     name: "{{ ci_runner_group }}"

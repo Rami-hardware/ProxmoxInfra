@@ -1,0 +1,10 @@
+# Managed by Ansible (roles/common). Key-only SSH, enforced here instead of
+# trusting cloud-init / the LXC template (the runner LXCs shipped with
+# PasswordAuthentication yes). Loaded before the distro's 50-/60- drop-ins,
+# and sshd keeps the first value it reads, so these win.
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitEmptyPasswords no
+# The runner LXCs are managed as root, with a key only.
+PermitRootLogin prohibit-password
+X11Forwarding no

@@ -25,3 +25,13 @@
     dest: /etc/systemd/journald.conf.d/00-size-cap.conf
     mode: '0644'
   notify: Restart systemd-journald
+
+# Validated with `sshd -t` before it replaces anything, so a bad line can't
+# lock Ansible out.
+- name: Enforce key-only SSH
+  ansible.builtin.template:
+    src: sshd-hardening.conf.j2
+    dest: /etc/ssh/sshd_config.d/00-hardening.conf
+    mode: '0644'
+    validate: /usr/sbin/sshd -t -f %s
+  notify: Reload sshd
