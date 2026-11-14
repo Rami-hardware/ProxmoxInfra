@@ -57,7 +57,7 @@ async function sendToDiscord(chunk, attempt = 1, mention = false) {
 }
 
 app.post('/alertmanager', async (req, res) => {
-  const alerts = req.body.alerts;
+  const alerts = req.body?.alerts; // Express 5: no JSON body = undefined body
 
   if (!Array.isArray(alerts) || !alerts.length) {
     console.warn('Received alert with empty or invalid alerts array');
