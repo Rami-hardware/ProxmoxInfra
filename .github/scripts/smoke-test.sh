@@ -50,6 +50,9 @@ check_argocd() {
   apps=$(kubectl -n argocd get applications -o json)
   jq -r '.items[] | select(.status.sync.status != "Synced") | "::warning::ArgoCD app \(.metadata.name) is \(.status.sync.status)"' <<< "$apps" >&3
   jq -r '.items[] | select(.status.health.status != "Healthy") | "ArgoCD app \(.metadata.name) is \(.status.health.status)"' <<< "$apps" | grep . && return 1
+  # ArgoCD can't read git (e.g. a rejected repo key): apps stay Healthy on
+  # their old pods, but nothing syncs and Image Updater can't write back.
+  jq -r '.items[] | .metadata.name as $n | (.status.conditions // [])[] | select(.type | test("ComparisonError|InvalidSpecError|SyncError")) | "ArgoCD app \($n): \(.type): \(.message | .[0:160])"' <<< "$apps" | grep . && return 1
   return 0
 }
 

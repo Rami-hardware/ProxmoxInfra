@@ -1,240 +1,231 @@
 # Homelab Infrastructure
 
-A fully automated homelab running on Proxmox, provisioned with Terraform, configured with Ansible, deployed via GitOps with ArgoCD, and monitored end-to-end with Prometheus, Grafana, and Loki.
+A self-hosted homelab on one Proxmox host. Terraform creates the VMs and the
+CI runner containers, Ansible configures the hosts and bootstraps a K3s
+cluster, and ArgoCD deploys the apps from this repo. Everything is
+monitored with Prometheus, Loki and Tempo, and every alert links to a runbook.
+Changes ship through GitHub Actions: tested on `development`, deployed to the
+real hosts as a canary from `staging`, then promoted to `main` (production)
+after a smoke test and an approval.
+
+> Agent and contributor rules (conventions, load-bearing quirks) live in
+> [AGENTS.md](AGENTS.md); the cross-file overview is in [CLAUDE.md](CLAUDE.md).
+> Disaster recovery: [docs/rebuild.md](docs/rebuild.md). Runbooks:
+> [docs/runbooks/](docs/runbooks/README.md).
 
 ---
 
 ## Architecture
 
-### Physical Host
-
-- **Proxmox VE** on bare metal (`192.168.10.250`)
-- Intel Arc GPU passthrough to media VM
-- ZFS storage with custom exporter
-
-### Virtual Machines
-
-| VM                | IP            | Cores | RAM  | Role                                      |
-| :---------------- | :------------ | :---- | :--- | :---------------------------------------- |
-| gateway-server    | 192.168.10.200 | 1     | 3 GB | DNS (AdGuard Home, systemd)               |
-| media-server      | 192.168.10.201 | 6     | 10 GB | Media stack — K3s worker                 |
-| monitoring-server | 192.168.10.203 | 1     | 8 GB | Observability stack — K3s worker          |
-| git-k3s-server    | 192.168.10.204 | 3     | 7 GB | K3s control plane                         |
-| VM 100 (macOS)    | — | — | 16 GB cfg | Owner's test VM — stopped, not Terraform-managed, excluded from backups |
-
----
-
-## GitOps with ArgoCD
-
-App deployment is split across two mechanisms:
-
-- **Ansible** bootstraps the cluster itself — K3s, Helm repos, cert-manager, ingress-nginx, Istio, ArgoCD, ArgoCD Image Updater, and cluster-wide DaemonSets (node-exporter, Grafana Alloy, kube-state-metrics).
-- **ArgoCD** owns app deployment from here on. Three `Application` resources (`media`, `monitoring`, `network`) auto-sync from `Ansbile/argocd-apps/<name>/` on the `main` branch — editing an app means editing its YAML under `argocd-apps/`, committing, and pushing; ArgoCD picks it up automatically (self-heal + prune enabled, no manual `kubectl apply` needed).
-
-### ArgoCD Image Updater
-
-Tracks the `:latest` (or `:rolling`) tag digest for every app image on a 2-minute poll. When upstream pushes a new image, Image Updater writes a `.argocd-source-<app>.yaml` override into the app's `argocd-apps/` directory and pushes the commit directly to `main` over SSH (deploy key with write access) — ArgoCD then syncs the change automatically. Fully hands-off container updates, no Watchtower needed.
-
-- Pinned to Image Updater **v0.12.2** (last annotation-based release before the v1.x CRD rewrite)
-- Each `Application`'s image list + `digest` update strategy is set via `argocd-image-updater.argoproj.io/*` annotations
-- Write-back requires each app directory to be a Kustomize base (`kustomization.yaml` with an `images:` block) — plain manifest directories aren't supported for git write-back
-
-### ArgoCD UI
-
-`https://argocd.homelab.lan` — proxied through the gateway's nginx (`nginx_services_local` in `group_vars/gateway-vm.yml`) to ArgoCD's in-cluster NodePort. Login `admin`, password from:
-
-```bash
-k3s kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
+```text
+            Terraform (Proxmox VMs + LXCs, Cloudflare)
+                              │
+   ┌──────────────────────────┴──────────────────────────┐
+   │ Proxmox VE host  rami / 192.168.10.250  (ZFS, vzdump) │
+   │                                                     │
+   │  gateway .200   media .201   monitoring .203   git-k3s .204   ci-runner-1/2/3 .205-.207
+   │  K3s agent      K3s agent    K3s agent         K3s server     LXC, GitHub Actions
+   └─────────────────────────────────────────────────────┘
+                              │ Ansible (roles per host)
+                              ▼
+        K3s cluster ── ArgoCD syncs Ansbile/argocd-apps/ from main
+                   └── Image Updater commits new image digests to main
 ```
+
+Three layers, each with a clear owner:
+
+| Layer | Owns | Changed by |
+| :--- | :--- | :--- |
+| **Terraform** (`Terraform/`) | Proxmox VMs and LXCs; Cloudflare zone settings, cache rules, tunnel | CI applies on `main` after approval (destroy/replace is blocked) |
+| **Ansible** (`Ansbile/`, 19 roles) | Host config, K3s, Helm releases (cert-manager, MetalLB, ingress-nginx, Istio, ArgoCD, Image Updater, Homarr), cluster DaemonSets, Ingress routes | CI, only the roles whose files changed |
+| **ArgoCD** (`Ansbile/argocd-apps/`) | The apps in the `media`, `monitoring`, `network` namespaces | Push to `main`; ArgoCD syncs (self-heal + prune) |
+
+### Hosts
+
+| Host | IP | vCPU / RAM | Role |
+| :--- | :--- | :--- | :--- |
+| `host-node` (Proxmox) | 192.168.10.250 | i5-10400F, 33.6 GB | Hypervisor, ZFS `tank`, nightly vzdump backups |
+| `gateway-server` | 192.168.10.200 | 2 / 2 GB | AdGuard Home (primary DNS, systemd), K3s agent (`network`) |
+| `media-server` | 192.168.10.201 | 6 / 7 GB | K3s agent (`media`), Intel Arc GPU passthrough |
+| `monitoring-server` | 192.168.10.203 | 2 / 8 GB | K3s agent (`monitoring`), Unbound (secondary DNS), ingress-nginx replica |
+| `git-k3s-server` | 192.168.10.204 | 3 / 7 GB | K3s control plane (sqlite), ArgoCD, Istio, Tempo, ingress-nginx replica |
+| `ci-runner-1/2/3` | 192.168.10.205-207 | 2 / 2 GB each | Unprivileged LXCs, two GitHub Actions runners each (6 parallel jobs) |
+
+VM 100 is the owner's macOS test VM: not managed by Terraform, excluded from
+backups (it shares media's GPU), never started while media runs.
 
 ---
 
 ## Services
 
-### Media (192.168.10.201) — K3s worker, namespace: `media` — ArgoCD-managed
+All `*.homelab.lan` names resolve through AdGuard/Unbound to ingress-nginx
+(MetalLB `192.168.10.210`) with TLS from the internal CA
+(`http://ca.homelab.lan/ca.crt` — trust it once per device). Public names
+under `darkestserver.com` come in through a Cloudflare Tunnel.
 
-| App          | URL                               | Port | Notes                                         |
-| :----------- | :-------------------------------- | :--- | :-------------------------------------------- |
-| Jellyfin     | <https://jellyfin.homelab.lan>    | 8096 | Intel Arc GPU transcoding (VAAPI)             |
-| Radarr       | <https://radarr.homelab.lan>      | 7878 | Movie automation                              |
-| Sonarr       | <https://sonarr.homelab.lan>      | 8989 | TV automation                                 |
-| Bazarr       | <https://bazarr.homelab.lan>      | 6767 | Subtitle automation (GPU-accelerated ffmpeg)  |
-| Seerr        | <https://seerr.homelab.lan>       | 5055 | Media request management                      |
-| qBittorrent  | <https://qbittorrent.homelab.lan> | 8080 | Torrent client — BT port 6881 TCP/UDP         |
-| Prowlarr     | <https://prowlarr.homelab.lan>    | 9696 | Indexer management                            |
-| FlareSolverr | —                                 | 8191 | Cloudflare bypass (stateless, Chromium-based) |
-| Scraparr     | —                                 | 7100 | Prometheus metrics exporter for arr apps      |
+### Media — `media` namespace (media-server)
 
-### Monitoring (192.168.10.203) — K3s worker, namespace: `monitoring` — ArgoCD-managed
+| App | URL | Notes |
+| :--- | :--- | :--- |
+| Jellyfin | <https://jellyfin.homelab.lan> · public | Intel Arc VAAPI transcoding via the GPU device plugin (not privileged) |
+| Seerr | <https://seerr.homelab.lan> · public | Media requests |
+| Sonarr / Radarr | <https://sonarr.homelab.lan> / <https://radarr.homelab.lan> | TV / movie automation |
+| Prowlarr | <https://prowlarr.homelab.lan> | Indexers |
+| Bazarr | <https://bazarr.homelab.lan> | Subtitles (GPU ffmpeg for sync) |
+| qBittorrent | <https://qbittorrent.homelab.lan> | BitTorrent port 6881 open to the internet |
+| Tracearr | <https://tracearr.homelab.lan> | Playback tracking (TimescaleDB pg18 + Redis 8) |
+| Homarr | <https://homarr.homelab.lan> | Dashboard (Helm, installed by Ansible) |
+| FlareSolverr, Scraparr | — | Cloudflare challenge solver; *arr metrics exporter |
 
-| App                  | URL                                | Port  | Notes                              |
-| :------------------- | :--------------------------------- | :---- | :--------------------------------- |
-| Grafana              | <https://grafana.homelab.lan>      | 3000  | Dashboards (home: Homelab — Overview) |
-| Prometheus           | <https://prometheus.homelab.lan>   | 9090  | Metrics collection, 30d retention  |
-| Loki                 | —                                  | 3100  | Log aggregation                    |
-| Alertmanager         | <https://alertmanager.homelab.lan> | 9093  | Alert routing                      |
-| Speedtest Exporter   | —                                  | 9798  | ISP bandwidth tracking             |
-| qBittorrent Exporter | —                                  | 17871 | qBittorrent metrics for Prometheus |
-| Intel GPU Exporter   | —                                  | 8082  | Arc GPU utilization metrics        |
+### Monitoring — `monitoring` namespace (monitoring-server)
 
-AdGuard Home runs on the gateway itself as a **pinned systemd service** (`adguard` role, binary at `/opt/adguardhome`, DNS on :53, UI on 8081) — it is the network's authoritative DNS and the K3s pod-DNS upstream. The `adguard-home` pod in the `network` namespace (hostNetwork) serves the proxied UI; DNS liveness is now covered by the `blackbox-dns` probe + `AdGuardDNSDown` alert instead.
+| App | URL | Notes |
+| :--- | :--- | :--- |
+| Grafana | <https://grafana.homelab.lan> | Dashboards (login required); no alert rules live here |
+| Prometheus | <https://prometheus.homelab.lan> | 15d / 12 GB retention, LAN only |
+| Alertmanager | <https://alertmanager.homelab.lan> | Routes to alert-forwarder → Discord; heartbeat to healthchecks.io; LAN only |
+| Loki | `:3100` | Logs, 30d retention; ruler remote-writes `log:*` metrics to Prometheus |
+| alert-forwarder | `:30302` | Own Node.js app (`Ansbile/apps/alert-forwarder`), Alertmanager → Discord |
+| Exporters | — | blackbox (local, public, DNS), speedtest, qBittorrent, Intel GPU |
 
-### Network (192.168.10.200) — K3s worker, namespace: `network` — ArgoCD-managed
+### Cluster and network
 
-| App     | URL                           | Port | Notes                           |
-| :------ | :---------------------------- | :--- | :------------------------------ |
-| AdGuard | <https://adguard.homelab.lan> | 8081 | DNS + ad blocking (hostNetwork) |
-
-Gateway also runs: **AdGuard Home** (systemd service — DNS :53, UI :8081; see the `adguard` role). TLS termination for `*.homelab.lan` / `*.darkestserver.com` happens in-cluster (ingress-nginx + the certs/ingress resources the `nginx_config` role deploys into K3s), not via a gateway nginx container.
-
-### Git / K3s (192.168.10.204)
-
-- **K3s control plane** — Kubernetes API server
-- **ArgoCD + ArgoCD Image Updater** — GitOps sync + auto image updates
-- **cert-manager** — TLS via internal CA (`homelab-ca-issuer`)
-- **ingress-nginx** — Kubernetes ingress controller (Helm-managed, LoadBalancer at `192.168.10.210`)
-- **Istio** (`istio-base` + `istiod` + `istio-cni` + `ztunnel`) — ambient service mesh (no sidecars) on `media`, `monitoring`, `network`: mTLS between pods, a waypoint in `media` for L7 metrics and traces to Tempo
-- **kube-state-metrics** — Kubernetes object metadata exported to Prometheus
-
-### Cluster-wide DaemonSets
-
-| Component        | Nodes                                      | Description                            |
-| :--------------- | :----------------------------------------- | :------------------------------------- |
-| node-exporter    | media, monitoring, git-k3s-server, gateway | Host-level CPU / memory / disk metrics |
-| Grafana Alloy    | media, monitoring, git-k3s-server, gateway | Log shipping to Loki                   |
-| kubelet-cAdvisor | media, monitoring, git-k3s-server          | Container metrics via kubelet API      |
+| Service | Where | Notes |
+| :--- | :--- | :--- |
+| AdGuard Home | gateway, systemd | Primary DNS (:53), UI <https://adguard.homelab.lan> |
+| Unbound | monitoring, systemd | Secondary DNS, full recursion + the same local names |
+| ArgoCD | <https://argocd.homelab.lan> | GitOps; login `admin`, password in `argocd-initial-admin-secret` |
+| Tempo | <https://tempo.homelab.lan> | Traces from Istio and ingress-nginx, 7d; LAN only |
+| Proxmox UI | <https://server.homelab.lan> | Proxied to `192.168.10.250:8006` |
+| ingress-nginx | git-k3s + monitoring | hostNetwork, one replica per node, MetalLB VIP `.210` |
+| Istio ambient | `media`, `monitoring`, `network` | ztunnel mTLS, waypoint + AuthorizationPolicies in `media` |
+| cert-manager | — | Internal CA issuer + Let's Encrypt wildcard (Cloudflare DNS-01) |
 
 ---
 
-## Infrastructure as Code
+## Security model
 
-### Terraform
-
-- Provider: `bpg/proxmox`
-- All VMs defined as a `map(object)` in `terraform.tfvars` — add/change a VM by editing one block
-- Module at `modules/proxmox_vm/` handles all VM resources
-- `lifecycle.ignore_changes` covers `disk`, `initialization`, `clone`, `hostpci`, `cpu`
-- State tracked per VMID — map keys must never be renamed (would destroy the VM)
-- `parallelism=1` required on self-hosted runner to avoid Proxmox API race conditions
-- VM apply is currently commented out in CI — plan runs and blocks on destroy/replace, apply is manual
-
-### Ansible
-
-- All modules use FQCN (`ansible.builtin.*`, `community.general.*`)
-- All configs rendered from Jinja2 templates — no inline hardcoded content
-- IPs reference `hostvars[host]['ansible_host']` from inventory — single source of truth
-- Secrets stored in Ansible Vault
-- Role variable naming follows `<role_name>_` prefix convention
-- Owns cluster bootstrap (K3s, Helm-based infra, DaemonSets) — no longer owns app rollout for `media`/`monitoring`/`network` namespaces, see [GitOps with ArgoCD](#gitops-with-argocd)
-
-### Cluster workloads owned by Ansible
-
-Apps live in ArgoCD (`Ansbile/argocd-apps/<media|monitoring|network>/`). The `k3s_apps` role only owns cluster-wide pieces, rendered from these templates and applied on every run:
-
-| Template                         | Type        | Description                                     |
-| :------------------------------- | :---------- | :---------------------------------------------- |
-| `node-exporter-daemonset.yml.j2` | DaemonSet   | Runs on all K3s nodes                           |
-| `alloy.yml.j2`                   | DaemonSet   | Grafana Alloy log agent on all K3s nodes        |
-| `kube-state-metrics.yml.j2`      | Deployment  | K8s object metadata on control plane            |
-| `prometheus-rbac.yml.j2`         | RBAC        | ServiceAccount + ClusterRole for kubelet scrape |
-| `tempo.yml.j2`                   | Deployment  | Tracing backend for Istio                       |
-| `ingress-nginx-values.yml.j2`    | Helm values | ingress-nginx controller config                 |
+- **Network policy**: every mesh namespace is default-deny ingress. The LAN may
+  reach app pods; the no-login admin APIs (Prometheus, Alertmanager, Loki,
+  alert-forwarder, and the Prometheus/Alertmanager/Tempo ingresses) accept the
+  home LAN `192.168.10.0/24` only — never the tunnel or a VPN range. `media`
+  egress cannot reach the LAN.
+- **SSH**: key-only everywhere (`roles/common`). Separate keys per consumer
+  (`roles/ssh_access`): the owner's, and CI's — which is also ArgoCD's GitHub
+  deploy key. Host keys are pinned in `.github/ssh_known_hosts`.
+- **CI**: actions pinned to commit SHAs, read-only `GITHUB_TOKEN` by default,
+  each secret only in the job that uses it, no `pull_request` trigger (public
+  repo, LAN runners).
+- **Secrets**: Ansible Vault (`group_vars/all/vault.yml`) and GitHub secrets;
+  GitHub secret scanning + push protection. Terraform verifies the Proxmox API
+  certificate (the runners trust the PVE cluster CA).
+- **Containers**: no privileged app pods except the cluster agents that need
+  host access (node-exporter); the GPU is handed out by the Intel device plugin.
 
 ---
 
-## CI/CD Pipeline
+## CI/CD
 
-Triggered on push to `development`, `staging`, or `main`, plus a monthly scheduled run.
+Runs on push to `development`, `staging` and `main`, and monthly on `main`
+(full redeploy). Only what changed runs: `.github/scripts/detect-changed-hosts.sh`
+diffs against the branch's last green run and maps each changed file to the
+hosts and roles (`ansible-playbook --tags`) that use it.
 
 ```text
-build-image job
-└── Build, scan (Trivy), and push the alert-forwarder image to GHCR
-
-testing job
-├── Terraform validate
-├── Ansible syntax-check (all playbooks, with vault password)
-└── Ansible lint
-
-Deploy job
-├── Terraform init + plan (saved to tfplan)
-├── Destroy check — fails pipeline if any VM would be destroyed or replaced
-└── Ansible playbooks (gateway → monitoring → media → git-k3s)
-    └── git-k3s-server bootstraps K3s, Helm infra, ArgoCD, Image Updater
-        — ArgoCD then syncs media/monitoring/network from git independently
-
-security job
-└── Runs after Deploy, notifies on findings
-
-notify job
-└── Posts pipeline result to Discord
+Detect Changed Hosts ─┬─ Build image (alert-forwarder, only when its code changed)
+                      └─ Testing: Terraform fmt/validate, syntax check + ansible-lint
+                                  of what changed, gateway --check (development)
+Deploy (staging/main):
+  Terraform plan ─► Approval (Production: owner) ─► Terraform apply (main, code changes only)
+     ─► gateway | monitoring | media | git-k3s | host-node | ci-runners   (in parallel,
+        each silences only its own host's warning alerts while it runs)
+     ─► Cloudflare (when Terraform/cloudflare changed)
+     ─► Smoke test: nodes, workloads, ArgoCD health, every ingress, DNS, monitoring
+        APIs, deployed hosts' scrape targets
+Notify ─► Discord
 ```
 
-App-level changes (editing anything under `Ansbile/argocd-apps/`) don't need a CI run to take effect — ArgoCD polls `main` on its own and syncs automatically. CI only needs to run for infra/bootstrap changes.
+| Branch | What happens |
+| :--- | :--- |
+| `development` | Tested, never deployed. Dependabot/Renovate PRs land here. |
+| `staging` | Canary: deploys its changes to the real hosts; the smoke test is the verdict. |
+| `main` | Production. Moved only by **Promote staging → main** (requires a green staging run), then waits for the owner's approval. |
+
+Supporting workflows: `checks.yml` (server-side dry run of `argocd-apps/` and
+the alertops-mcp tests), `promote.yml`, `runner-health.yml` (every 15 min,
+Discord on change), `runner-retry.yml` (re-runs jobs lost with their runner).
+
+### Keeping versions current
+
+| What | How |
+| :--- | :--- |
+| App images in `argocd-apps/` | **ArgoCD Image Updater** (v0.12.2), every ~2 min, commits digests to `main`. Stateful apps follow one major only (Prometheus `v3`, Loki `3`, Grafana `13.x`, Jellyfin `12`, Redis `8-alpine`, TimescaleDB `pg18`). |
+| k3s, Helm charts, Istio, Ansible-pinned images, host tools, Terraform, CI Python tools | **Renovate** (`renovate.json`): weekly PRs to `development`; k3s moves one minor at a time. Each pin has a `# renovate:` comment. |
+| GitHub Actions, alert-forwarder base image and npm | **Dependabot** (`.github/dependabot.yml`), weekly, LTS Node only |
 
 ---
 
 ## Observability
 
-### Prometheus Scrape Jobs
+- **Metrics**: Prometheus scrapes node-exporter on every VM, runner and the
+  Proxmox host, kubelet/cAdvisor, kube-state-metrics, CoreDNS, ingress-nginx,
+  Istio (mesh + ztunnel), ArgoCD, cert-manager, Tempo, Alloy, cloudflared,
+  ZFS, SMART and PVE exporters, the app exporters, and blackbox probes of every
+  local URL, the public URLs and both DNS servers (28 scrape jobs).
+- **Logs**: Grafana Alloy (DaemonSet) ships pod and system logs to Loki.
+  Log-based alerts are Prometheus rules over Loki's `log:*` recording rules.
+- **Traces**: Istio ambient + ingress-nginx → Tempo (100% sampling).
+- **Alerts**: 151 rules in `Ansbile/roles/prometheus/templates/prometheus-rules.yml.j2`,
+  each with a `runbook_url`. SLOs (99.5% sites, 99.9% DNS, 14-day window) use
+  multi-window burn-rate alerts. A Watchdog heartbeat goes to healthchecks.io,
+  which emails if monitoring itself dies.
+- **Auto-remediation (optional)**: `tools/alertops-mcp` is an MCP server that
+  lets the `alert-fixer` agent investigate, apply allowlisted fixes, verify and
+  report to Discord (rate limits, cooldowns, kill switch).
 
-| Job                             | Target                             | Notes                                                                              |
-| :------------------------------ | :--------------------------------- | :--------------------------------------------------------------------------------- |
-| `nodes`                         | node-exporter on all VMs           | `relabel_configs` maps IP → hostname                                               |
-| `kubelet-cadvisor`              | kubelet `/metrics/cadvisor`        | HTTPS + bearer token auth                                                          |
-| `kube-state-metrics`            | kube-state-metrics pod             | Adds k8s labels to container metrics                                               |
-| `loki`                          | Loki on monitoring-server          | Internal metrics                                                                   |
-| `qbittorrent`                   | qbittorrent-exporter               | Torrent download/upload/ratio metrics                                              |
-| `scraparr`                      | Scraparr on media-server           | Arr app queue/health metrics                                                       |
-| `intel-gpu`                     | intel-gpu-exporter on media-server | Arc GPU utilization                                                                |
-| `speedtest`                     | speedtest-exporter                 | ISP bandwidth, ping, jitter (1h interval — 10m caused WAN bufferbloat that tripped the blackbox-public alerts) |
-| `ingress-nginx`                 | ingress-nginx controller           | Request rate, latency, 5xx rate per service                                        |
-| `zfs`                           | zfs-exporter on Proxmox host       | Pool health, IO, capacity                                                          |
-| `smartctl_exporter`             | smartctl_exporter on Proxmox host  | Disk S.M.A.R.T. health (reallocated sectors, temperature, wear)                    |
-| `argocd-application-controller` | ArgoCD app-controller pod          | Sync/health status per Application (built-in, no separate exporter)                |
-| `argocd-server`                 | ArgoCD server pod                  | API request metrics (built-in, no separate exporter)                               |
-| `argocd-repo-server`            | ArgoCD repo-server pod             | Git fetch / manifest generation metrics (built-in, no separate exporter)           |
-| `tempo`                         | Tempo pod                          | Trace ingestion metrics (built-in, no separate exporter)                           |
-| `alloy`                         | Alloy pods (log agent)             | Log pipeline health           |
-| `cert-manager`                  | cert-manager controller pod        | Certificate expiry (built-in metrics, no separate exporter)                        |
-| `alertmanager-internal`         | Alertmanager pod                   | Alertmanager's own health/notification metrics (built-in, no separate exporter)    |
-| `coredns`                       | CoreDNS pod (kube-system)          | DNS query rate/latency/errors (K3s ships the prometheus plugin enabled by default) |
+---
 
-### Loki + Grafana Alloy
+## Backups and recovery
 
-- Alloy runs as a DaemonSet on all K3s nodes (`roles/k3s_apps/templates/alloy.yml.j2`, config in `alloy-config.alloy.j2`)
-- Labels every line with `host`, `namespace`, `pod`, `container`, `job`
-- Reads: K3s container logs (`/var/log/pods`) and system logs (`/var/log/*.log`); read positions persist in `/var/lib/alloy`
+- Nightly vzdump of all VMs to `tank/backup` on the host (7 daily + 4 weekly).
+- Nightly consistent snapshot of the k3s datastore inside git-k3s
+  (`/var/backups/k3s`, 7 kept), alerted on if stale.
+- Terraform state is committed to git; Cloudflare state lives in a K3s Secret.
+- Full rebuild procedure: [docs/rebuild.md](docs/rebuild.md).
 
-### Tracing
+---
 
-- **Istio** ambient mode on `media`, `monitoring`, `network` namespaces (ztunnel mTLS, `media` waypoint), 100% trace sampling to **Tempo** (replaces the earlier Jaeger setup)
+## Repository layout
 
-### Grafana
-
-- Prometheus and Loki datasources auto-provisioned from `/etc/grafana/provisioning/datasources/`
-- Alerts routed via Alertmanager → webhook to notification server
-- All Prometheus-evaluated alert rules (nodes, k8s, ingress, istio, blackbox probes, Loki, Tempo, SMART, ZFS, etc.) are repo-managed in `Ansbile/roles/prometheus/templates/prometheus-rules.yml.j2`; log-based (LogQL) alerts are repo-managed in `Ansbile/roles/loki/templates/loki-rules.yml.j2` and evaluated by Loki's ruler. Grafana's UI holds no alert rules — add or change alerts in the repo templates.
+```text
+Terraform/                Proxmox VMs/LXCs (terraform.tfvars), Cloudflare (Terraform/cloudflare)
+Ansbile/                  (spelled this way on purpose)
+  inventory.ini           hosts and their Ansible users
+  <host>.yml              one playbook per host
+  group_vars/             per-host vars; all/vault.yml is fully encrypted
+  roles/                  19 roles (k3s_apps holds the cluster add-ons, one task file each)
+  argocd-apps/            ArgoCD Applications (*-app.yaml) and the media/monitoring/network apps
+  apps/alert-forwarder/   Node.js app + Helm chart
+.github/                  workflows, composite actions, scripts, dependabot.yml
+renovate.json             Renovate config
+docs/                     rebuild.md, incident template, runbooks/
+tools/alertops-mcp/       alert investigation/remediation MCP server
+```
 
 ---
 
 ## Technologies
 
-| Category       | Tools                                                                     |
-| :------------- | :------------------------------------------------------------------------ |
-| Virtualization | Proxmox VE                                                                |
-| IaC            | Terraform (`bpg/proxmox` provider)                                        |
-| Configuration  | Ansible                                                                   |
-| Orchestration  | K3s (Kubernetes)                                                          |
-| GitOps         | ArgoCD, ArgoCD Image Updater                                              |
-| Service Mesh   | Istio, Tempo                                                              |
-| CI/CD          | GitHub Actions (self-hosted runners on LXCs ci-runner-1..3)               |
-| Metrics        | Prometheus, node-exporter, kubelet-cAdvisor, kube-state-metrics, Scraparr |
-| Visualization  | Grafana                                                                   |
-| Logging        | Loki, Grafana Alloy                                                            |
-| Alerting       | Alertmanager                                                              |
-| Reverse Proxy  | Nginx (gateway) + ingress-nginx (K3s)                                     |
-| DNS            | AdGuard Home                                                              |
-| Media          | Jellyfin, Radarr, Sonarr, Bazarr, Seerr, qBittorrent, Prowlarr        |
+| Category | Tools |
+| :--- | :--- |
+| Virtualization | Proxmox VE, ZFS |
+| IaC / config | Terraform (`bpg/proxmox`, `cloudflare`), Ansible |
+| Kubernetes | K3s, Helm, ArgoCD + Image Updater, MetalLB, ingress-nginx, cert-manager |
+| Service mesh | Istio ambient (ztunnel, waypoint), Tempo |
+| CI/CD | GitHub Actions on self-hosted LXC runners, Dependabot, Renovate |
+| Observability | Prometheus, Alertmanager, Grafana, Loki, Grafana Alloy, blackbox exporter |
+| DNS / edge | AdGuard Home, Unbound, Cloudflare (tunnel, DNS) |
+| Media | Jellyfin, Sonarr, Radarr, Prowlarr, Bazarr, qBittorrent, Seerr, Tracearr, Homarr |
 
 ---
 
