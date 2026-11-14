@@ -119,4 +119,4 @@ Runners: **GitHub-hosted** (`ubuntu-latest`) for jobs that need no LAN — Detec
 
 ## Authoritative Docs
 
-`README.md` is the full architecture reference (VM table, service URLs/ports, scrape jobs, app pattern flags). Mostly accurate; when it conflicts with code, trust the code — e.g. its CI diagram omits the gateway/media playbooks `deploy.yml` actually runs.
+`README.md` is the human-facing overview (hosts, services and URLs, security model, CI/CD, version updates, observability). Keep it current when hosts, services or the pipeline change; when it conflicts with code, trust the code.
