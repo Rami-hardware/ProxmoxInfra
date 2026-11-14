@@ -5,7 +5,7 @@
 # Cluster-wide checks always run (every host change can break the cluster's
 # routing or DNS); the Prometheus target check covers only the given hosts.
 # Pods restart after a deploy, so failing checks are retried for up to
-# SMOKE_TIMEOUT seconds before the test fails. On staging this is the canary
+# SMOKE_TIMEOUT seconds (default 360) before the test fails. On staging this is the canary
 # verdict; promote.yml only promotes a green staging run, so a failed smoke
 # test also blocks the promote.
 set -uo pipefail
@@ -15,7 +15,9 @@ AM=${ALERTMANAGER_URL:-http://192.168.10.203:9093}
 LOKI=${LOKI_URL:-http://192.168.10.203:3100}
 DNS_SERVERS=${DNS_SERVERS:-"192.168.10.200 192.168.10.203"}
 INGRESS_IP=${INGRESS_IP:-192.168.10.210}
-TIMEOUT=${SMOKE_TIMEOUT:-120}
+# 6 min: longer than one ingress-nginx replica draining (hostPort, so the new
+# pod waits for the old one's 300s termination grace) plus its start.
+TIMEOUT=${SMOKE_TIMEOUT:-360}
 exec 3>&1  # warnings from inside a check's $( ) still reach the log
 
 # deploy.yml host key → Prometheus `instance` label.

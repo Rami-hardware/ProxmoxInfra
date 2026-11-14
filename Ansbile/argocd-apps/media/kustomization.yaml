@@ -28,6 +28,10 @@ images:
     newTag: latest
   - name: jellyfin/jellyfin
     newTag: "12"
+  - name: redis
+    newTag: "8-alpine"
+  - name: timescale/timescaledb-ha
+    newTag: "pg18"
   - name: linuxserver/bazarr
     newTag: latest
   - name: linuxserver/radarr

@@ -23,7 +23,7 @@ spec:
           effect: NoSchedule
       containers:
         - name: node-exporter
-          image: prom/node-exporter:v1.12.1
+          image: prom/node-exporter:{{ k3s_apps_node_exporter_version }}
           securityContext:
             privileged: true
           args:

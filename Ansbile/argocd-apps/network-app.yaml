@@ -4,15 +4,9 @@ kind: Application
 metadata:
   name: network
   namespace: argocd
-  annotations:
-    # AdGuard is the primary DNS: patch releases of v0.107 only. v0.108
-    # changes the config format — bump it here on purpose.
-    argocd-image-updater.argoproj.io/image-list: >-
-      adguard-home=adguard/adguardhome:~0.107
-    argocd-image-updater.argoproj.io/adguard-home.update-strategy: semver
-    argocd-image-updater.argoproj.io/adguard-home.allow-tags: regexp:^v0\.107\.[0-9]+$
-    argocd-image-updater.argoproj.io/write-back-method: git:secret:argocd/git-creds
-    argocd-image-updater.argoproj.io/git-branch: main
+  # No Image Updater annotations: this namespace runs no images from
+  # argocd-apps. AdGuard is a systemd service on the gateway (roles/adguard,
+  # adguard_version), not a pod.
 spec:
   project: default
   source:

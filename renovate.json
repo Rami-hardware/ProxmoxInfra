@@ -1,0 +1,66 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Weekly PRs (against development) for every version pinned outside ArgoCD: k3s, the Helm charts / Istio / images Ansible deploys, host tools, Terraform, the CI Python tools. Each pin carries a `# renovate: datasource=… depName=…` comment on the line above it. ArgoCD apps are updated by Image Updater; GitHub Actions, the alert-forwarder Dockerfile and npm by Dependabot (.github/dependabot.yml). No pull_request CI: merge into development, then promote as usual.",
+  "extends": ["config:recommended"],
+  "baseBranches": ["development"],
+  "enabledManagers": ["custom.regex", "pip_requirements"],
+  "pip_requirements": {
+    "fileMatch": ["^\\.github/ci-requirements\\.txt$"]
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "`# renovate: datasource=… depName=… [registryUrl=…]` above a `key: value` line",
+      "fileMatch": ["^Ansbile/.+\\.ya?ml$", "^\\.github/workflows/.+\\.ya?ml$"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: registryUrl=(?<registryUrl>\\S+))?\\s*\\n\\s*[A-Za-z0-9_]+: \"?(?<currentValue>[^\"\\s]+)\"?"
+      ]
+    }
+  ],
+  "schedule": ["before 6am on monday"],
+  "timezone": "Asia/Riyadh",
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 10,
+  "packageRules": [
+    {
+      "description": "Release tags are vX.Y.Z, the pins are X.Y.Z",
+      "matchDepNames": ["databus23/helm-diff", "pdf/zfs_exporter", "actions/runner", "hashicorp/terraform"],
+      "extractVersion": "^v(?<version>.+)$"
+    },
+    {
+      "description": "k3s server + agents + the runners' kubectl move together, one minor version at a time (Kubernetes only supports +1 minor upgrades)",
+      "matchDepNames": ["k3s-io/k3s", "kubernetes/kubernetes"],
+      "groupName": "k3s",
+      "separateMultipleMinor": true
+    },
+    {
+      "matchDepNames": ["k3s-io/k3s"],
+      "versioning": "regex:^v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\+k3s(?<build>\\d+)$"
+    },
+    {
+      "description": "Cluster add-ons Ansible installs (Helm charts, Istio, Gateway API CRDs, helm-diff) — minor/patch in one PR; majors get their own",
+      "matchFileNames": ["Ansbile/roles/k3s_apps/**"],
+      "matchDatasources": ["helm", "github-releases"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "cluster add-ons"
+    },
+    {
+      "description": "Images of Ansible-managed workloads (Alloy, cloudflared, Tempo, node-exporter, kube-state-metrics, GPU plugin, ca-cert nginx) — minor/patch in one PR",
+      "matchDatasources": ["docker"],
+      "matchFileNames": ["Ansbile/**"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "cluster images"
+    },
+    {
+      "description": "Host tools: AdGuard, Actions runner, Proxmox exporters, Terraform, CI Python tools",
+      "matchDepNames": ["AdguardTeam/AdGuardHome", "actions/runner", "pdf/zfs_exporter", "prometheus-pve-exporter", "hashicorp/terraform", "ansible", "ansible-lint"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "host tools"
+    },
+    {
+      "description": "Majors (and Terraform, whose state format moves with it) never group: each is its own reviewed PR",
+      "matchUpdateTypes": ["major"],
+      "labels": ["dependencies", "major"]
+    }
+  ]
+}

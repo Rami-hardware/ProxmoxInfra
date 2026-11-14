@@ -26,6 +26,11 @@ updates:
   - package-ecosystem: docker
     directory: /Ansbile/apps/alert-forwarder
     target-branch: development
+    # LTS Node only: odd majors are short-lived (v25 was end-of-life
+    # 2026-06-01, before Dependabot even proposed it). Even majors become LTS.
+    ignore:
+      - dependency-name: node
+        versions: ["25.x", "27.x", "29.x", "31.x"]
     schedule:
       interval: weekly
       day: monday

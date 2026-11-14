@@ -71,7 +71,23 @@ spec:
         fsGroup: 1000
       containers:
         - name: timescale
-          image: timescale/timescaledb-ha:pg18.1-ts2.25.0
+          image: timescale/timescaledb-ha:pg18
+          # Image Updater moves this to the newest pg18 image. The database
+          # keeps its extension versions until ALTER EXTENSION, and the image
+          # ships the older libraries, so it starts either way; this hook
+          # upgrades them once Postgres answers. Errors are ignored (retried on
+          # the next start). Check: psql -c 'select extname, extversion from pg_extension'.
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - sh
+                  - -c
+                  - >-
+                    for i in $(seq 1 60); do pg_isready -q && break; sleep 2; done;
+                    psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c 'ALTER EXTENSION timescaledb UPDATE';
+                    psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c 'ALTER EXTENSION timescaledb_toolkit UPDATE';
+                    exit 0
           ports:
             - containerPort: 5432
           envFrom:

@@ -141,6 +141,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
+          # renovate: datasource=github-releases depName=hashicorp/terraform
           terraform_version: 1.6.0
           terraform_wrapper: false  # wrapper intercepts exit codes; breaks -detailed-exitcode
 
@@ -260,6 +261,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
+          # renovate: datasource=github-releases depName=hashicorp/terraform
           terraform_version: 1.6.0
           terraform_wrapper: false
 
@@ -593,6 +595,7 @@ jobs:
         if: inputs.cloudflare && !contains(needs.*.result, 'failure')
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
+          # renovate: datasource=github-releases depName=hashicorp/terraform
           terraform_version: 1.6.0
           terraform_wrapper: false
 
@@ -663,7 +666,7 @@ jobs:
       always() && needs.gate.result == 'success' &&
       (inputs.gateway || inputs.monitoring || inputs.media || inputs.git_k3s || inputs.ci_runners || inputs.host_node || needs.tf_apply.result == 'success')
     runs-on: self-hosted
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

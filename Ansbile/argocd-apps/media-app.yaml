@@ -6,7 +6,10 @@ metadata:
   namespace: argocd
   annotations:
     # Jellyfin follows its major tag (`12` = newest 12.x): a new major
-    # migrates its database one way, so bump it here on purpose.
+    # migrates its database one way, so bump it here on purpose. Same for
+    # Redis (`8-alpine`) and TimescaleDB (`pg18` = newest PostgreSQL 18.x with
+    # the newest TimescaleDB; the image keeps older extension libraries, and
+    # the pod's postStart hook runs ALTER EXTENSION ... UPDATE).
     argocd-image-updater.argoproj.io/image-list: >-
       seerr=ghcr.io/seerr-team/seerr:latest,
       jellyfin=jellyfin/jellyfin:12,
@@ -17,7 +20,9 @@ metadata:
       flaresolverr=ghcr.io/flaresolverr/flaresolverr:latest,
       scraparr=ghcr.io/thecfu/scraparr:latest,
       sonarr=linuxserver/sonarr:latest,
-      tracearr=ghcr.io/connorgallopo/tracearr:latest
+      tracearr=ghcr.io/connorgallopo/tracearr:latest,
+      tracearr-redis=redis:8-alpine,
+      tracearr-timescale=timescale/timescaledb-ha:pg18
     argocd-image-updater.argoproj.io/seerr.update-strategy: digest
     argocd-image-updater.argoproj.io/jellyfin.update-strategy: digest
     argocd-image-updater.argoproj.io/bazarr.update-strategy: digest
@@ -28,6 +33,8 @@ metadata:
     argocd-image-updater.argoproj.io/scraparr.update-strategy: digest
     argocd-image-updater.argoproj.io/sonarr.update-strategy: digest
     argocd-image-updater.argoproj.io/tracearr.update-strategy: digest
+    argocd-image-updater.argoproj.io/tracearr-redis.update-strategy: digest
+    argocd-image-updater.argoproj.io/tracearr-timescale.update-strategy: digest
     argocd-image-updater.argoproj.io/write-back-method: git:secret:argocd/git-creds
     argocd-image-updater.argoproj.io/git-branch: main
 spec:

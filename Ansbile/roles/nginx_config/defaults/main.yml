@@ -8,3 +8,7 @@ nginx_config_admin_clients:
 
 # Admin clients + the pod network (blackbox-exporter probes these URLs).
 nginx_config_admin_source_ranges: "{{ nginx_config_admin_clients + ['10.42.0.0/16'] }}"
+
+# Image of the ca-cert pod (serves the local CA at http://ca.homelab.lan).
+# renovate: datasource=docker depName=nginx
+nginx_config_ca_nginx_version: "1.31.4-alpine"

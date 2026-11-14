@@ -88,7 +88,7 @@ spec:
         kubernetes.io/hostname: {{ k3s_apps_tempo_node }}
       containers:
         - name: tempo
-          image: grafana/tempo:2.6.1
+          image: grafana/tempo:{{ k3s_apps_tempo_version }}
           args:
             - "-config.file=/etc/tempo/tempo.yaml"
           ports:
