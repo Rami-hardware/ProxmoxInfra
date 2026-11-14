@@ -10,3 +10,5 @@ kustomize:
   - ghcr.io/thecfu/scraparr@sha256:b9f79a85c33564dfdb1e50ab3d725faeb27b89f4ad5cae7013e39e2f572a8085
   - linuxserver/sonarr@sha256:673dc4609a5672bc8e46069c86ffcea283a86b48d34a6c93d8da8c24a1b87571
   - ghcr.io/connorgallopo/tracearr@sha256:25433cbce1b23e4a9233cdf98f00c3dab642d04f4e1f0f7f20fb3cca2a64e7d3
+  - redis@sha256:7958cfbb9d152f87dadfbc89f1b0b15938f0b81ff8982feb327476f4911935c3
+  - timescale/timescaledb-ha@sha256:96b6033e7e54c26099f29cb46f634953b749b8c2c92c77bfb715cd630cdadf2e
