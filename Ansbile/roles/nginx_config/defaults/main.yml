@@ -1,14 +1,10 @@
 ---
-# Machines outside the inventory that may use the admin-only services
-# (`admin_only: true` in nginx_services_local: no login of their own). The
-# owner's desktop — reserve this address in the router's DHCP. Keep in sync
-# with argocd-apps/components/mesh-network-policy (allow-admin-api).
+# Who may use the admin-only services (`admin_only: true` in
+# nginx_services_local: no login of their own): the home LAN only — never
+# the public internet (Cloudflare tunnel) or a VPN range. Keep in sync with
+# argocd-apps/components/mesh-network-policy (allow-admin-api).
 nginx_config_admin_clients:
-  - 192.168.10.91/32
+  - 192.168.10.0/24
 
-# Admin clients + every inventory host (CI runners' smoke test, node-local
-# callers) + the pod network (blackbox-exporter probes these URLs).
-nginx_config_admin_source_ranges: >-
-  {{ nginx_config_admin_clients
-     + (groups['all'] | map('extract', hostvars, 'ansible_host') | map('regex_replace', '$', '/32') | list)
-     + ['10.42.0.0/16'] }}
+# Admin clients + the pod network (blackbox-exporter probes these URLs).
+nginx_config_admin_source_ranges: "{{ nginx_config_admin_clients + ['10.42.0.0/16'] }}"
