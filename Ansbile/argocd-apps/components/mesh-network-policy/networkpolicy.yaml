@@ -83,10 +83,11 @@ spec:
 ---
 # Admin APIs with no login of their own (Alertmanager can silence every
 # alert, Loki takes log pushes, alert-forwarder posts to Discord): from the
-# lab hosts and the admin desktop only, not the whole LAN. Their NodePort
+# home LAN and the nodes only — not other pods' namespaces, the internet or
+# a VPN range. Their NodePort
 # Services use externalTrafficPolicy: Local, which keeps the client IP (with
 # Cluster it is SNATed to a node address and this list would mean nothing).
-# The admin desktop is also in roles/nginx_config/defaults (ingress allowlist).
+# The ingress allowlist for the same apps is roles/nginx_config/defaults.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -102,11 +103,7 @@ spec:
   ingress:
     - from:
         - ipBlock:
-            cidr: 192.168.10.200/30 # gateway .200, media .201, monitoring .203 (+ .202, unused)
-        - ipBlock:
-            cidr: 192.168.10.204/30 # git-k3s .204, CI runners .205-.207 (smoke test, deploy silences)
-        - ipBlock:
-            cidr: 192.168.10.91/32 # admin desktop (alertops-mcp, browser)
+            cidr: 192.168.10.0/24 # home LAN: lab hosts, CI runners, admin machines
         - ipBlock:
             cidr: 10.42.0.0/31 # gateway-server
         - ipBlock:
