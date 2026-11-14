@@ -19,6 +19,7 @@ proxmox_exporters_node_timers:
   - prometheus-node-exporter-apt.timer
 
 # zfs_exporter — pin matches the binary already running on the host.
+# renovate: datasource=github-releases depName=pdf/zfs_exporter
 proxmox_exporters_zfs_version: "2.3.11"
 proxmox_exporters_zfs_release_url: "https://github.com/pdf/zfs_exporter/releases/download/v{{ proxmox_exporters_zfs_version }}"
 proxmox_exporters_zfs_checksum: "sha256:416cf18e4790614a7cef5f5f97a29d18938b16ed96e9f83043a499ae70e9887e"
@@ -29,6 +30,7 @@ proxmox_exporters_zfs_port: 9134
 # Install is skipped until a token is provided (empty by default), so CI never
 # ships a half-configured, crash-looping service. See docs/runbooks/exporters.md
 # for creating the PVE token and adding the PVE_EXPORTER_TOKEN CI secret.
+# renovate: datasource=pypi depName=prometheus-pve-exporter
 proxmox_exporters_pve_version: "3.11.0"
 proxmox_exporters_pve_venv: /opt/pve-exporter
 proxmox_exporters_pve_config_dir: /etc/prometheus-pve-exporter

@@ -47,8 +47,8 @@ controller:
     periodSeconds: 2
     failureThreshold: 2
 
-  image:
-    tag: "v1.12.1"
+  # No image tag override: the controller version comes with the pinned
+  # chart (k3s_apps_ingress_nginx_chart_version), so a chart bump moves both.
 
   config:
     allow-snippet-annotations: "true"

@@ -11,7 +11,7 @@
   kubernetes.core.helm:
     name: argocd-image-updater
     chart_ref: argo/argocd-image-updater
-    chart_version: "0.8.5"
+    chart_version: "{{ k3s_apps_image_updater_chart_version }}"
     release_namespace: argocd
     create_namespace: true
     update_repo_cache: false
