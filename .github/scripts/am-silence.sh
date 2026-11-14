@@ -33,6 +33,9 @@ case "$1" in
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     end=$(date -u -d '+45 minutes' +%Y-%m-%dT%H:%M:%SZ)
     ids=""
+    # Output the ids made so far even if a later create fails, so the job's
+    # cleanup step still removes them instead of leaving them for 45 min.
+    trap '[ -z "$ids" ] || echo "id=${ids# }" >> "$GITHUB_OUTPUT"' EXIT
     for set in "$@"; do
       body=$(jq -n --argjson m "$(matchers_json "$set")" --arg now "$now" --arg end "$end" \
         --arg c "CI deploy $GITHUB_RUN_ID $what" \
@@ -41,8 +44,7 @@ case "$1" in
         -H 'Content-Type: application/json' -d "$body" | jq -r .silenceID)
       ids="$ids $id"
       echo "Silenced warnings${set:+ where $set} until $end (silence $id)"
-    done
-    echo "id=${ids# }" >> "$GITHUB_OUTPUT" ;;
+    done ;;
   delete)
     shift
     for id in $*; do

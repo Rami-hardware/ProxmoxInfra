@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
           fetch-depth: 0
@@ -64,10 +64,14 @@ jobs:
             other=$(grep -vE '^(docs/|tools/|scripts/|\.claude/|Ansbile/argocd-apps/)|\.md$|^\.mcp\.json$' <<< "$changed" || true)
             [ -z "$other" ] || fail "staging ${staging:0:8} has no pipeline run, yet changes files the pipeline tests: $(echo $other | head -c 200)"
             # ArgoCD manifests and alertops-mcp are tested by checks.yml instead.
-            if grep -qE '^(Ansbile/argocd-apps/|tools/alertops-mcp/)' <<< "$changed"; then
-              read -r cs cc < <(run_of checks.yml "$staging")
+            # checks.yml only runs on pushes touching those paths, so judge by
+            # the newest commit that touched them (a later docs-only commit
+            # has no checks run of its own).
+            checked=$(git log -1 --format=%H "$tested..$staging" -- Ansbile/argocd-apps tools/alertops-mcp)
+            if [ -n "$checked" ]; then
+              read -r cs cc < <(run_of checks.yml "$checked")
               [ "$cs" = completed ] && [ "$cc" = success ] \
-                || fail "checks.yml for staging ${staging:0:8} is $cs/$cc — it must pass first."
+                || fail "checks.yml for ${checked:0:8} (newest staging change to argocd-apps/alertops-mcp) is $cs/$cc — it must pass first."
             fi
             echo "Staging ${staging:0:8} changes only pipeline-ignored files since ${tested:0:8}; using that run."
           fi

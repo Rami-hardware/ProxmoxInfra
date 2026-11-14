@@ -98,22 +98,11 @@ on:
         # Until it is set, the host-node playbook skips the pve-exporter install
         # (see roles/proxmox_exporters, docs/runbooks/exporters.md).
         required: false
-# Secrets the playbooks read via lookup('env', ...). Workflow-level so every
-# per-host job gets them; the SSH key and vault password go through
-# ansible-prep instead.
+# Each secret the playbooks read via lookup('env', ...) goes only to the host
+# job whose roles read it (step env below), not to every job. The SSH key and
+# vault password go through ansible-prep.
 env:
   ANSIBLE_VAULT_PASSWORD_FILE: ~/.vault_pass
-  ADGUARD_EXPORTER_PASSWORD: ${{ secrets.ADGUARD_EXPORTER_PASSWORD }}
-  ADGUARD_EXPORTER_USERNAME: ${{ secrets.ADGUARD_EXPORTER_USERNAME }}
-  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-  SONARR_API_KEY: ${{ secrets.SONARR_API_KEY }}
-  BAZARR_API_KEY: ${{ secrets.BAZARR_API_KEY }}
-  PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
-  RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
-  OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
-  CF_DNS_API_TOKEN: ${{ secrets.CF_DNS_API_TOKEN }}
-  HEALTHCHECKS_PING_URL: ${{ secrets.HEALTHCHECKS_PING_URL }}
-  PVE_EXPORTER_TOKEN: ${{ secrets.PVE_EXPORTER_TOKEN }}
   ALERT_FORWARDER_TAG: ${{ inputs.alert_forwarder_tag }}
   # Alertmanager API (NodePort on monitoring-server), for deploy silences
   # (.github/scripts/am-silence.sh).
@@ -147,10 +136,10 @@ jobs:
       fingerprint: ${{ steps.plan.outputs.fingerprint }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v4
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: 1.6.0
           terraform_wrapper: false  # wrapper intercepts exit codes; breaks -detailed-exitcode
@@ -163,8 +152,8 @@ jobs:
         run: terraform init
 
       # NOTE: VM imports are intentionally NOT done in CI. Terraform state is
-      # persistent on the self-hosted runner, so imports are only needed once
-      # (first setup) or after state corruption. Run manually if needed:
+      # committed to git, so imports are only needed once (first setup) or
+      # after state corruption. Run manually if needed:
       #   terraform import 'module.proxmox_vms["NAME"].proxmox_virtual_environment_vm.vm' pve/VMID
 
       # Detects drift between code and the live Proxmox server. Uses
@@ -266,10 +255,10 @@ jobs:
       TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v4
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: 1.6.0
           terraform_wrapper: false
@@ -351,7 +340,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Silence warning alerts while this job runs
         id: silence
@@ -367,6 +356,9 @@ jobs:
       - name: ansible-playbook gateway-server
         env:
           TAGS: ${{ inputs.gateway_tags }}
+          # roles/adguard
+          ADGUARD_EXPORTER_USERNAME: ${{ secrets.ADGUARD_EXPORTER_USERNAME }}
+          ADGUARD_EXPORTER_PASSWORD: ${{ secrets.ADGUARD_EXPORTER_PASSWORD }}
         run: |
           [ -n "$TAGS" ] && echo "Only roles: $TAGS" || echo "Whole playbook"
           ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --vault-password-file ~/.vault_pass ${TAGS:+--tags "$TAGS"}
@@ -389,7 +381,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Silence warning alerts while this job runs
         id: silence
@@ -405,6 +397,8 @@ jobs:
       - name: ansible-playbook monitoring-server
         env:
           TAGS: ${{ inputs.monitoring_tags }}
+          # roles/alertmanager (dead man's switch)
+          HEALTHCHECKS_PING_URL: ${{ secrets.HEALTHCHECKS_PING_URL }}
         run: |
           [ -n "$TAGS" ] && echo "Only roles: $TAGS" || echo "Whole playbook"
           ansible-playbook -i Ansbile/inventory.ini Ansbile/monitoring-server.yml --vault-password-file ~/.vault_pass ${TAGS:+--tags "$TAGS"}
@@ -427,7 +421,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Silence warning alerts while this job runs
         id: silence
@@ -443,6 +437,12 @@ jobs:
       - name: ansible-playbook media-server
         env:
           TAGS: ${{ inputs.media_tags }}
+          # group_vars/media-vm.yml (roles/scraparr)
+          SONARR_API_KEY: ${{ secrets.SONARR_API_KEY }}
+          BAZARR_API_KEY: ${{ secrets.BAZARR_API_KEY }}
+          PROWLARR_API_KEY: ${{ secrets.PROWLARR_API_KEY }}
+          RADARR_API_KEY: ${{ secrets.RADARR_API_KEY }}
+          OVERSEERR_API_KEY: ${{ secrets.OVERSEERR_API_KEY }}
         run: |
           [ -n "$TAGS" ] && echo "Only roles: $TAGS" || echo "Whole playbook"
           ansible-playbook -i Ansbile/inventory.ini Ansbile/media-server.yml --vault-password-file ~/.vault_pass ${TAGS:+--tags "$TAGS"}
@@ -466,7 +466,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Silence warning alerts while this job runs
         id: silence
@@ -482,6 +482,8 @@ jobs:
       - name: ansible-playbook host-node
         env:
           TAGS: ${{ inputs.host_node_tags }}
+          # roles/proxmox_exporters
+          PVE_EXPORTER_TOKEN: ${{ secrets.PVE_EXPORTER_TOKEN }}
         run: |
           [ -n "$TAGS" ] && echo "Only roles: $TAGS" || echo "Whole playbook"
           ansible-playbook -i Ansbile/inventory.ini Ansbile/host-node.yml --vault-password-file ~/.vault_pass ${TAGS:+--tags "$TAGS"}
@@ -504,7 +506,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Silence warning alerts while this job runs
         id: silence
@@ -520,6 +522,9 @@ jobs:
       - name: ansible-playbook git-k3s-server
         env:
           TAGS: ${{ inputs.git_k3s_tags }}
+          # roles/k3s_apps (alert-forwarder, cert-manager DNS-01)
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          CF_DNS_API_TOKEN: ${{ secrets.CF_DNS_API_TOKEN }}
         run: |
           [ -n "$TAGS" ] && echo "Only roles: $TAGS" || echo "Whole playbook"
           ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml --vault-password-file ~/.vault_pass ${TAGS:+--tags "$TAGS"}
@@ -543,7 +548,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Silence warning alerts while this job runs
         id: silence
@@ -582,11 +587,11 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Terraform
         if: inputs.cloudflare && !contains(needs.*.result, 'failure')
-        uses: hashicorp/setup-terraform@v4
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: 1.6.0
           terraform_wrapper: false
@@ -661,7 +666,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Smoke test
         env:

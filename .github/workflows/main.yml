@@ -28,6 +28,12 @@ on:
         type: boolean
         default: true
 
+# Least privilege: every job gets a read-only token unless it asks for more
+# (the repo default is read too). A reusable workflow can't exceed what its
+# caller job grants, so build-image and Deploy grant their extras here.
+permissions:
+  contents: read
+
 # Prevent two deploys from racing on Terraform state / Ansible runs.
 concurrency:
   group: deploy-${{ github.ref_name }}
@@ -61,7 +67,7 @@ jobs:
       syntax_playbooks: ${{ steps.detect.outputs.syntax_playbooks }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0  # needs history back to the last deployed commit
 
@@ -106,6 +112,9 @@ jobs:
 
   build-image:
     name: Build Docker Image
+    permissions:
+      contents: read
+      packages: write  # push the alert-forwarder image to GHCR
     uses: ./.github/workflows/build-image.yml
 
   testing:
