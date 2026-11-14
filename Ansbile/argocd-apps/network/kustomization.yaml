@@ -13,4 +13,4 @@ components:
 # a new image on the registry side — this is the write-back target.
 images:
   - name: adguard/adguardhome
-    newTag: v0.107.79
+    newTag: "v0.107.79"

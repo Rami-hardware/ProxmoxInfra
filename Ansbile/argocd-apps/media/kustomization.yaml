@@ -27,7 +27,7 @@ images:
   - name: ghcr.io/seerr-team/seerr
     newTag: latest
   - name: jellyfin/jellyfin
-    newTag: 12
+    newTag: "12"
   - name: linuxserver/bazarr
     newTag: latest
   - name: linuxserver/radarr
