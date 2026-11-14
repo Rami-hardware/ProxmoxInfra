@@ -1,0 +1,10 @@
+---
+# Extra NTP servers for chrony on the Proxmox host. Its stock
+# `pool 2.debian.pool.ntp.org` resolves almost only to IPv6 addresses, and the
+# host has no IPv6 route, so it was left with one dead IPv4 server and an
+# unsynchronised clock (NodeClockNotSynced on host-node and on the runner
+# LXCs, which share its kernel). The VMs sync from ntp.ubuntu.com.
+chrony_servers:
+  - ntp.ubuntu.com
+  - time.cloudflare.com
+  - time.google.com

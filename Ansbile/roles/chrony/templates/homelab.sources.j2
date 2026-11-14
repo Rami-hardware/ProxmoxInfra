@@ -1,0 +1,4 @@
+# Managed by Ansible (roles/chrony).
+{% for server in chrony_servers %}
+server {{ server }} iburst
+{% endfor %}

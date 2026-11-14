@@ -18,6 +18,22 @@ curl -s http://192.168.10.203:3100/ready 2>/dev/null   # (tempo is on git-k3s)
 sudo k3s kubectl logs -n istio-system deploy/tempo --tail=30
 ```
 
+## In-mesh calls to one pod refused after a node reboot
+Seen 2026-11-13: monitoring-server restarted at 04:39; Prometheus,
+Alertmanager and blackbox-exporter came back in place (container restart,
+new sandbox) but ztunnel never re-enrolled them. Every in-mesh call to them
+failed — Loki's ruler remote-write (→ `LogPipelineBroken` for 17h), Grafana
+→ Prometheus/Alertmanager — while their NodePorts kept working (so the smoke
+test and alertops saw nothing). Symptom in ztunnel:
+```bash
+for z in $(sudo k3s kubectl -n istio-system get pods -l app=ztunnel -o name); do
+  sudo k3s kubectl -n istio-system logs $z --since=30m; done \
+  | grep 'Connection refused' | grep -oE 'dst.workload="[^"]+"' | sort | uniq -c
+```
+Fix: delete the listed pods (not `rollout restart`: ArgoCD self-heal reverts
+the annotation) so they get a fresh, enrolled sandbox:
+`sudo k3s kubectl -n <ns> delete pod <pod>`.
+
 ## Notes
 - Ambient mode, no sidecars. `media`, `monitoring` and `network` carry
   `istio.io/dataplane-mode=ambient` (set by roles/k3s_apps). ztunnel on each
