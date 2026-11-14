@@ -2,11 +2,12 @@
 # The Proxmox host itself. Unlike the VM playbooks this does NOT run `common`:
 # that role is VM-oriented (journald cap "too much on small VMs", apt-daily
 # pinning) and its apt-daily-upgrade drop-in dir doesn't exist on the host.
-# host-node is managed narrowly — exporters only, nothing that touches the
-# hypervisor's own config.
+# host-node is managed narrowly: SSH keys, NTP sources (chrony) and the
+# exporters — nothing else of the hypervisor's own config.
 - name: Deploy to the Proxmox host (host-node)
   hosts: host-node
   become: true
   roles:
     - { role: ssh_access, tags: [ssh_access] }
+    - { role: chrony, tags: [chrony] }
     - { role: proxmox_exporters, tags: [proxmox_exporters] }

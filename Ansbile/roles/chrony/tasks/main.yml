@@ -1,0 +1,16 @@
+---
+- name: Add NTP servers that answer over IPv4
+  ansible.builtin.template:
+    src: homelab.sources.j2
+    dest: /etc/chrony/sources.d/homelab.sources
+    mode: '0644'
+  notify: Restart chrony
+
+# -4: resolve and use IPv4 only. The host has no IPv6 route, so IPv6
+# addresses from the pool can never answer.
+- name: Run chronyd IPv4-only
+  ansible.builtin.lineinfile:
+    path: /etc/default/chrony
+    regexp: '^DAEMON_OPTS='
+    line: 'DAEMON_OPTS="-F 1 -4"'
+  notify: Restart chrony
