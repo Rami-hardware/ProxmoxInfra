@@ -34,8 +34,9 @@ variable "balloon" {
   description = "Minimum balloon memory in MB (0 = ballooning disabled). Proxmox reclaims memory between this value and 'memory' when the host is under pressure."
 }
 
-variable "clone" {
-  type = string
+# VM ID of the cloud-init template to clone (ubuntu-24.04-cloud-init-template).
+variable "clone_vm_id" {
+  type = number
 }
 
 variable "full_clone" {

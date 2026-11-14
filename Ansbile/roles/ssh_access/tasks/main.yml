@@ -1,0 +1,9 @@
+---
+- name: Manage authorized SSH keys for the Ansible user
+  ansible.posix.authorized_key:
+    user: "{{ ansible_user }}"
+    key: "{{ lookup('ansible.builtin.file', item.name + '.pub') }}"
+    state: "{{ item.state }}"
+  loop: "{{ ssh_access_authorized_keys }}"
+  loop_control:
+    label: "{{ item.name }} ({{ item.state }})"

@@ -1,0 +1,18 @@
+---
+# ── Intel GPU device plugin ───────────────────────────────────────────────────
+# Pods request `gpu.intel.com/i915: 1` instead of mounting /dev/dri and running
+# privileged. Upstream manifest: intel-device-plugins-for-kubernetes,
+# deployments/gpu_plugin/base.
+- name: Template Intel GPU device plugin manifest
+  ansible.builtin.template:
+    src: intel-gpu-plugin.yml.j2
+    dest: "{{ k3s_apps_manifest_dir }}/intel-gpu-plugin.yml"
+    mode: '0644'
+
+- name: Apply Intel GPU device plugin
+  ansible.builtin.command:
+    cmd: "k3s kubectl apply --server-side --force-conflicts -f {{ k3s_apps_manifest_dir }}/intel-gpu-plugin.yml"
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: k3s_apps_gpu_plugin_apply
+  changed_when: "'serverside-applied' in k3s_apps_gpu_plugin_apply.stdout"

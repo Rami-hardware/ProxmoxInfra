@@ -1,0 +1,11 @@
+# Managed by Ansible (roles/k3s_server).
+[Unit]
+Description=Nightly k3s datastore snapshot
+
+[Timer]
+OnCalendar={{ k3s_server_snapshot_time }}
+RandomizedDelaySec=10m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -2,9 +2,8 @@ resource "proxmox_virtual_environment_vm" "vm" {
   name      = var.name
   node_name = var.target_node
   vm_id     = var.vmid
-  # optional clone block — documented for this resource
   clone {
-    vm_id     = 9000            # ID of the template to clone
+    vm_id     = var.clone_vm_id
     node_name = var.target_node # node where the template lives
     full      = var.full_clone
   }
@@ -40,7 +39,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
       }
     }
     user_account {
-      keys     = [trimspace(var.ssh_public_key)]
+      keys     = split("\n", trimspace(var.ssh_public_key)) # one key per line (owner, CI)
       username = var.ciuser
       password = var.cipassword
     }
@@ -56,7 +55,11 @@ resource "proxmox_virtual_environment_vm" "vm" {
     bridge = "vmbr0"
   }
   lifecycle {
-    prevent_destroy = false
+    # The VMs hold data (media library config, Prometheus/Loki, the k3s
+    # datastore). A destroy must be a deliberate code change, not a plan
+    # someone missed. Disk size is in ignore_changes too: growing a disk in
+    # tfvars does nothing — resize it in Proxmox (qm resize) and update tfvars.
+    prevent_destroy = true
     ignore_changes = [
       disk,
       initialization,

@@ -173,6 +173,9 @@ role_parts() {
 while IFS= read -r f; do
   case "$f" in
     '') ;;
+    # The Application CRs themselves (Image Updater annotations, source path)
+    # are applied by k3s_apps, not synced by ArgoCD.
+    Ansbile/argocd-apps/*-app.yaml) run_role k3s_apps k3s_apps_image_updater ;;
     Ansbile/argocd-apps/*) ;;  # ArgoCD syncs these itself
     Ansbile/roles/*/*)
       r=${f#Ansbile/roles/}

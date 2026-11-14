@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Managed by Ansible (roles/k3s_server). Consistent snapshot of the k3s sqlite
+# datastore + server token. Restore: docs/runbooks/k3s-datastore.md.
+set -euo pipefail
+
+db=/var/lib/rancher/k3s/server/db/state.db
+dir={{ k3s_server_snapshot_dir }}
+ts=$(date -u +%Y%m%dT%H%M%SZ)
+tmp="$dir/.state-$ts.db"
+trap 'rm -f "$tmp"' EXIT
+
+# Online backup API: a consistent copy while k3s keeps writing (WAL mode).
+sqlite3 "$db" ".backup '$tmp'"
+[ "$(sqlite3 "$tmp" 'PRAGMA integrity_check;')" = ok ] || { echo "integrity check failed" >&2; exit 1; }
+zstd -q -f -T0 "$tmp" -o "$dir/state-$ts.db.zst"
+install -m 600 /var/lib/rancher/k3s/server/token "$dir/token"
+
+# Keep the newest {{ k3s_server_snapshot_keep }}.
+ls -1t "$dir"/state-*.db.zst | tail -n +{{ k3s_server_snapshot_keep + 1 }} | xargs -r rm -f
+
+size=$(stat -c %s "$dir/state-$ts.db.zst")
+metrics="{{ k3s_server_textfile_dir }}/k3s_db_snapshot.prom"
+cat > "$metrics.tmp" <<METRICS
+# HELP k3s_db_snapshot_last_success_timestamp_seconds Time of the last good k3s datastore snapshot.
+# TYPE k3s_db_snapshot_last_success_timestamp_seconds gauge
+k3s_db_snapshot_last_success_timestamp_seconds $(date +%s)
+# HELP k3s_db_snapshot_size_bytes Size of the last k3s datastore snapshot (zstd).
+# TYPE k3s_db_snapshot_size_bytes gauge
+k3s_db_snapshot_size_bytes $size
+METRICS
+mv "$metrics.tmp" "$metrics"
+echo "Snapshot $dir/state-$ts.db.zst ($size bytes)"

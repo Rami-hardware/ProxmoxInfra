@@ -12,3 +12,16 @@ k3s_server_secondary_dns: "192.168.10.203"
 # Internal zone delegated to AdGuard via a coredns-custom server block —
 # AdGuard is authoritative for it; public resolvers return NXDOMAIN.
 k3s_server_internal_domain: homelab.lan
+
+# ── Datastore snapshots ───────────────────────────────────────────────────────
+# Nightly consistent copy of the sqlite datastore (the whole cluster state)
+# plus the server token, both needed to restore the control plane. A live
+# state.db copied mid-write (vzdump, a hard reboot) can be torn; this copy
+# is taken with sqlite's online backup API and integrity-checked.
+# Same disk as the VM: vzdump carries it off the VM; off-host copies are the
+# backup work (docs/rebuild.md).
+k3s_server_snapshot_dir: /var/backups/k3s
+k3s_server_snapshot_keep: 7
+k3s_server_snapshot_time: "*-*-* 02:30:00"
+# node-exporter textfile collector (k3s_apps node-exporter DaemonSet).
+k3s_server_textfile_dir: /var/lib/node_exporter/textfile_collector

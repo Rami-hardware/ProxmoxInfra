@@ -5,16 +5,21 @@ metadata:
   name: monitoring
   namespace: argocd
   annotations:
+    # Stateful apps follow one major version only: a new major (storage or
+    # config format change) is bumped here on purpose, not shipped to
+    # production by Image Updater. Tag `3`/`v3` = newest 3.x (digest);
+    # Grafana has no major tag, so it uses semver with a release-tag filter.
     argocd-image-updater.argoproj.io/image-list: >-
-      grafana=grafana/grafana:latest,
-      prometheus=prom/prometheus:latest,
-      loki=grafana/loki:latest,
+      grafana=grafana/grafana:13.x,
+      prometheus=prom/prometheus:v3,
+      loki=grafana/loki:3,
       alertmanager=prom/alertmanager:latest,
       speedtest-exporter=miguelndecarvalho/speedtest-exporter:latest,
       intel-gpu-exporter=ghcr.io/onedr0p/intel-gpu-exporter:rolling,
       qbittorrent-exporter=esanchezm/prometheus-qbittorrent-exporter:latest,
       blackbox-exporter=prom/blackbox-exporter:latest
-    argocd-image-updater.argoproj.io/grafana.update-strategy: digest
+    argocd-image-updater.argoproj.io/grafana.update-strategy: semver
+    argocd-image-updater.argoproj.io/grafana.allow-tags: regexp:^13\.[0-9]+\.[0-9]+$
     argocd-image-updater.argoproj.io/prometheus.update-strategy: digest
     argocd-image-updater.argoproj.io/loki.update-strategy: digest
     argocd-image-updater.argoproj.io/alertmanager.update-strategy: digest

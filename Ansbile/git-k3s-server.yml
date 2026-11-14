@@ -3,6 +3,7 @@
   hosts: git-k3s-server
   become: true
   roles:
+    - { role: ssh_access, tags: [ssh_access] }
     - { role: common, tags: [common] }
     - { role: dns, tags: [dns] }
     - { role: k3s_server, tags: [k3s_server] }

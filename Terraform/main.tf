@@ -3,7 +3,7 @@ module "proxmox_vms" {
   for_each       = var.vms
   name           = each.value.name
   target_node    = "rami"
-  clone          = "ubuntu-24.04-cloud-init-template"
+  clone_vm_id    = 9000 # ubuntu-24.04-cloud-init-template
   full_clone     = true
   vmid           = each.value.vmid
   ciuser         = each.value.ciuser

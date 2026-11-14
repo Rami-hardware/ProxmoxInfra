@@ -5,9 +5,11 @@ metadata:
   name: media
   namespace: argocd
   annotations:
+    # Jellyfin follows its major tag (`12` = newest 12.x): a new major
+    # migrates its database one way, so bump it here on purpose.
     argocd-image-updater.argoproj.io/image-list: >-
       seerr=ghcr.io/seerr-team/seerr:latest,
-      jellyfin=jellyfin/jellyfin:latest,
+      jellyfin=jellyfin/jellyfin:12,
       bazarr=linuxserver/bazarr:latest,
       radarr=linuxserver/radarr:latest,
       prowlarr=linuxserver/prowlarr:latest,

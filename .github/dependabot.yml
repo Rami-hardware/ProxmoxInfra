@@ -1,5 +1,7 @@
 # Weekly PRs for new versions of the GitHub Actions the workflows use
-# (actions/checkout, setup-terraform, docker/*, ...), grouped into one PR.
+# (pinned by commit SHA; Dependabot updates the SHA and its version comment)
+# and of alert-forwarder's base image and npm packages. One grouped PR per
+# ecosystem.
 # PRs target `development`: merging one runs CI there (tested, never
 # deployed); promote it through staging → main as usual. Dependabot's own
 # branches trigger nothing (CI runs on pushes to the three branches only,
@@ -17,3 +19,27 @@ updates:
         patterns: ["*"]
     commit-message:
       prefix: "ci"
+
+  # alert-forwarder: its base image (node:*-alpine) and npm dependencies.
+  # Merging one changes the app's content hash, so CI builds and deploys a
+  # new image tag (build-image.yml).
+  - package-ecosystem: docker
+    directory: /Ansbile/apps/alert-forwarder
+    target-branch: development
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "alert-forwarder"
+
+  - package-ecosystem: npm
+    directory: /Ansbile/apps/alert-forwarder
+    target-branch: development
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      npm:
+        patterns: ["*"]
+    commit-message:
+      prefix: "alert-forwarder"

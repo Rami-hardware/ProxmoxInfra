@@ -1,11 +1,11 @@
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-RUN npm install --omit=dev
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 
-FROM node:20-alpine
+FROM node:24-alpine
 
 RUN apk upgrade --no-cache
 

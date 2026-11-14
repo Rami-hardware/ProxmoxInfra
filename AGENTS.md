@@ -15,7 +15,7 @@ Homelab infra: Proxmox VMs provisioned with Terraform, configured with Ansible, 
 - **Production deploys need approval**: the `Production` environment has the owner as required reviewer. Discord gets a "waiting for approval" message with the run link; approve under **Review deployments**. This applies to the monthly scheduled run too. While a main deploy waits, it holds the `deploy-hosts` concurrency group, so staging deploys queue behind it.
 - `main` has a ruleset (`protect-main`): no deletion, no force-push. Normal pushes (you, Image Updater, promote) still work.
 - Only the `gate` job binds to an environment (`Production`/`Staging`; each environment accepts only its own branch), so each environment's Deployments page is real deploy history. Secrets stay repo-level on purpose: staging deploys to the same hosts as main with the same credentials, and environment secrets reach only jobs bound to that environment (= one Production approval per host job). Only the owner pushes the three branches, and no `pull_request` trigger reaches the runners.
-- Dependabot (`.github/dependabot.yml`) opens one grouped PR a week for new GitHub Actions versions, against `development`; merge it there and promote as usual. `vars.ALERTMANAGER_URL` is a repo variable.
+- Dependabot (`.github/dependabot.yml`) opens one grouped PR a week per ecosystem (GitHub Actions; alert-forwarder's Docker base image and npm packages), against `development`; merge it there and promote as usual. `vars.ALERTMANAGER_URL` is a repo variable.
 
 ## Load-Bearing Quirks — DO NOT "FIX"
 
@@ -29,7 +29,7 @@ Homelab infra: Proxmox VMs provisioned with Terraform, configured with Ansible, 
 
 - Provider `bpg/proxmox` pinned `~> 0.70.1`. No `required_version`. No remote backend — **state (`terraform.tfstate`) is committed to git**.
 - `Terraform/.terraform/` is gitignored — provider binaries were once committed (81MB, several stale versions); never re-add them. CI installs providers via the filesystem mirror action.
-- VMs defined as a `map(object)` in `terraform.tfvars` (keys: `gateway`, `media`, `monitoring`, `github`). Map keys are state addresses: **renaming a key destroys the VM**.
+- VMs defined as a `map(object)` in `terraform.tfvars` (keys: `gateway`, `media`, `monitoring`, `github`). Map keys are state addresses: **renaming a key destroys the VM**. The VM module has `prevent_destroy = true`: a plan that would destroy or replace a VM errors out (remove it in a deliberate commit to really destroy one). Disk size is ignore_changes — resize in Proxmox (`qm resize`), then update tfvars.
 - LXC containers: `containers` map (keys `ci_runner_1`..`ci_runner_3`) → `modules/proxmox_lxc` (unprivileged, nesting only — no Docker on the runners). Same key-rename rule. The Ubuntu template must exist on the host first: `pveam update && pveam download local ubuntu-24.04-standard_24.04-2_amd64.tar.zst`.
 - Host RAM is the tight resource (33.6 GB, VMs pin most of it; media's GPU passthrough pins all of its RAM). Check `node_memory_MemAvailable_bytes{instance="host-node"}` before adding guests.
   - A key rename makes CI's plan show destroy + recreate and block. Move the state by hand first (`terraform state mv 'module.proxmox_vms["old"]' 'module.proxmox_vms["new"]'`) and commit the state.
@@ -37,7 +37,7 @@ Homelab infra: Proxmox VMs provisioned with Terraform, configured with Ansible, 
 - **CI applies VMs/LXCs on `main` only, after the Production approval, and only when that deploy contains a Proxmox Terraform code change** (`Terraform/*.tf`, `*.tfvars`, `modules/` → `changes` output `terraform_apply`). Drift (hand edits in Proxmox), scheduled/full runs and `terraform.tfstate`-only commits plan and warn (`### ⚠️ Terraform drift — NOT applied`) but never modify or delete anything. `deploy.yml`: `tf_plan` runs before the approval (full diff in the run summary — read it before approving), a destroy/replace fails the pipeline; `tf_apply` (after `gate`, on an `lxc` runner because a VM change can reboot git-k3s) re-plans, refuses if the plan differs from the reviewed one (`.github/scripts/tf-plan-fingerprint.sh`), applies with `-parallelism=1`, and commits `terraform.tfstate` back to main **and** staging (`github-actions[bot]`, pull before pushing). Staging only plans. Destroys/replaces stay manual.
 - Manual apply requires `parallelism=1` (Proxmox API race conditions); `-target` per resource keeps the blast radius small. Commit `terraform.tfstate` afterwards.
 - Provider values come from `TF_VAR_*` env vars (GitHub secrets) — never hardcode tokens.
-- VM SSH is **key-only** (PasswordAuthentication no; single authorized key shared by the CI runner + owner). The `cipassword` values in tfvars are empty — cloud-init legacy, no live effect (`initialization` is ignore_changes).
+- SSH is **key-only** everywhere (`roles/common` drop-in `00-hardening.conf`). Separate keys per consumer, managed by `roles/ssh_access` (first role in every playbook; public keys in its `files/<name>.pub`): `owner` (your desktop, alertops-mcp) and `ci` (secret `SSH_PRIVATE_KEY`). Revoke one by setting its `state: absent`. Terraform's `SSH_PUBLIC_KEY` secret holds both public keys, one per line, for cloud-init on new guests. The `cipassword` values in tfvars are empty — cloud-init legacy, no live effect (`initialization` is ignore_changes).
 
 ### Commands (run from `Terraform/`)
 
@@ -52,7 +52,7 @@ terraform plan -input=false -no-color -detailed-exitcode -out=tfplan
 
 - Inventory: `inventory.ini` (groups = `gateway-vm`, `media-vm`, `monitoring-vm`, `git-k3s-server-vm`, `host-node`). Group names must match `group_vars/<group>.yml` filenames.
 - Playbooks: one per host (`gateway-server.yml`, `media-server.yml`, `monitoring-server.yml`, `git-k3s-server.yml`, `ci-runners.yml`, `host-node.yml` — the last is the Proxmox host itself, exporters only: node/zfs/pve).
-- 17 roles under `Ansbile/roles/`. In CI all host playbooks run in parallel (see CI/CD).
+- 18 roles under `Ansbile/roles/`. In CI all host playbooks run in parallel (see CI/CD).
 - Terraform runs in CI only when its files changed (`changes` flags `terraform` for `Terraform/` and `cloudflare` for `Terraform/cloudflare/`): fmt/validate in Testing, VM plan + destroy guard (applied on main after approval) and Cloudflare plan/apply/tunnel token in Deploy. Schedule and manual full runs do all of it. The gateway `--check --diff` dry run only runs on `development` (staging's real deploy is the test), limited to the changed gateway roles. Ansible runs with `ANSIBLE_PIPELINING=True`.
 - **CI runs only the roles whose files changed** since the branch's last successful pipeline run (`.github/scripts/detect-changed-hosts.sh`). Every playbook tags each role with its own name (`- { role: x, tags: [x] }` — keep that format, the script parses it), and a change under `roles/<r>/` runs `ansible-playbook --tags r` on every host whose playbook lists `r` (a `common` change runs only `common`). A role can go finer by splitting `tasks/main.yml` into `tasks/<part>.yml` imported with `tags: [<role>_<part>]` (k3s_apps does, one file per component): a changed `tasks/<part>.yml` or a template/file named in only such parts runs just those parts; `main.yml`, defaults, handlers, or a template no part names run the whole role. Parts must not use registers/facts from each other. `apps/` → `k3s_apps`; `group_vars/all/local_dns.yml` → `adguard` + `unbound`. A host's playbook or `group_vars/<host>.yml` runs that whole host. `vault.yml`, inventory, `requirements.yml`, `.github/`, or a role in no playbook run everything; schedule and manual dispatch always run everything. The run summary of `Detect Changed Hosts` lists the roles per host. **Never use a fact/`register` from another role** — with `--tags` that role may not run.
 - Secrets: `group_vars/all/vault.yml` is fully vault-encrypted (plain vars go in other files under `group_vars/all/`, e.g. `local_dns.yml`). Vault password via `--vault-password-file ~/.vault_pass` (CI writes it from `ANSIBLE_VAULT_PASSWORD` secret). Never commit plaintext secrets — GitHub push protection blocks known token types.
@@ -63,7 +63,7 @@ terraform plan -input=false -no-color -detailed-exitcode -out=tfplan
 - **Role vars prefixed** `<role_name>_` (e.g. `k3s_server_version`, `grafana_data_dir`).
 - **All config rendered from Jinja2 templates** (`*.yml.j2`) — no inline hardcoded content in tasks.
 - **Helm releases** in `k3s_apps` use `kubernetes.core.helm` with every chart version pinned (`k3s_apps_*_chart_version`) and the `helm-diff` plugin (`/etc/helm/plugins`), so a release only upgrades when its rendered manifests change. Bump chart versions on purpose; never go back to shell `helm upgrade --install`.
-- **No moving image tags** (`:latest`, `:alpine`) in Ansible templates: pin a version (bump it on purpose). ArgoCD apps may use `:latest` in `kustomization.yaml` only because Image Updater pins the digest in `.argocd-source-*.yaml`. alert-forwarder deploys `:app-<content hash>` (see build-image.yml).
+- **No moving image tags** (`:latest`, `:alpine`) in Ansible templates: pin a version (bump it on purpose). ArgoCD apps may use `:latest` in `kustomization.yaml` only because Image Updater pins the digest in `.argocd-source-*.yaml` — but stateful apps whose next major can change their data or config format follow one major only (Prometheus `v3`, Loki `3`, Jellyfin `12` = digest of the major tag; Grafana `13.x` and AdGuard `~0.107` = `semver` + `allow-tags`, set in the `*-app.yaml` annotations). Bump a major there on purpose. alert-forwarder deploys `:app-<content hash>` (see build-image.yml).
 - **IPs referenced via `hostvars[host]['ansible_host']`** from inventory — single source of truth, never hardcode IPs.
 - Command/shell tasks need explicit `changed_when` / `failed_when`.
 - Alerting: all Prometheus-evaluated rules live in `roles/prometheus/templates/prometheus-rules.yml.j2` (Alertmanager → alert-forwarder → Discord). Log-based alerts live there too (group `logs`): Loki's ruler only runs LogQL **recording** rules (`roles/loki/templates/loki-rules.yml.j2`, metrics named `log:*`) and remote-writes them to Prometheus. Loki itself sends no alerts. Grafana keeps NO alert rules — never add alerts in the Grafana UI.
@@ -82,7 +82,7 @@ ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --check --d
 
 ## ArgoCD Apps (`Ansbile/argocd-apps/`)
 
-App changes here do NOT need CI — ArgoCD polls and syncs automatically (self-heal + prune).
+App changes here do NOT need CI — ArgoCD polls and syncs automatically (self-heal + prune). Exception: the top-level `*-app.yaml` Application CRs are applied by `k3s_apps` (part `image_updater`), so `main.yml` runs for them.
 
 Top-level `media-app.yaml` / `monitoring-app.yaml` / `network-app.yaml` are the Application CRs (Image Updater annotations, `targetRevision: main`). Per-namespace dir (`media/`, `monitoring/`, `network/`):
 
@@ -108,6 +108,7 @@ Runners: **GitHub-hosted** (`ubuntu-latest`) for jobs that need no LAN — Detec
 - No Trivy/CVE scanning in CI (removed on purpose). Committed secrets are caught by GitHub's own secret scanning + push protection (enabled in repo settings).
 - SSH host keys are pinned: Ansible in CI uses `StrictHostKeyChecking=yes` against `.github/ssh_known_hosts` (set by `setup-ssh-vault`). After rebuilding a VM, CI fails with "REMOTE HOST IDENTIFICATION HAS CHANGED" until you update its line (`ssh-keyscan -t ed25519 <ip>`, check the fingerprint against the VM console).
 - Discord notifications via webhook secrets.
+- Supply chain: every action is pinned to a commit SHA with a `# vX.Y.Z` comment (Dependabot keeps both updated) — never use a bare tag. `main.yml`/`checks.yml` default to a read-only `GITHUB_TOKEN` (also the repo default); a job that needs more grants it itself (build-image `packages: write`, Deploy `contents: write`). `deploy.yml` passes each playbook secret only to the host job whose roles read it.
 
 ## Alert Automation (`tools/alertops-mcp/`, `.claude/agents/alert-fixer.md`)
 

@@ -35,6 +35,10 @@ qm start 505   # gateway (DNS for everything else)
 qm start 511   # monitoring
 qm start 911   # media
 ```
+If k3s on git-k3s won't come up after the restore (a `state.db` torn by the
+crash-consistent dump), restore the control plane from the nightly datastore
+snapshot inside the VM: [runbooks/k3s-datastore.md](runbooks/k3s-datastore.md).
+
 CI runs only on the runner LXCs (`pct start 205 206 207`). If they are gone,
 `terraform apply` recreates them (`containers` map); then pin their host keys
 in `.github/ssh_known_hosts` and run `ci-runners.yml` (CI does it on the

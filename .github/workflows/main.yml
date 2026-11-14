@@ -11,14 +11,19 @@ on:
     # the Proxmox host (Envoy watchdog / ingress 5xx alerts), so don't run one for
     # docs, local tooling, or ArgoCD app manifests (ArgoCD syncs those itself).
     # A push that also touches anything else still runs the full pipeline.
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
-      - 'tools/**'
-      - 'scripts/**'
-      - '.claude/**'
-      - '.mcp.json'
-      - 'Ansbile/argocd-apps/**'
+    # Exception: the Application CRs (argocd-apps/*-app.yaml) are applied by
+    # the k3s_apps role, so they do run it. (`paths` with ! patterns: the
+    # last matching pattern wins; paths-ignore can't re-include.)
+    paths:
+      - '**'
+      - '!docs/**'
+      - '!**.md'
+      - '!tools/**'
+      - '!scripts/**'
+      - '!.claude/**'
+      - '!.mcp.json'
+      - '!Ansbile/argocd-apps/**'
+      - 'Ansbile/argocd-apps/*-app.yaml'
   schedule:
     - cron: '0 3 1 * *'  # 1st of every month at 03:00 UTC — monthly redeploy (triggers cert regen as side effect)
   workflow_dispatch:
@@ -27,6 +32,12 @@ on:
         description: Run every playbook (off = only hosts changed since the last green run; promote.yml uses that)
         type: boolean
         default: true
+
+# Least privilege: every job gets a read-only token unless it asks for more
+# (the repo default is read too). A reusable workflow can't exceed what its
+# caller job grants, so build-image and Deploy grant their extras here.
+permissions:
+  contents: read
 
 # Prevent two deploys from racing on Terraform state / Ansible runs.
 concurrency:
@@ -61,7 +72,7 @@ jobs:
       syntax_playbooks: ${{ steps.detect.outputs.syntax_playbooks }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0  # needs history back to the last deployed commit
 
@@ -106,6 +117,9 @@ jobs:
 
   build-image:
     name: Build Docker Image
+    permissions:
+      contents: read
+      packages: write  # push the alert-forwarder image to GHCR
     uses: ./.github/workflows/build-image.yml
 
   testing:

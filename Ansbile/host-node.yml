@@ -8,4 +8,5 @@
   hosts: host-node
   become: true
   roles:
+    - { role: ssh_access, tags: [ssh_access] }
     - { role: proxmox_exporters, tags: [proxmox_exporters] }
