@@ -4,6 +4,10 @@ metadata:
   name: alert-forwarder
 spec:
   type: NodePort
+  # Local keeps the client IP for the allow-admin-api NetworkPolicy
+  # (components/mesh-network-policy). The pod is pinned to .Values.targetNode,
+  # so the NodePort answers there (the address everything uses).
+  externalTrafficPolicy: Local
   selector:
     app: alert-forwarder
   ports:

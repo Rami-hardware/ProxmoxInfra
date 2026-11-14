@@ -58,13 +58,55 @@ kind: NetworkPolicy
 metadata:
   name: allow-from-nodes-and-lan
 spec:
-  podSelector: {}
+  # Every pod except the admin APIs below.
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: NotIn
+        values: [alertmanager, prometheus, loki, alert-forwarder]
   policyTypes:
     - Ingress
   ingress:
     - from:
         - ipBlock:
             cidr: 192.168.10.0/24 # LAN clients and node IPs (hostPort keeps the client IP)
+        - ipBlock:
+            cidr: 10.42.0.0/31 # gateway-server
+        - ipBlock:
+            cidr: 10.42.1.0/31 # media-server
+        - ipBlock:
+            cidr: 10.42.2.0/31 # git-k3s-server
+        - ipBlock:
+            cidr: 10.42.3.0/31 # monitoring-server
+        - ipBlock:
+            cidr: 169.254.7.127/32 # Istio ambient kubelet probes
+---
+# Admin APIs with no login of their own (Alertmanager can silence every
+# alert, Loki takes log pushes, alert-forwarder posts to Discord): from the
+# lab hosts and the admin desktop only, not the whole LAN. Their NodePort
+# Services use externalTrafficPolicy: Local, which keeps the client IP (with
+# Cluster it is SNATed to a node address and this list would mean nothing).
+# The admin desktop is also in roles/nginx_config/defaults (ingress allowlist).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-admin-api
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: [alertmanager, prometheus, loki, alert-forwarder]
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - ipBlock:
+            cidr: 192.168.10.200/30 # gateway .200, media .201, monitoring .203 (+ .202, unused)
+        - ipBlock:
+            cidr: 192.168.10.204/30 # git-k3s .204, CI runners .205-.207 (smoke test, deploy silences)
+        - ipBlock:
+            cidr: 192.168.10.91/32 # admin desktop (alertops-mcp, browser)
         - ipBlock:
             cidr: 10.42.0.0/31 # gateway-server
         - ipBlock:

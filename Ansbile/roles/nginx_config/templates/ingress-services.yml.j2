@@ -142,6 +142,11 @@ metadata:
 {% if svc.backend_protocol | default(false) %}
     nginx.ingress.kubernetes.io/backend-protocol: "{{ svc.backend_protocol }}"
 {% endif %}
+{% if svc.admin_only | default(false) %}
+    # No login of its own: only admin machines, the lab hosts and pods
+    # (blackbox probes) — 403 for the rest of the LAN.
+    nginx.ingress.kubernetes.io/whitelist-source-range: "{{ nginx_config_admin_source_ranges | join(',') }}"
+{% endif %}
 {% if svc.disable_buffering | default(false) %}
     nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
     nginx.ingress.kubernetes.io/proxy-buffering: "off"

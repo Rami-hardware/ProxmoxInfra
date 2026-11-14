@@ -104,12 +104,12 @@ nginx_services_local:
   - name: alertmanager
     port: 9093
     namespace: monitoring
-    auth: false
+    admin_only: true
 
   - name: prometheus
     port: 9090
     namespace: monitoring
-    auth: false
+    admin_only: true
 
   - name: server
     ip: 192.168.10.250
@@ -122,7 +122,7 @@ nginx_services_local:
     service: tempo-query
     port: 3200
     namespace: istio-system
-    auth: false
+    admin_only: true
 
   - name: argocd
     service: argocd-server
