@@ -3,3 +3,4 @@ collections:
   - name: community.crypto
   - name: kubernetes.core
     version: ">=6.6.0,<7.0.0"
+# seerr-jellyfin-creds Secret is created by CI in deploy.yml (kubectl create secret generic)
