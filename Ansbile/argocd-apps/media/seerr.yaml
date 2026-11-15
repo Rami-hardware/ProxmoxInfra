@@ -56,7 +56,6 @@ metadata:
   # DB); restore with POST /api/v1/settings/jobs/{id}/schedule:
   #   availability-sync          -> "0 0 5 * * *"
   #   plex-recently-added-scan   -> "0 */5 * * * *"
----
 spec:
   replicas: 1
   strategy:
