@@ -86,6 +86,8 @@ on:
         required: true
       OVERSEERR_API_KEY:
         required: true
+      JELLYFIN_API_KEY:
+        required: false
       CF_DNS_API_TOKEN:
         required: true
       RUNNER_ADMIN_TOKEN:
@@ -453,6 +455,17 @@ jobs:
         if: always() && steps.silence.outputs.id != ''
         continue-on-error: true
         run: .github/scripts/am-silence.sh delete "${{ steps.silence.outputs.id }}"
+
+      - name: Apply Seerr Jellyfin credentials Secret
+        if: inputs.media && secrets.JELLYFIN_API_KEY != ''
+        env:
+          JELLYFIN_SERVER: "http://10.43.175.229:8096"
+          JELLYFIN_API_KEY: ${{ secrets.JELLYFIN_API_KEY }}
+        run: |
+          kubectl -n media create secret generic seerr-jellyfin-creds \
+            --from-literal=JELLYFIN_SERVER="$JELLYFIN_SERVER" \
+            --from-literal=JELLYFIN_API_KEY="$JELLYFIN_API_KEY" \
+            --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Cleanup secrets
         if: always()
