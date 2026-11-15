@@ -51,6 +51,17 @@ jobs:
           # The canary verdict: the newest main.yml run for staging's exact commit.
           tested=$staging
           read -r status conclusion < <(run_of main.yml "$staging")
+          # When only deploy.yml changed on staging, GitHub creates a main.yml run
+          # that always fails (0s duration).  Detect this by diffing against the
+          # merge-base with main: if all changes are ignored paths (including
+          # deploy.yml), treat it like "no pipeline run" and fall back.
+          if [ "$status" = completed ] && [ "$conclusion" = failure ]; then
+            base=$(git merge-base origin/main origin/staging)
+            changed_since_base=$(git diff --name-only "$base"..origin/staging | grep -vE '^(docs/|tools/|scripts/|\.claude/|Ansbile/argocd-apps/[^/]+/|\.github/workflows/deploy\.yml$)|\.md$|^\.mcp\.json$' || true)
+            if [ -z "$changed_since_base" ]; then
+              status=none
+            fi
+          fi
           if [ "$status" = none ]; then
             # main.yml ignores ArgoCD manifests, docs and tools, so such a push
             # starts no pipeline run. Judge by the newest staging commit that
@@ -63,6 +74,10 @@ jobs:
             changed=$(git diff --name-only "$tested" "$staging")
             other=$(grep -vE '^(docs/|tools/|scripts/|\.claude/|Ansbile/argocd-apps/[^/]+/|\.github/workflows/deploy\.yml$)|\.md$|^\.mcp\.json$' <<< "$changed" || true)
             [ -z "$other" ] || fail "staging ${staging:0:8} has no pipeline run, yet changes files the pipeline tests: $(echo $other | head -c 200)"
+            # deploy.yml runs on staging but CI always fails workflow-only pushes (GitHub behavior).
+            if [ "$(printf '%s\n' "$changed" | grep -cx '.github/workflows/deploy.yml')" = "1" ] && [ -z "$other" ]; then
+              echo "Only .github/workflows/deploy.yml changed — using ${tested:0:8} run (deploy-only pushes always fail on staging)."
+            fi
             # ArgoCD manifests and alertops-mcp are tested by checks.yml instead.
             # checks.yml only runs on pushes touching those paths, so judge by
             # the newest commit that touched them (a later docs-only commit
