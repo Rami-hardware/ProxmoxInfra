@@ -46,17 +46,10 @@ kind: Deployment
 metadata:
   name: seerr
   namespace: media
-  # NOTE (2026-09-26): seerr's configured Plex server (192.168.1.201:32400,
-  # "Adult Titans") is on a subnet this network can no longer route to, so all
-  # Plex jobs have been failing with read ECONNRESET since ~Apr 2026. The
-  # daily availability-sync burst (~80 error lines in 5 min at 02:00 UTC)
-  # tripped the "Error rate spike" alert every day, so availability-sync and
-  # plex-recently-added-scan were rescheduled to "0 0 3 29 2 *" (leap day) via
-  # the Seerr jobs API. Runtime-only change (persisted in the seerr settings
-  # DB); restore with POST /api/v1/settings/jobs/{id}/schedule:
+  # NOTE: Reconnected Seerr to Jellyfin (replacing dead Plex at 192.168.1.201:32400).
+  # Jellyfin URL and API key set via env vars below. Jobs restored to normal schedule:
   #   availability-sync          -> "0 0 5 * * *"
-  #   plex-recently-added-scan   -> "0 */5 * * * *"
-  # Durable fix is reconnecting seerr to Jellyfin (needs a Jellyfin API key).
+  #   jellyfin-recently-added-scan -> "0 */5 * * * *"
 spec:
   replicas: 1
   strategy:
@@ -106,6 +99,10 @@ spec:
           env:
             - name: TZ
               value: "Asia/Riyadh"
+            - name: JELLYFIN_SERVER
+              value: "http://10.43.175.229:8096"
+            - name: JELLYFIN_API_KEY
+              value: "7f3e19039caa48a8802a5e1d539b8553"
           volumeMounts:
             - name: config
               mountPath: /app/config
