@@ -5,3 +5,9 @@
   ansible.builtin.systemd:
     name: AdGuardHome
     state: restarted
+
+- name: Restart AdGuard exporter
+  ansible.builtin.systemd:
+    name: adguard-exporter
+    state: restarted
+    daemon_reload: true

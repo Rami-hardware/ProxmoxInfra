@@ -21,17 +21,79 @@
     group: '65534'
     mode: '0755'
 
-- name: Template Prometheus config
-  ansible.builtin.template:
-    src: prometheus.yml.j2
-    dest: "{{ prometheus_config_file }}"
-    mode: '0644'
-    validate: "sh -c 'command -v promtool >/dev/null 2>&1 && promtool check config %s || true'"
-  notify: Reload Prometheus
+# The host has k3s/containerd but no Docker CLI or host promtool. Download the
+# pinned, checksummed promtool release for validation; it works on first
+# bootstrap before the Prometheus workload exists. Confirm outbound release
+# access before deploying this role. The validator must be available before
+# either production file is touched.
+- name: Create Prometheus validation staging directory
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: prometheus-validation
+  register: prometheus_validation_stage
 
-- name: Template Prometheus alert rules
-  ansible.builtin.template:
-    src: prometheus-rules.yml.j2
-    dest: "{{ prometheus_rules_file }}"
-    mode: '0644'
-  notify: Reload Prometheus
+- name: Validate and install Prometheus configuration
+  block:
+    - name: Render staged Prometheus config
+      ansible.builtin.template:
+        src: prometheus.yml.j2
+        dest: "{{ prometheus_validation_stage.path }}/prometheus.yml"
+        mode: '0644'
+
+    - name: Render staged Prometheus rules
+      ansible.builtin.template:
+        src: prometheus-rules.yml.j2
+        dest: "{{ prometheus_validation_stage.path }}/prometheus-rules.yml"
+        mode: '0644'
+
+    - name: Download pinned Prometheus release for promtool
+      ansible.builtin.get_url:
+        url: "{{ prometheus_validation_archive_url }}"
+        dest: "{{ prometheus_validation_stage.path }}/prometheus.tar.gz"
+        checksum: "sha256:{{ prometheus_validation_sha256 }}"
+        mode: '0644'
+
+    - name: Extract pinned promtool
+      ansible.builtin.unarchive:
+        src: "{{ prometheus_validation_stage.path }}/prometheus.tar.gz"
+        dest: "{{ prometheus_validation_stage.path }}"
+        remote_src: true
+
+    - name: Validate staged Prometheus config and rules
+      ansible.builtin.command:
+        argv:
+          - "{{ prometheus_validation_stage.path }}/prometheus-{{ prometheus_validation_version | regex_replace('^v', '') }}.linux-amd64/promtool"
+          - check
+          - config
+          - "{{ prometheus_validation_stage.path }}/prometheus.yml"
+      changed_when: false
+
+    - name: Validate staged Prometheus alert rules
+      ansible.builtin.command:
+        argv:
+          - "{{ prometheus_validation_stage.path }}/prometheus-{{ prometheus_validation_version | regex_replace('^v', '') }}.linux-amd64/promtool"
+          - check
+          - rules
+          - "{{ prometheus_validation_stage.path }}/prometheus-rules.yml"
+      changed_when: false
+
+    - name: Install validated Prometheus config
+      ansible.builtin.copy:
+        src: "{{ prometheus_validation_stage.path }}/prometheus.yml"
+        dest: "{{ prometheus_config_file }}"
+        remote_src: true
+        mode: '0644'
+      notify: Reload Prometheus
+
+    - name: Install validated Prometheus rules
+      ansible.builtin.copy:
+        src: "{{ prometheus_validation_stage.path }}/prometheus-rules.yml"
+        dest: "{{ prometheus_rules_file }}"
+        remote_src: true
+        mode: '0644'
+      notify: Reload Prometheus
+  always:
+    - name: Remove Prometheus validation staging directory
+      ansible.builtin.file:
+        path: "{{ prometheus_validation_stage.path }}"
+        state: absent

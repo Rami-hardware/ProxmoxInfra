@@ -1,5 +1,9 @@
 ---
 alertmanager_config_dir: /opt/docker/alertmanager
+# Host path backing alertmanager-data-pv mounted at /alertmanager in Kubernetes.
+alertmanager_data_dir: /opt/docker/alertmanager/data
+alertmanager_data_dir_uid: 65534
+alertmanager_data_dir_gid: 65534
 alertmanager_webhook_url: "http://{{ hostvars['monitoring-server']['ansible_host'] }}:30302/alertmanager"
 alertmanager_resolve_timeout: 5m
 alertmanager_group_wait: 30s

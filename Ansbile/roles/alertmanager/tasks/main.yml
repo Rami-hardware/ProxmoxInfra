@@ -16,6 +16,16 @@
     state: directory
     mode: '0755'
 
+# kubelet does not chown hostPath volumes; prepare writable storage for the
+# Alertmanager container user before the pod mounts the data directory.
+- name: Ensure Alertmanager PV data directory is owned by the Alertmanager user
+  ansible.builtin.file:
+    path: "{{ alertmanager_data_dir }}"
+    state: directory
+    owner: "{{ alertmanager_data_dir_uid }}"
+    group: "{{ alertmanager_data_dir_gid }}"
+    mode: '0755'
+
 - name: Template Alertmanager config
   ansible.builtin.template:
     src: alertmanager.yml.j2

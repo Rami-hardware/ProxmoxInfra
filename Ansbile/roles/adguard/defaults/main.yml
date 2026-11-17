@@ -11,6 +11,12 @@ adguard_download_base: https://github.com/AdGuardTeam/AdGuardHome/releases/downl
 adguard_api_username: "{{ lookup('env', 'ADGUARD_EXPORTER_USERNAME') }}"
 adguard_api_password: "{{ lookup('env', 'ADGUARD_EXPORTER_PASSWORD') }}"
 
+# The metrics exporter preserves the existing root-run service/API behavior.
+adguard_exporter_dir: /opt/adguard-exporter
+adguard_exporter_env_file: /opt/adguard-exporter.env
+adguard_exporter_port: 9618
+adguard_exporter_poll_seconds: 30
+
 # DNS rewrites ensured on every run (names from group_vars/all/local_dns.yml).
 adguard_rewrite_answer: "{{ local_dns_ingress_ip }}"
 adguard_rewrite_domains: >-
