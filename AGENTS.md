@@ -8,14 +8,7 @@ Guidance for AI coding agents working in this repo.
 
 ## Repo Overview
 
-Homelab infra: Proxmox VMs provisioned with Terraform, configured with Ansible, apps deployed via GitOps (ArgoCD + Image Updater) on K3s. Branches: `main` / `staging` / `development` — CI runs on push to any of them, plus a monthly scheduled run on main (full redeploy; regenerates certs as a side effect). All three share one inventory, i.e. the real hosts:
-- `development` — developed code; CI tests it, **never deploys**.
-- `staging` — **canary**: deploys the changed playbooks from the staging branch to the real hosts. Watch it, then merge to `main`. Main's next run redeploys every host staging touched since main's last success (no-op if merged, revert if abandoned). Cloudflare apply and ArgoCD stay main-only.
-- `main` — production. **Promote with the `Promote staging → main` workflow** (Actions tab → Run workflow): it requires staging's latest run for that exact commit to be green (including the post-deploy smoke test; a commit that only touches pipeline-ignored paths — `argocd-apps/`, docs, tools — uses the newest staging commit with a run, plus a green `checks.yml` for ArgoCD/alertops changes), fast-forwards main (or merges when main only has Image Updater `.argocd-source-*.yaml` commits), dispatches the main pipeline with `full_deploy=false`. It posts to Discord. Main-only commits it accepts: Image Updater's `.argocd-source-*.yaml` and CI's `terraform.tfstate`.
-- **Production deploys need approval**: the `Production` environment has the owner as required reviewer. Discord gets a "waiting for approval" message with the run link; approve under **Review deployments**. This applies to the monthly scheduled run too. While a main deploy waits, it holds the `deploy-hosts` concurrency group, so staging deploys queue behind it.
-- `main` has a ruleset (`protect-main`): no deletion, no force-push. Normal pushes (you, Image Updater, promote) still work.
-- Only the `gate` job binds to an environment (`Production`/`Staging`; each environment accepts only its own branch), so each environment's Deployments page is real deploy history. Secrets stay repo-level on purpose: staging deploys to the same hosts as main with the same credentials, and environment secrets reach only jobs bound to that environment (= one Production approval per host job). Only the owner pushes the three branches, and no `pull_request` trigger reaches the runners.
-- Dependabot (`.github/dependabot.yml`) opens one grouped PR a week per ecosystem (GitHub Actions; alert-forwarder's Docker base image and npm packages), against `development`; merge it there and promote as usual. **Renovate** (`renovate.json`, GitHub App) does the same for every version pinned outside ArgoCD: k3s (server, agents and the runners' kubectl as one PR, one minor at a time), the Helm charts / Istio / Gateway API / images that `k3s_apps` and `nginx_config` deploy, AdGuard, the runner, the Proxmox exporters, Terraform and `.github/ci-requirements.txt`. Every such pin has a `# renovate: datasource=… depName=… [registryUrl=…]` comment on the line above — add one to any new pin. Images in templates go through a `<role>_*_version` variable, never a literal tag. `vars.ALERTMANAGER_URL` is a repo variable.
+Homelab infra: Proxmox VMs provisioned with Terraform, configured with Ansible, apps deployed via GitOps (ArgoCD + Image Updater) on K3s. Branches `main` / `staging` / `development` share one inventory — the real hosts. `development` never deploys, `staging` is the canary, `main` is production and needs approval.
 
 ## Load-Bearing Quirks — DO NOT "FIX"
 
@@ -25,97 +18,18 @@ Homelab infra: Proxmox VMs provisioned with Terraform, configured with Ansible, 
 - The k3s server VM's Terraform map key is `github`, not `git-k3s-server` — see `terraform.tfvars`.
 - **VM 100** on the Proxmox host is an out-of-band macOS test VM (owner-owned; not in tfvars/inventory). It's excluded from the backup job (`cluster/backup` `--exclude 100`) because it carries a duplicate of media's GPU PCI ID (`0000:03:00.0`) — it cannot run while media does. Don't delete it, don't re-add it to backups.
 
-## Terraform (`Terraform/`)
+## Detailed Guidance — load the matching skill
 
-- Provider `bpg/proxmox` pinned `~> 0.70.1`. No `required_version`. No remote backend — **state (`terraform.tfstate`) is committed to git**.
-- `Terraform/.terraform/` is gitignored — provider binaries were once committed (81MB, several stale versions); never re-add them. CI installs providers via the filesystem mirror action.
-- VMs defined as a `map(object)` in `terraform.tfvars` (keys: `gateway`, `media`, `monitoring`, `github`). Map keys are state addresses: **renaming a key destroys the VM**. The VM module has `prevent_destroy = true`: a plan that would destroy or replace a VM errors out (remove it in a deliberate commit to really destroy one). Disk size is ignore_changes — resize in Proxmox (`qm resize`), then update tfvars.
-- LXC containers: `containers` map (keys `ci_runner_1`..`ci_runner_3`) → `modules/proxmox_lxc` (unprivileged, nesting only — no Docker on the runners). Same key-rename rule. The Ubuntu template must exist on the host first: `pveam update && pveam download local ubuntu-24.04-standard_24.04-2_amd64.tar.zst`.
-- Host RAM is the tight resource (33.6 GB, VMs pin most of it; media's GPU passthrough pins all of its RAM). Check `node_memory_MemAvailable_bytes{instance="host-node"}` before adding guests.
-  - A key rename makes CI's plan show destroy + recreate and block. Move the state by hand first (`terraform state mv 'module.proxmox_vms["old"]' 'module.proxmox_vms["new"]'`) and commit the state.
-- `lifecycle.ignore_changes` (in `modules/proxmox_vm/main.tf`) covers `disk`, `initialization`, `clone`, `hostpci`, `cpu` and more — don't remove.
-- **CI applies VMs/LXCs on `main` only, after the Production approval, and only when that deploy contains a Proxmox Terraform code change** (`Terraform/*.tf`, `*.tfvars`, `modules/` → `changes` output `terraform_apply`). Drift (hand edits in Proxmox), scheduled/full runs and `terraform.tfstate`-only commits plan and warn (`### ⚠️ Terraform drift — NOT applied`) but never modify or delete anything. `deploy.yml`: `tf_plan` runs before the approval (full diff in the run summary — read it before approving), a destroy/replace fails the pipeline; `tf_apply` (after `gate`, on an `lxc` runner because a VM change can reboot git-k3s) re-plans, refuses if the plan differs from the reviewed one (`.github/scripts/tf-plan-fingerprint.sh`), applies with `-parallelism=1`, and commits `terraform.tfstate` back to main **and** staging (`github-actions[bot]`, pull before pushing). Staging only plans. Destroys/replaces stay manual.
-- Manual apply requires `parallelism=1` (Proxmox API race conditions); `-target` per resource keeps the blast radius small. Commit `terraform.tfstate` afterwards.
-- Provider values come from `TF_VAR_*` env vars (GitHub secrets) — never hardcode tokens. TLS to the Proxmox API is verified (no `insecure`): the runners trust the PVE cluster CA (`roles/ci_runner/files/pve-root-ca.crt`); a manual apply needs that CA trusted too. If the host's IP or name changes, fix `/etc/hosts` on it and run `pvecm updatecerts --force`, or the certificate stops matching.
-- SSH is **key-only** everywhere (`roles/common` drop-in `00-hardening.conf`). Separate keys per consumer, managed by `roles/ssh_access` (first role in every playbook; public keys in its `files/<name>.pub`): `owner` (your desktop, alertops-mcp) and `ci` (secret `SSH_PRIVATE_KEY`). Revoke one by setting its `state: absent`. **The CI key is also ArgoCD's git key**: `k3s_apps` copies the runner's `~/.ssh/id_rsa` into the ArgoCD repo credentials and Image Updater's write-back secret, so whatever key `SSH_PRIVATE_KEY` holds must be a **writable deploy key** on the GitHub repo — rotate both together, or every app goes `ComparisonError` (nothing syncs, no image updates). Terraform's `SSH_PUBLIC_KEY` secret holds both public keys, one per line, for cloud-init on new guests. The `cipassword` values in tfvars are empty — cloud-init legacy, no live effect (`initialization` is ignore_changes).
+This file stays short on purpose. Each area's full rules live in a skill under `.opencode/skills/`; load the one that matches before working in that area.
 
-### Commands (run from `Terraform/`)
-
-```bash
-terraform init -backend=false
-terraform fmt -check -recursive
-terraform validate
-terraform plan -input=false -no-color -detailed-exitcode -out=tfplan
-```
-
-## Ansible (`Ansbile/`)
-
-- Inventory: `inventory.ini` (groups = `gateway-vm`, `media-vm`, `monitoring-vm`, `git-k3s-server-vm`, `host-node`). Group names must match `group_vars/<group>.yml` filenames.
-- Playbooks: one per host (`gateway-server.yml`, `media-server.yml`, `monitoring-server.yml`, `git-k3s-server.yml`, `ci-runners.yml`, `host-node.yml` — the last is the Proxmox host itself, managed narrowly: SSH keys, chrony NTP sources, node/zfs/pve exporters).
-- 19 roles under `Ansbile/roles/`. In CI all host playbooks run in parallel (see CI/CD).
-- Terraform runs in CI only when its files changed (`changes` flags `terraform` for `Terraform/` and `cloudflare` for `Terraform/cloudflare/`): fmt/validate in Testing, VM plan + destroy guard (applied on main after approval) and Cloudflare plan/apply/tunnel token in Deploy. Schedule and manual full runs do all of it. The gateway `--check --diff` dry run only runs on `development` (staging's real deploy is the test), limited to the changed gateway roles. Ansible runs with `ANSIBLE_PIPELINING=True`.
-- **CI runs only the roles whose files changed** since the branch's last successful pipeline run (`.github/scripts/detect-changed-hosts.sh`). Every playbook tags each role with its own name (`- { role: x, tags: [x] }` — keep that format, the script parses it), and a change under `roles/<r>/` runs `ansible-playbook --tags r` on every host whose playbook lists `r` (a `common` change runs only `common`). A role can go finer by splitting `tasks/main.yml` into `tasks/<part>.yml` imported with `tags: [<role>_<part>]` (k3s_apps does, one file per component): a changed `tasks/<part>.yml` or a template/file named in only such parts runs just those parts; `main.yml`, defaults, handlers, or a template no part names run the whole role. Parts must not use registers/facts from each other. `apps/` → `k3s_apps`; `group_vars/all/local_dns.yml` → `adguard` + `unbound`. A host's playbook or `group_vars/<host>.yml` runs that whole host. `vault.yml`, inventory, `requirements.yml`, `.github/`, or a role in no playbook run everything; schedule and manual dispatch always run everything. The run summary of `Detect Changed Hosts` lists the roles per host. **Never use a fact/`register` from another role** — with `--tags` that role may not run.
-- Secrets: `group_vars/all/vault.yml` is fully vault-encrypted (plain vars go in other files under `group_vars/all/`, e.g. `local_dns.yml`). Vault password via `--vault-password-file ~/.vault_pass` (CI writes it from `ANSIBLE_VAULT_PASSWORD` secret). Never commit plaintext secrets — GitHub push protection blocks known token types.
-
-### Conventions (enforced — match existing code)
-
-- **FQCN always**: `ansible.builtin.template`, `community.general.*` — no short module names.
-- **Role vars prefixed** `<role_name>_` (e.g. `k3s_server_version`, `grafana_data_dir`).
-- **All config rendered from Jinja2 templates** (`*.yml.j2`) — no inline hardcoded content in tasks.
-- **Helm releases** in `k3s_apps` use `kubernetes.core.helm` with every chart version pinned (`k3s_apps_*_chart_version`) and the `helm-diff` plugin (`/etc/helm/plugins`), so a release only upgrades when its rendered manifests change. Bump chart versions on purpose; never go back to shell `helm upgrade --install`.
-- **No moving image tags** (`:latest`, `:alpine`) in Ansible templates: pin a version (bump it on purpose). ArgoCD apps may use `:latest` in `kustomization.yaml` only because Image Updater pins the digest in `.argocd-source-*.yaml` — but stateful apps whose next major can change their data or config format follow one major only (Prometheus `v3`, Loki `3`, Jellyfin `12`, Redis `8-alpine`, TimescaleDB `pg18` = digest of the major tag; Grafana `13.x` = `semver` + `allow-tags`, set in the `*-app.yaml` annotations). Bump a major there on purpose. Every image under `argocd-apps/` must be in its app's `image-list`, or it is never updated. TimescaleDB's pod runs `ALTER EXTENSION … UPDATE` in a postStart hook after an image change. AdGuard is not a pod (systemd on the gateway, `adguard_version`, updated by Renovate). alert-forwarder deploys `:app-<content hash>` (see build-image.yml).
-- **IPs referenced via `hostvars[host]['ansible_host']`** from inventory — single source of truth, never hardcode IPs.
-- Command/shell tasks need explicit `changed_when` / `failed_when`.
-- Alerting: all Prometheus-evaluated rules live in `roles/prometheus/templates/prometheus-rules.yml.j2` (Alertmanager → alert-forwarder → Discord). Log-based alerts live there too (group `logs`): Loki's ruler only runs LogQL **recording** rules (`roles/loki/templates/loki-rules.yml.j2`, metrics named `log:*`) and remote-writes them to Prometheus. Loki itself sends no alerts. Grafana keeps NO alert rules — never add alerts in the Grafana UI.
-- SRE docs: SLOs (99.5% local/public, 99.9% DNS, 14d window) with multiwindow burn-rate alerts live in the rules file; every alert carries a `runbook_url` into `docs/runbooks/`. DR: `docs/rebuild.md`. Incidents: `docs/incident-template.md`. Keep runbooks updated after incidents.
-
-### Commands
-
-```bash
-ansible-galaxy collection install -r Ansbile/requirements.yml
-ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --syntax-check --vault-password-file ~/.vault_pass
-ansible-lint Ansbile/
-ansible-playbook -i Ansbile/inventory.ini Ansbile/gateway-server.yml --check --diff --vault-password-file ~/.vault_pass
-```
-
-(`--check` dry run is only verified on the gateway playbook.)
-
-## ArgoCD Apps (`Ansbile/argocd-apps/`)
-
-App changes here do NOT need CI — ArgoCD polls and syncs automatically (self-heal + prune). Exception: the top-level `*-app.yaml` Application CRs are applied by `k3s_apps` (part `image_updater`), so `main.yml` runs for them.
-
-Top-level `media-app.yaml` / `monitoring-app.yaml` / `network-app.yaml` are the Application CRs (Image Updater annotations, `targetRevision: main`). Per-namespace dir (`media/`, `monitoring/`, `network/`):
-
-- `kustomization.yaml` — `resources:` list + `images:` block with `newTag` (the Image Updater write-back target).
-- One plain multi-doc YAML per app (Namespace + PV + PVC + Deployment + Service/NodePort pattern — see `jellyfin.yaml`).
-- To add an app: create its YAML, list it in that dir's `kustomization.yaml`.
-
-Excluded from ansible-lint via root `.ansible-lint` (`exclude_paths: [Ansbile/argocd-apps/]`).
-
-## CI/CD (`.github/workflows/`)
-
-Runners: **GitHub-hosted** (`ubuntu-latest`) for jobs that need no LAN — Detect Changed Hosts, Build Docker Image, approval notice, Notify, Promote. **Self-hosted** for everything that touches the LAN (Testing, the deploy jobs, checks.yml): three LXCs `ci-runner-1/2/3` running **two runner instances each** (6 parallel jobs) (users `runner-a`/`runner-b`, separate homes so parallel jobs never share `~/.ssh/id_rsa`/`~/.vault_pass`; label `lxc`), installed by `ci-runners.yml` / `roles/ci_runner` (`ci_runner_instances`; weekly cleanup timer; a new or rebuilt LXC registers itself via secret `RUNNER_ADMIN_TOKEN` — fine-grained PAT, Administration read/write on this repo, passed only to the ci-runners job; `vault_github_runner_pat` is the fallback for a run by hand). The runners run node-exporter (job `nodes`, `instance=ci-runner-N`); they share the Proxmox kernel, so the load and OOM alerts exclude them. Self-hosted jobs use `runs-on: self-hosted` and may land on any of them, so workflows use plain `kubectl` (every runner has a kubeconfig at `/etc/rancher/k3s/k3s.yaml`, which the Cloudflare backend also reads). Deploy jobs share one concurrency group (`deploy-hosts`) across branches. `deploy.yml` is split into per-host jobs on different runners: `tf_plan` (before approval) → `gate` (GitHub-hosted; the only job bound to an environment = the one Production approval) → `tf_apply` (main only) → **all host jobs in parallel** (`gateway` | `monitoring` | `media` | `host_node` | `git_k3s` | `ci_runners`) → `finish` (Cloudflare; only when `Terraform/cloudflare/` changed or on a full run). Each host job silences only its own host's warning alerts while it runs (`instance`/`namespace` matchers in `deploy.yml`; `git_k3s` and `tf_apply` silence all warnings; `.github/scripts/am-silence.sh`, expires after 45 min). After the host jobs, `smoke` (`.github/scripts/smoke-test.sh`, ~2s when healthy, retries up to 360s — an ingress-nginx rollout drains each replica for up to 300s) checks nodes Ready, workloads ready / no crash loops, ArgoCD apps Healthy with no ComparisonError/SyncError (OutOfSync only warns), every Ingress host via ingress-nginx (5xx/no answer = fail), DNS on AdGuard + Unbound, Prometheus/Alertmanager/Loki answering, and the deployed hosts' Prometheus targets `up`. A failure fails the run (on staging that's the canary verdict and blocks the promote). A host job runs only when its host changed; one host failing doesn't stop the others. Parallel is safe on a running cluster (agents/runners only *read* token/kubeconfig from git-k3s); a fresh cluster is bootstrapped in order by hand (`docs/rebuild.md`). Entry `main.yml` → `changes` job (picks playbooks) + reusable workflows: `testing.yml`, `deploy.yml`, `build-image.yml`, `notify.yml`. Composite actions: `setup-ssh-vault`, `setup-terraform-mirror`, `setup-ansible-venv`, `cleanup-secrets`.
-
-- Runner HA (both GitHub-hosted, active from `main`): `runner-health.yml` checks every 15 min that all self-hosted runners are online and posts to Discord on change (needs secret `RUNNER_STATUS_TOKEN`, fine-grained PAT, Administration: Read-only); `runner-retry.yml` re-runs a pipeline run's failed jobs once when a runner was lost ("lost communication" / shutdown annotation). Runbook: `docs/runbooks/ci-runners.md`.
-- `checks.yml` covers the paths `main.yml` ignores: server-side dry run of `argocd-apps/<ns>` against the live cluster (`-n <ns>` — the shared NetworkPolicy component has no namespace), and the alertops-mcp pytest suite. It deploys nothing.
-- Ansible tool versions are pinned in `.github/ci-requirements.txt`; the venv is cached in `~/.cache/ci-ansible-venv` on the runner (checkout wipes the workspace). Bump pins on purpose.
-- Caches are per runner user. `roles/ci_runner` pre-warms each LXC instance (venv + Terraform provider mirror) with the same `.github/scripts/` the actions run, so a new runner's first job isn't slow.
-- `testing.yml` has two jobs on separate runners: `Lint and validate` (Terraform fmt/validate; syntax check of the deploying playbooks and `ansible-lint --offline` on only the changed roles/playbooks/vars files — `lint_paths`/`syntax_playbooks` from the detect script, `Ansbile/` when everything runs) and `Gateway dry run` (development only, when gateway changed). Testing starts right after `changes`, not after the image build.
-
-- `build-image.yml` tags the `alert-forwarder` image `app-<git tree hash of Ansbile/apps/alert-forwarder>` and builds + pushes to GHCR **only if that tag doesn't exist yet** (app changed or never built). Deploy gets the tag as an input → `ALERT_FORWARDER_TAG` → `k3s_apps_alert_forwarder_image_tag`. Unchanged app = same tag = no pod restart.
-- Runner has no registry access — Terraform providers install via filesystem mirror (`setup-terraform-mirror`), currently seeded for `bpg/proxmox 0.70.1` and `telmate/proxmox 2.9.14`. Bumping a provider requires updating `.github/scripts/seed-terraform-mirror.sh` too (shared by the action and the runner pre-warm).
-- `setup-terraform` uses `terraform_wrapper: false` — required for `-detailed-exitcode` to work.
-- No Trivy/CVE scanning in CI (removed on purpose). Committed secrets are caught by GitHub's own secret scanning + push protection (enabled in repo settings).
-- SSH host keys are pinned: Ansible in CI uses `StrictHostKeyChecking=yes` against `.github/ssh_known_hosts` (set by `setup-ssh-vault`). After rebuilding a VM, CI fails with "REMOTE HOST IDENTIFICATION HAS CHANGED" until you update its line (`ssh-keyscan -t ed25519 <ip>`, check the fingerprint against the VM console).
-- Discord notifications via webhook secrets.
-- Supply chain: every action is pinned to a commit SHA with a `# vX.Y.Z` comment (Dependabot keeps both updated) — never use a bare tag. `main.yml`/`checks.yml` default to a read-only `GITHUB_TOKEN` (also the repo default); a job that needs more grants it itself (build-image `packages: write`, Deploy `contents: write`). `deploy.yml` passes each playbook secret only to the host job whose roles read it.
-
-## Alert Automation (`tools/alertops-mcp/`, `.claude/agents/alert-fixer.md`)
-
-- `alertops-mcp`: Python MCP server (registered in `.mcp.json`, stdio, own `.venv`). It takes alerts from Alertmanager → investigation (Prometheus/Loki/kubectl-over-ssh/host checks) → allowlisted remediation → verification → close with root cause to Discord via alert-forwarder. The server enforces the order: no remediation without a recorded finding, and no close without a fresh passing verification after the last action. It also applies rate limits/cooldowns and has a kill switch (`~/.local/state/alertops/DISABLE_REMEDIATION`).
-- Remediation allowlists live in `tools/alertops-mcp/config.yaml` (hosts → systemd units/containers, k8s namespaces). If you rename a service/unit in Ansible, update the allowlist too.
-- Tests: `cd tools/alertops-mcp && .venv/bin/pip install -e ".[test]" && .venv/bin/pytest -q` (fakes, no network).
-- `scripts/alert-fixer.sh` (cron wrapper, installed to `~/bin`) runs the `alert-fixer` agent headless.
+| Skill | Covers |
+| :--- | :--- |
+| `homelab-architecture` | host/IP/role map, layer ownership, exposing a service, mesh + NetworkPolicy |
+| `ci-pipeline` | branches, promotion, approvals, `.github/` workflows, runners, Dependabot/Renovate |
+| `terraform-proxmox` | `Terraform/`, VM/LXC maps, state, plan/apply rules |
+| `ansible-homelab` | `Ansbile/` roles, playbooks, inventory, vault, conventions, alert rules |
+| `argocd-apps` | `Ansbile/argocd-apps/`, kustomization, Application CRs |
+| `alertops` | `tools/alertops-mcp/`, alert-fixer, remediation allowlists |
 
 ## Authoritative Docs
 
