@@ -88,8 +88,6 @@ on:
         required: true
       OVERSEERR_API_KEY:
         required: true
-      JELLYFIN_API_KEY:
-        required: false
       CF_DNS_API_TOKEN:
         required: true
       RUNNER_ADMIN_TOKEN:
