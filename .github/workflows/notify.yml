@@ -12,6 +12,9 @@ on:
       deploy_result:
         required: true
         type: string
+      changes_result:
+        required: true
+        type: string
     secrets:
       DISCORD_CD_Alert_URL:
         required: true
@@ -28,6 +31,7 @@ jobs:
           BUILD_RESULT: ${{ inputs.build_result }}
           TESTING_RESULT: ${{ inputs.testing_result }}
           DEPLOY_RESULT: ${{ inputs.deploy_result }}
+          CHANGES_RESULT: ${{ inputs.changes_result }}
           BRANCH: ${{ github.ref_name }}
           COMMIT: ${{ github.sha }}
           COMMIT_MSG: ${{ github.event.head_commit.message }}
@@ -40,11 +44,11 @@ jobs:
           if [ "$DEPLOY_RESULT" = "success" ] || { [ "$BRANCH" = "development" ] && [ "$DEPLOY_RESULT" = "skipped" ]; }; then
             DEPLOY_OK=true
           fi
-          if [ "$BUILD_RESULT" = "success" ] && [ "$TESTING_RESULT" = "success" ] && $DEPLOY_OK; then
+          if [ "$CHANGES_RESULT" = "success" ] && [ "$BUILD_RESULT" = "success" ] && [ "$TESTING_RESULT" = "success" ] && $DEPLOY_OK; then
             STATUS="✅ Success"; COLOR=3066993
           elif [ "$BUILD_RESULT" = "cancelled" ] || [ "$TESTING_RESULT" = "cancelled" ] || [ "$DEPLOY_RESULT" = "cancelled" ]; then
             STATUS="⏹️ Cancelled"; COLOR=9807270
-          elif [ "$TESTING_RESULT" = "skipped" ] && [ "$DEPLOY_RESULT" = "skipped" ]; then
+          elif [ "$CHANGES_RESULT" = "skipped" ] && [ "$TESTING_RESULT" = "skipped" ] && [ "$DEPLOY_RESULT" = "skipped" ]; then
             STATUS="⚠️ Skipped"; COLOR=15844367
           else
             STATUS="❌ Failed"; COLOR=15158332
@@ -54,22 +58,18 @@ jobs:
           MSG=$(printf '%s' "${COMMIT_MSG:-no message}" | head -c 200 \
                 | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
 
-          curl -sS -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK" <<EOF
-          {
-            "embeds": [{
-              "title": "$STATUS — Homelab CI/CD",
-              "url": "$RUN_URL",
-              "color": $COLOR,
-              "fields": [
-                {"name": "Branch",  "value": "\`$BRANCH\`",      "inline": true},
-                {"name": "Author",  "value": "$ACTOR",            "inline": true},
-                {"name": "Commit",  "value": "\`${COMMIT:0:7}\`", "inline": true},
-                {"name": "Build",   "value": "$BUILD_RESULT",     "inline": true},
-                {"name": "Testing", "value": "$TESTING_RESULT",   "inline": true},
-                {"name": "Deploy",  "value": "$DEPLOY_RESULT",    "inline": true},
-                {"name": "Message", "value": $MSG}
-              ],
-              "footer": {"text": "GitHub Actions"}
-            }]
-          }
-          EOF
+          jq -n \
+            --arg title "$STATUS — Homelab CI/CD" --arg url "$RUN_URL" \
+            --arg branch "\`$BRANCH\`" --arg actor "$ACTOR" \
+            --arg commit "\`${COMMIT:0:7}\`" --arg build "$BUILD_RESULT" \
+            --arg testing "$TESTING_RESULT" --arg deploy "$DEPLOY_RESULT" \
+            --arg message "${COMMIT_MSG:-no message}" --argjson color "$COLOR" \
+            '{embeds:[{title:$title,url:$url,color:$color,fields:[
+              {name:"Branch",value:$branch,inline:true},
+              {name:"Author",value:$actor,inline:true},
+              {name:"Commit",value:$commit,inline:true},
+              {name:"Build",value:$build,inline:true},
+              {name:"Testing",value:$testing,inline:true},
+              {name:"Deploy",value:$deploy,inline:true},
+              {name:"Message",value:$message}],footer:{text:"GitHub Actions"}}]}' \
+            | curl -sS -f -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK"

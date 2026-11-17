@@ -68,6 +68,8 @@ on:
         required: true
       ANSIBLE_VAULT_PASSWORD:
         required: true
+      JELLYFIN_API_KEY:
+        required: false
       ADGUARD_EXPORTER_PASSWORD:
         required: false
       ADGUARD_EXPORTER_USERNAME:
@@ -611,7 +613,7 @@ jobs:
       (inputs.host_node || needs.host_node.result == 'skipped') &&
       (inputs.git_k3s || needs.git_k3s.result == 'skipped') &&
       (inputs.ci_runners || needs.ci_runners.result == 'skipped') &&
-      !contains(needs.*.result, 'failure')
+      !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
     runs-on: self-hosted
     timeout-minutes: 20
     steps:
@@ -697,8 +699,8 @@ jobs:
       (inputs.host_node || needs.host_node.result == 'skipped') &&
       (inputs.git_k3s || needs.git_k3s.result == 'skipped') &&
       (inputs.ci_runners || needs.ci_runners.result == 'skipped') &&
-      !contains(needs.*.result, 'failure') &&
-      (inputs.gateway || inputs.monitoring || inputs.media || inputs.git_k3s || inputs.ci_runners || inputs.host_node || needs.tf_apply.result == 'success')
+      !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') &&
+      (inputs.gateway || inputs.monitoring || inputs.media || inputs.git_k3s || inputs.ci_runners || inputs.host_node || inputs.cloudflare || needs.tf_apply.result == 'success')
     runs-on: self-hosted
     timeout-minutes: 10
     steps:
