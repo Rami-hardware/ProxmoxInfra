@@ -44,8 +44,11 @@ jobs:
           [ "$staging" != "$main" ] || fail "main is already at staging (${staging:0:8}) — nothing to promote."
 
           run_of() {  # <workflow file> <sha> → "<status> <conclusion>" of its newest staging run
-            gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$1/runs?branch=staging&head_sha=$2&per_page=1" \
-              -q '.workflow_runs[0] | "\(.status // "none") \(.conclusion // "none")"'
+            local result
+            result=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$1/runs?branch=staging&head_sha=$2&per_page=1" \
+              -q 'if (.workflow_runs | length) == 0 then "none none" else "\(.workflow_runs[0].status // "unknown") \(.workflow_runs[0].conclusion // "unknown")" end') \
+              || fail "could not query $1 run for staging commit ${2:0:8}."
+            printf '%s\n' "$result"
           }
 
           # The canary verdict: the newest main.yml run for staging's exact commit.
@@ -67,8 +70,13 @@ jobs:
             # starts no pipeline run. Judge by the newest staging commit that
             # has one, and allow only ignored paths on top of it.
             for c in $(git rev-list --first-parent -n 50 origin/staging | tail -n +2); do
-              read -r status conclusion < <(run_of main.yml "$c")
-              [ "$status" = none ] || { tested=$c; break; }
+              read -r candidate_status candidate_conclusion < <(run_of main.yml "$c")
+              if [ "$candidate_status" = completed ] && [ "$candidate_conclusion" = success ]; then
+                tested=$c
+                status=$candidate_status
+                conclusion=$candidate_conclusion
+                break
+              fi
             done
             [ "$tested" != "$staging" ] || fail "no pipeline run found for staging's last 50 commits."
             changed=$(git diff --name-only "$tested" "$staging")
@@ -79,16 +87,16 @@ jobs:
               echo "Only .github/workflows/deploy.yml changed — using ${tested:0:8} run (deploy-only pushes always fail on staging)."
             fi
             # ArgoCD manifests and alertops-mcp are tested by checks.yml instead.
-            # checks.yml only runs on pushes touching those paths, so judge by
-            # the newest commit that touched them (a later docs-only commit
-            # has no checks run of its own).
-            checked=$(git log -1 --format=%H "$tested..$staging" -- Ansbile/argocd-apps tools/alertops-mcp)
-            if [ -n "$checked" ]; then
+            # Validate every commit that changed either covered path; checking only
+            # the newest one could let an earlier failed check disappear.
+            while read -r checked; do
               read -r cs cc < <(run_of checks.yml "$checked")
               [ "$cs" = completed ] && [ "$cc" = success ] \
-                || fail "checks.yml for ${checked:0:8} (newest staging change to argocd-apps/alertops-mcp) is $cs/$cc — it must pass first."
-            fi
+                || fail "checks.yml for ${checked:0:8} (staging change to argocd-apps/alertops-mcp) is $cs/$cc — it must pass first."
+            done < <(git log --format=%H "$tested..$staging" -- Ansbile/argocd-apps tools/alertops-mcp)
             echo "Staging ${staging:0:8} changes only pipeline-ignored files since ${tested:0:8}; using that run."
+          elif [ "$status" = completed ] && [ "$conclusion" = failure ]; then
+            fail "staging's run for ${tested:0:8} failed — failed runs are not treated as absent."
           fi
           [ "$status" = completed ] || fail "staging's run for ${tested:0:8} is $status — wait for it to finish."
           [ "$conclusion" = success ] || fail "staging's run for ${tested:0:8} ended '$conclusion' — fix it on staging first."

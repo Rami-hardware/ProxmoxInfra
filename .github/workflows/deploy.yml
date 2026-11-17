@@ -119,6 +119,7 @@ env:
 # and an agent together. A failing host no longer holds the others back. A
 # fresh cluster is bootstrapped in order by hand (docs/rebuild.md).
 jobs:
+
   # The only job bound to an environment: one Production approval per deploy
   # (covering the Terraform apply too), and each environment's Deployments
   # page is real deploy history.
@@ -126,7 +127,7 @@ jobs:
   # summary when you click Approve; tf_apply applies exactly this plan.
   tf_plan:
     name: Terraform plan
-    if: inputs.terraform
+    if: (github.ref_name == 'main' || github.ref_name == 'staging') && inputs.terraform
     runs-on: self-hosted
     timeout-minutes: 20
     env:
@@ -232,7 +233,7 @@ jobs:
     needs: [tf_plan]
     # tf_plan skipped (Terraform untouched) is fine; a failed plan or a
     # destroy/replace blocks the whole deploy.
-    if: ${{ !cancelled() && !failure() }}
+    if: ${{ !cancelled() && !failure() && (github.ref_name == 'main' || github.ref_name == 'staging') }}
     # Only waits for the approval: GitHub-hosted, so it never queues for a
     # LAN runner. Each deploy job silences alerts itself (am-silence.sh).
     runs-on: ubuntu-latest
@@ -597,7 +598,20 @@ jobs:
   finish:
     name: Cloudflare
     needs: [gate, tf_apply, gateway, monitoring, media, host_node, git_k3s, ci_runners]
-    if: always() && needs.gate.result == 'success' && inputs.cloudflare
+    # `needs` includes intentionally skipped optional jobs.  A skipped job is
+    # acceptable only when its input is disabled; an enabled host must pass.
+    # Do not run after cancellation, even though `always()` is required to
+    # inspect all dependency results.
+    if: >-
+      always() && !cancelled() && needs.gate.result == 'success' &&
+      inputs.cloudflare &&
+      (inputs.gateway || needs.gateway.result == 'skipped') &&
+      (inputs.monitoring || needs.monitoring.result == 'skipped') &&
+      (inputs.media || needs.media.result == 'skipped') &&
+      (inputs.host_node || needs.host_node.result == 'skipped') &&
+      (inputs.git_k3s || needs.git_k3s.result == 'skipped') &&
+      (inputs.ci_runners || needs.ci_runners.result == 'skipped') &&
+      !contains(needs.*.result, 'failure')
     runs-on: self-hosted
     timeout-minutes: 20
     steps:
@@ -676,7 +690,14 @@ jobs:
     name: Smoke test
     needs: [gate, tf_apply, gateway, monitoring, media, host_node, git_k3s, ci_runners]
     if: >-
-      always() && needs.gate.result == 'success' &&
+      always() && !cancelled() && needs.gate.result == 'success' &&
+      (inputs.gateway || needs.gateway.result == 'skipped') &&
+      (inputs.monitoring || needs.monitoring.result == 'skipped') &&
+      (inputs.media || needs.media.result == 'skipped') &&
+      (inputs.host_node || needs.host_node.result == 'skipped') &&
+      (inputs.git_k3s || needs.git_k3s.result == 'skipped') &&
+      (inputs.ci_runners || needs.ci_runners.result == 'skipped') &&
+      !contains(needs.*.result, 'failure') &&
       (inputs.gateway || inputs.monitoring || inputs.media || inputs.git_k3s || inputs.ci_runners || inputs.host_node || needs.tf_apply.result == 'success')
     runs-on: self-hosted
     timeout-minutes: 10

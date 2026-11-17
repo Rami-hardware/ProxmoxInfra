@@ -28,7 +28,12 @@ instances=$(for h in "$@"; do [ -n "${instance[$h]:-}" ] && echo "${instance[$h]
 # Each check prints why it failed on stdout and returns non-zero.
 
 check_nodes() {
-  kubectl get nodes --no-headers | awk '$2 != "Ready" {print "node " $1 " is " $2; bad=1} END {exit bad}'
+  kubectl get nodes -o json | jq -r '
+    .items[] | .metadata.name as $name
+    | ((.status.conditions // []) | map(select(.type == "Ready")) | last) as $ready
+    | select(($ready.status // "Unknown") != "True")
+    | "node \($name) is \($ready.status // "Unknown")"' | grep . && return 1
+  return 0
 }
 
 check_workloads() {
@@ -60,11 +65,22 @@ check_ingress() {
   # Every Ingress host, straight at ingress-nginx. 5xx or no answer = down;
   # anything else (200, a login redirect, Tempo's 404 on /) means the route
   # and the backend answer.
-  local h code bad=0
-  for h in $(kubectl get ingress -A -o jsonpath='{.items[*].spec.rules[*].host}' | tr ' ' '\n' | sort -u); do
+  local h code curl_status bad=0
+  while IFS= read -r h; do
+    [ -n "$h" ] || continue
     code=$(curl -sk -o /dev/null --max-time 10 --resolve "$h:443:$INGRESS_IP" -w '%{http_code}' "https://$h/")
-    if [ "$code" = 000 ] || [ "$code" -ge 500 ]; then echo "https://$h/ → $code"; bad=1; fi
-  done
+    curl_status=$?
+    if [ "$curl_status" -ne 0 ]; then
+      echo "https://$h/ → curl failed (exit $curl_status)"
+      bad=1
+    elif [[ ! "$code" =~ ^[0-9]{3}$ ]]; then
+      echo "https://$h/ → invalid HTTP status '$code'"
+      bad=1
+    elif (( 10#$code >= 500 )); then
+      echo "https://$h/ → $code"
+      bad=1
+    fi
+  done < <(kubectl get ingress -A -o json | jq -r '.items[]?.spec.rules[]?.host // empty' | sort -u)
   return $bad
 }
 
