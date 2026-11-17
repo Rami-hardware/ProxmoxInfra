@@ -458,11 +458,17 @@ jobs:
         run: .github/scripts/am-silence.sh delete "${{ steps.silence.outputs.id }}"
 
       - name: Apply Seerr Jellyfin credentials Secret
-        if: inputs.media && secrets.JELLYFIN_API_KEY != ''
+        if: inputs.media
         env:
           JELLYFIN_SERVER: "http://10.43.175.229:8096"
           JELLYFIN_API_KEY: ${{ secrets.JELLYFIN_API_KEY }}
         run: |
+          # secrets context isn't available in a step if:, so an unset
+          # JELLYFIN_API_KEY is detected here as an empty env var.
+          if [ -z "$JELLYFIN_API_KEY" ]; then
+            echo "JELLYFIN_API_KEY not set — skipping seerr-jellyfin-creds."
+            exit 0
+          fi
           kubectl -n media create secret generic seerr-jellyfin-creds \
             --from-literal=JELLYFIN_SERVER="$JELLYFIN_SERVER" \
             --from-literal=JELLYFIN_API_KEY="$JELLYFIN_API_KEY" \
