@@ -11,4 +11,4 @@ kustomize:
   - linuxserver/sonarr@sha256:c7d1df25e428da6c9ace05daea0d34e59522978a3843ea1944812f855af4086c
   - ghcr.io/connorgallopo/tracearr@sha256:6bcaf17c012b4fe11b898f343244af19b3c87b7847bdc652897e2c9781465f2c
   - redis@sha256:7958cfbb9d152f87dadfbc89f1b0b15938f0b81ff8982feb327476f4911935c3
-  - timescale/timescaledb-ha@sha256:e3777b7d120cd448606f32b3e1fd020d9931c32f7a63f3d3dff51cb560b61d6e
+  - timescale/timescaledb-ha@sha256:ff4362ab6890052930ef75a72d94b7072fcc510bc79c84722700c1b2b68f3474
