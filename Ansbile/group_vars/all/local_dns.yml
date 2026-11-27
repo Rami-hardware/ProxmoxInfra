@@ -17,6 +17,7 @@ local_dns_lan_names:
   - bazarr
   - ca
   - grafana
+  - hermes
   - homarr
   - jellyfin
   - prometheus

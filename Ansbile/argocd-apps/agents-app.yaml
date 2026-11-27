@@ -1,0 +1,30 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: agents
+  namespace: argocd
+  annotations:
+    # Hermes follows its `stable` tag (the image upstream's release gate
+    # accepted), pinned to a digest by Image Updater. `latest` is the same
+    # image today; `main` is every development build — never use it here.
+    argocd-image-updater.argoproj.io/image-list: >-
+      hermes=nousresearch/hermes-agent:stable
+    argocd-image-updater.argoproj.io/hermes.update-strategy: digest
+    argocd-image-updater.argoproj.io/write-back-method: git:secret:argocd/git-creds
+    argocd-image-updater.argoproj.io/git-branch: main
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:Rami-hardware/ProxmoxInfra.git
+    targetRevision: main
+    path: Ansbile/argocd-apps/agents
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: agents
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

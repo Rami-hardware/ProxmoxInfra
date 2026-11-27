@@ -88,6 +88,12 @@ under `darkestserver.com` come in through a Cloudflare Tunnel.
 | alert-forwarder | `:30302` | Own Node.js app (`Ansbile/apps/alert-forwarder`), Alertmanager → Discord |
 | Exporters | — | blackbox (local, public, DNS), speedtest, qBittorrent, Intel GPU |
 
+### Agents — `agents` namespace (git-k3s-server)
+
+| App | URL | Notes |
+| :--- | :--- | :--- |
+| Hermes Agent | Discord bot · <https://hermes.homelab.lan> (dashboard, LAN only, basic auth) | Nous Research agent on Claude (`claude-sonnet-5-5`); chat + web research only — no shell, files, browser or code execution. Egress to the internet only (no LAN/cluster). Settings owned by the `hermes-managed-config` ConfigMap; secrets from GitHub `HERMES_*` secrets |
+
 ### Cluster and network
 
 | Service | Where | Notes |
@@ -98,7 +104,7 @@ under `darkestserver.com` come in through a Cloudflare Tunnel.
 | Tempo | <https://tempo.homelab.lan> | Traces from Istio and ingress-nginx, 7d; LAN only |
 | Proxmox UI | <https://server.homelab.lan> | Proxied to `192.168.10.250:8006` |
 | ingress-nginx | git-k3s + monitoring | hostNetwork, one replica per node, MetalLB VIP `.210` |
-| Istio ambient | `media`, `monitoring`, `network` | ztunnel mTLS, waypoint + AuthorizationPolicies in `media` |
+| Istio ambient | `agents`, `media`, `monitoring`, `network` | ztunnel mTLS, waypoint + AuthorizationPolicies in `media` |
 | cert-manager | — | Internal CA issuer + Let's Encrypt wildcard (Cloudflare DNS-01) |
 
 ---

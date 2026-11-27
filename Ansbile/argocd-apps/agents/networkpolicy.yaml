@@ -1,0 +1,42 @@
+---
+# Egress for the agents namespace: cluster DNS plus the public internet on
+# 80/443 (Anthropic API, Discord gateway, web search/extract) — and nothing
+# private. The private ranges are carved out so an agent steered by a prompt
+# injection cannot reach the LAN, the nodes, other pods or Service IPs
+# (10.42/16 and 10.43/16 sit inside 10/8).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: egress-dns-and-internet
+  namespace: agents
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 100.64.0.0/10
+              - 169.254.0.0/16
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80

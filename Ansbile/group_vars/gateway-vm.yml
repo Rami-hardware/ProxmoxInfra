@@ -134,3 +134,11 @@ nginx_services_local:
     port: 3000
     namespace: media
     auth: false
+
+  # Hermes dashboard: has its own login (basic auth), but it can read and
+  # write the agent's API keys and drive the agent, so LAN-only like the
+  # admin APIs.
+  - name: hermes
+    port: 9119
+    namespace: agents
+    admin_only: true

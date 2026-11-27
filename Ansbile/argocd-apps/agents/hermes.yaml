@@ -1,0 +1,219 @@
+---
+# Hermes Agent (Nous Research): personal assistant on Discord, Claude as the
+# LLM, chat + web research only. Dashboard at https://hermes.homelab.lan
+# (admin_only ingress, basic auth). Secrets (hermes-secrets) are written by
+# CI from GitHub secrets — see the git_k3s job in .github/workflows/deploy.yml.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agents
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: hermes
+  namespace: agents
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: hermes-data-pv
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  hostPath:
+    # Memories, skills, sessions and state.db (SQLite, WAL) — local disk,
+    # never NFS. Backed up with the git-k3s-server VM.
+    path: /opt/hermes
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hermes-data-pvc
+  namespace: agents
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  volumeName: hermes-data-pv
+  storageClassName: ""
+---
+# Managed scope: /etc/hermes/config.yaml wins per key over the writable
+# /opt/data/config.yaml, so these settings are owned by git — a dashboard
+# Save or a /model command cannot widen the toolsets. A malformed file is
+# logged and ignored by Hermes (never blocks startup): check the logs after
+# editing it.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hermes-managed-config
+  namespace: agents
+data:
+  config.yaml: |
+    model:
+      provider: "anthropic"
+      default: "claude-sonnet-5-5"
+
+    # Chat + web research only. disabled_toolsets applies after the
+    # per-platform lists, so it also covers the dashboard's Chat tab (the
+    # CLI preset) — no shell, code execution, files, browser or sub-agents.
+    platform_toolsets:
+      discord: ["web", "clarify", "memory", "session_search", "todo", "vision"]
+    agent:
+      disabled_toolsets:
+        - terminal
+        - code_execution
+        - file
+        - browser
+        - computer_use
+        - delegation
+        - cronjob
+        - skills
+        - discord_admin
+
+    approvals:
+      mode: "manual"
+      cron_mode: "deny"
+      unattended_mode: "deny"
+
+    security:
+      allow_lazy_installs: false
+
+    # No web API key: Hermes rotates over the free tiers of Exa, Parallel,
+    # Firecrawl and Keenable. Add e.g. TAVILY_API_KEY to hermes-secrets and
+    # set web.backend for a dedicated backend.
+    web:
+      keyless_fallback: true
+
+    dashboard:
+      public_url: "https://hermes.homelab.lan"
+      # ingress-nginx runs on hostNetwork on git-k3s-server (same node:
+      # cni0 10.42.2.1) and monitoring-server (flannel.1 10.42.3.0).
+      trusted_proxies:
+        - "10.42.2.0/31"
+        - "10.42.3.0/31"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hermes
+  namespace: agents
+spec:
+  replicas: 1
+  # Never two gateways on one data directory (SQLite + Discord session).
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: hermes
+  template:
+    metadata:
+      labels:
+        app: hermes
+    spec:
+      serviceAccountName: hermes
+      nodeSelector:
+        kubernetes.io/hostname: git-k3s-server
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      # The image starts as root under s6-overlay and drops to the `hermes`
+      # user (UID 10000); the hostPath directory is created root-owned, so
+      # hand it to that user first.
+      initContainers:
+        - name: chown-data
+          image: nousresearch/hermes-agent:stable
+          command: ["chown", "-R", "10000:10000", "/opt/data"]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: data
+              mountPath: /opt/data
+      containers:
+        - name: hermes
+          image: nousresearch/hermes-agent:stable
+          args: ["gateway", "run"]
+          ports:
+            - name: dashboard
+              containerPort: 9119
+          env:
+            - name: TZ
+              value: "Asia/Riyadh"
+            - name: HERMES_UID
+              value: "10000"
+            - name: HERMES_GID
+              value: "10000"
+            - name: HERMES_DASHBOARD
+              value: "1"
+            - name: HERMES_DASHBOARD_HOST
+              value: "0.0.0.0"
+            - name: HERMES_DASHBOARD_PORT
+              value: "9119"
+            - name: HERMES_DASHBOARD_PUBLIC_URL
+              value: "https://hermes.homelab.lan"
+            - name: HERMES_MANAGED_DIR
+              value: "/etc/hermes"
+          # ANTHROPIC_API_KEY, DISCORD_BOT_TOKEN, DISCORD_ALLOWED_USERS,
+          # HERMES_DASHBOARD_BASIC_AUTH_{USERNAME,PASSWORD,SECRET}
+          envFrom:
+            - secretRef:
+                name: hermes-secrets
+          volumeMounts:
+            - name: data
+              mountPath: /opt/data
+            - name: managed-config
+              mountPath: /etc/hermes
+              readOnly: true
+          # TCP, not HTTP: public_url turns on a Host-header guard that would
+          # reject the kubelet's pod-IP Host. The blackbox probe checks
+          # https://hermes.homelab.lan/api/status end to end.
+          startupProbe:
+            tcpSocket:
+              port: 9119
+            periodSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            tcpSocket:
+              port: 9119
+            periodSeconds: 15
+          livenessProbe:
+            tcpSocket:
+              port: 9119
+            periodSeconds: 30
+            failureThreshold: 4
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "100m"
+            limits:
+              memory: "2Gi"
+              cpu: "1500m"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: hermes-data-pvc
+        - name: managed-config
+          configMap:
+            name: hermes-managed-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hermes
+  namespace: agents
+spec:
+  type: ClusterIP
+  selector:
+    app: hermes
+  ports:
+    - name: http
+      port: 9119
+      targetPort: 9119
