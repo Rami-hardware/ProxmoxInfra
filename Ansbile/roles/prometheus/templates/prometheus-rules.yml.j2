@@ -577,7 +577,7 @@ groups:
           severity: warning
         annotations:
           runbook_url: "https://github.com/Rami-hardware/ProxmoxInfra/blob/main/docs/runbooks/sites.md"
-          summary: "{{ $labels.pod }} ({{ $labels.container }}) at {{ humanize $value }} of its memory limit"
+          summary: "{{ $labels.pod }} ({{ $labels.container }}) at {{ $value | humanizePercentage }} of its memory limit"
           description: "Working set has exceeded 90% of the container's memory limit for 15m — the OOM killer is the next step. Raise the limit or find the leak before KubePodOOMKilled does the post-mortem."
 
       - alert: KubePVCAlmostFull
