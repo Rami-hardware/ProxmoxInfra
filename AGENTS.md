@@ -18,6 +18,23 @@ Homelab infra: Proxmox VMs provisioned with Terraform, configured with Ansible, 
 - The k3s server VM's Terraform map key is `github`, not `git-k3s-server` — see `terraform.tfvars`.
 - **VM 100** on the Proxmox host is an out-of-band macOS test VM (owner-owned; not in tfvars/inventory). It's excluded from the backup job (`cluster/backup` `--exclude 100`) because it carries a duplicate of media's GPU PCI ID (`0000:03:00.0`) — it cannot run while media does. Don't delete it, don't re-add it to backups.
 
+## Local Checks (mirror CI)
+
+```bash
+# Ansible — CI lints only changed roles/playbooks; argocd-apps/ is excluded via .ansible-lint
+ansible-lint --offline Ansbile/
+ansible-playbook -i Ansbile/inventory.ini Ansbile/<playbook>.yml --syntax-check --vault-password-file ~/.vault_pass
+
+# Terraform (from Terraform/) — plan/apply run in CI; a manual apply needs -parallelism=1
+terraform init -backend=false && terraform fmt -check -recursive && terraform validate
+
+# ArgoCD manifests — server-side dry run against the live cluster, per namespace
+kubectl apply --dry-run=server -n <media|monitoring|network> -k Ansbile/argocd-apps/<ns>
+
+# alertops-mcp (fakes, no network); single test: .venv/bin/pytest -q tests/test_safety.py::<name>
+cd tools/alertops-mcp && .venv/bin/pip install -e ".[test]" && .venv/bin/pytest -q
+```
+
 ## Detailed Guidance — load the matching skill
 
 This file stays short on purpose. Each area's full rules live in a skill under `.opencode/skills/`; load the one that matches before working in that area.
