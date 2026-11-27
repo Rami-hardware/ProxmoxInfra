@@ -29,6 +29,19 @@
   register: k3s_server_config_result
   notify: Restart k3s
 
+- name: Create kubelet config drop-in directory
+  ansible.builtin.file:
+    path: /var/lib/rancher/k3s/agent/etc/kubelet.conf.d
+    state: directory
+    mode: '0700'
+
+- name: Configure kubelet image garbage collection
+  ansible.builtin.template:
+    src: kubelet-image-gc.conf.j2
+    dest: /var/lib/rancher/k3s/agent/etc/kubelet.conf.d/50-image-gc.conf
+    mode: '0600'
+  notify: Restart k3s
+
 # ── System Prerequisites ──────────────────────────────────────────────────────
 - name: Gather system facts
   ansible.builtin.setup:

@@ -26,3 +26,8 @@ k3s_server_snapshot_keep: 7
 k3s_server_snapshot_time: "*-*-* 02:30:00"
 # node-exporter textfile collector (k3s_apps node-exporter DaemonSet).
 k3s_server_textfile_dir: /var/lib/node_exporter/textfile_collector
+
+# Kubelet image GC — see k3s_agent defaults for why.
+k3s_server_image_max_gc_age: "168h"
+k3s_server_image_gc_high_threshold: 75
+k3s_server_image_gc_low_threshold: 65

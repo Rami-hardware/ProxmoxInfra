@@ -1,2 +1,10 @@
 # renovate: datasource=github-releases depName=k3s-io/k3s
 k3s_agent_version: "v1.34.3+k3s3"
+
+# Kubelet image GC: Image Updater pulls a new image on every bump and the
+# default GC only fires at 85% disk, so old versions (TimescaleDB is ~3GB
+# each) pile up. Delete images unused for this long, and start disk-pressure
+# GC earlier.
+k3s_agent_image_max_gc_age: "168h"
+k3s_agent_image_gc_high_threshold: 75
+k3s_agent_image_gc_low_threshold: 65
