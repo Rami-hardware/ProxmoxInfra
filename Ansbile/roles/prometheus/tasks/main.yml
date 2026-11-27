@@ -65,6 +65,9 @@
           - "{{ prometheus_validation_stage.path }}/prometheus-{{ prometheus_validation_version | regex_replace('^v', '') }}.linux-amd64/promtool"
           - check
           - config
+          # The kubelet/cadvisor jobs reference the pod's SA token, which only
+          # exists inside the Prometheus pod — skip referenced-file checks.
+          - --syntax-only
           - "{{ prometheus_validation_stage.path }}/prometheus.yml"
       changed_when: false
 
