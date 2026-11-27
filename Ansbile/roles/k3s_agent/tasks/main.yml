@@ -79,3 +79,16 @@
     mode: "0644"
   when: k3s_agent_ca_cert is not failed
   notify: Update CA trust store
+
+- name: Create kubelet config drop-in directory
+  ansible.builtin.file:
+    path: /var/lib/rancher/k3s/agent/etc/kubelet.conf.d
+    state: directory
+    mode: '0700'
+
+- name: Configure kubelet image garbage collection
+  ansible.builtin.template:
+    src: kubelet-image-gc.conf.j2
+    dest: /var/lib/rancher/k3s/agent/etc/kubelet.conf.d/50-image-gc.conf
+    mode: '0600'
+  notify: Restart k3s-agent

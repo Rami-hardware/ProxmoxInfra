@@ -1,0 +1,8 @@
+# {{ ansible_managed }}
+# imageMaximumGCAge has no kubelet flag, so it goes in a kubelet config
+# drop-in (k3s runs the kubelet with --config-dir=<this directory>).
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+imageMaximumGCAge: "{{ k3s_server_image_max_gc_age }}"
+imageGCHighThresholdPercent: {{ k3s_server_image_gc_high_threshold }}
+imageGCLowThresholdPercent: {{ k3s_server_image_gc_low_threshold }}
