@@ -70,19 +70,6 @@ on:
         required: true
       JELLYFIN_API_KEY:
         required: false
-      # Hermes Agent (argocd-apps/agents): the git_k3s job writes them into
-      # agents/hermes-secrets. Until HERMES_ANTHROPIC_API_KEY is set, the step
-      # is skipped and the pod waits for the Secret.
-      HERMES_ANTHROPIC_API_KEY:
-        required: false
-      HERMES_DISCORD_BOT_TOKEN:
-        required: false
-      HERMES_DISCORD_ALLOWED_USERS:
-        required: false
-      HERMES_DASHBOARD_PASSWORD:
-        required: false
-      HERMES_DASHBOARD_SECRET:
-        required: false
       ADGUARD_EXPORTER_PASSWORD:
         required: false
       ADGUARD_EXPORTER_USERNAME:
@@ -563,35 +550,6 @@ jobs:
         run: |
           [ -n "$TAGS" ] && echo "Only roles: $TAGS" || echo "Whole playbook"
           ansible-playbook -i Ansbile/inventory.ini Ansbile/git-k3s-server.yml --vault-password-file ~/.vault_pass ${TAGS:+--tags "$TAGS"}
-
-      - name: Apply Hermes Agent Secret
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.HERMES_ANTHROPIC_API_KEY }}
-          DISCORD_BOT_TOKEN: ${{ secrets.HERMES_DISCORD_BOT_TOKEN }}
-          DISCORD_ALLOWED_USERS: ${{ secrets.HERMES_DISCORD_ALLOWED_USERS }}
-          DASHBOARD_PASSWORD: ${{ secrets.HERMES_DASHBOARD_PASSWORD }}
-          DASHBOARD_SECRET: ${{ secrets.HERMES_DASHBOARD_SECRET }}
-        run: |
-          # secrets context isn't available in a step if:, so unset secrets
-          # are detected here as empty env vars.
-          if [ -z "$ANTHROPIC_API_KEY" ]; then
-            echo "HERMES_ANTHROPIC_API_KEY not set — skipping hermes-secrets."
-            exit 0
-          fi
-          # Fail closed: without an allowlist anyone in a shared server could
-          # drive the agent; without a password the dashboard won't start.
-          for v in DISCORD_BOT_TOKEN DISCORD_ALLOWED_USERS DASHBOARD_PASSWORD DASHBOARD_SECRET; do
-            if [ -z "${!v}" ]; then echo "::error::HERMES_$v is not set"; exit 1; fi
-          done
-          kubectl create namespace agents --dry-run=client -o yaml | kubectl apply -f -
-          kubectl -n agents create secret generic hermes-secrets \
-            --from-literal=ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
-            --from-literal=DISCORD_BOT_TOKEN="$DISCORD_BOT_TOKEN" \
-            --from-literal=DISCORD_ALLOWED_USERS="$DISCORD_ALLOWED_USERS" \
-            --from-literal=HERMES_DASHBOARD_BASIC_AUTH_USERNAME=admin \
-            --from-literal=HERMES_DASHBOARD_BASIC_AUTH_PASSWORD="$DASHBOARD_PASSWORD" \
-            --from-literal=HERMES_DASHBOARD_BASIC_AUTH_SECRET="$DASHBOARD_SECRET" \
-            --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Remove this job's silence
         if: always() && steps.silence.outputs.id != ''

@@ -69,7 +69,6 @@ k3s_apps_gateway_api_version: v1.5.1
 # Namespaces in the Istio ambient mesh (ztunnel: mTLS between pods).
 # Labelled with kubectl on every run so the label survives ArgoCD re-syncs.
 k3s_apps_ambient_namespaces:
-  - agents
   - media
   - monitoring
   - network
