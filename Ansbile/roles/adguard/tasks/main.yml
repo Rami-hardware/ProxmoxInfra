@@ -70,6 +70,52 @@
     enabled: true
     daemon_reload: true
 
+# ── AdGuard metrics exporter ──────────────────────────────────────────────────
+# Preserve the currently deployed root service and /opt/adguard-exporter.env
+# path for this first declarative adoption; privilege reduction is separate.
+- name: Create AdGuard exporter directory
+  ansible.builtin.file:
+    path: "{{ adguard_exporter_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Install AdGuard exporter script
+  ansible.builtin.copy:
+    src: adguard-exporter.py
+    dest: "{{ adguard_exporter_dir }}/exporter.py"
+    owner: root
+    group: root
+    mode: '0755'
+  notify: Restart AdGuard exporter
+
+- name: Install AdGuard exporter environment file
+  ansible.builtin.template:
+    src: adguard-exporter.env.j2
+    dest: "{{ adguard_exporter_env_file }}"
+    owner: root
+    group: root
+    mode: '0600'
+  no_log: true
+  notify: Restart AdGuard exporter
+
+- name: Install AdGuard exporter systemd unit
+  ansible.builtin.template:
+    src: adguard-exporter.service.j2
+    dest: /etc/systemd/system/adguard-exporter.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart AdGuard exporter
+
+- name: Enable AdGuard exporter service
+  ansible.builtin.systemd:
+    name: adguard-exporter
+    state: started
+    enabled: true
+    daemon_reload: true
+
 # ── Resolver + config fix-ups (existing behaviour) ────────────────────────────
 - name: Stop systemd-resolved service
   ansible.builtin.systemd:

@@ -34,6 +34,37 @@ spec:
   volumeName: alertmanager-config-pv
   storageClassName: ""
 ---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: alertmanager-data-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  hostPath:
+    # Reuse the existing data directory beneath the already-mounted config PV;
+    # it is owned by nobody:nobody on monitoring-server.
+    path: /opt/docker/alertmanager/data
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: alertmanager-data-pvc
+  namespace: monitoring
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  volumeName: alertmanager-data-pv
+  storageClassName: ""
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -63,11 +94,14 @@ spec:
           image: prom/alertmanager:latest
           args:
             - "--config.file=/etc/alertmanager/config.yml"
+            - "--storage.path=/alertmanager"
           ports:
             - containerPort: 9093
           volumeMounts:
             - name: config
               mountPath: /etc/alertmanager
+            - name: data
+              mountPath: /alertmanager
           resources:
             requests:
               memory: "32Mi"
@@ -79,6 +113,9 @@ spec:
         - name: config
           persistentVolumeClaim:
             claimName: alertmanager-config-pvc
+        - name: data
+          persistentVolumeClaim:
+            claimName: alertmanager-data-pvc
 ---
 apiVersion: v1
 kind: Service

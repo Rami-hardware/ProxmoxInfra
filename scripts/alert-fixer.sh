@@ -7,7 +7,7 @@ set -euo pipefail
 
 AM_URL="http://192.168.10.203:9093"
 REPO_DIR="$HOME/Desktop/new server"
-CLAUDE_BIN="$(ls -d "$HOME"/.nvm/versions/node/*/bin/claude 2>/dev/null | sort -V | tail -1)"
+CLAUDE_BIN="$(ls -d "$HOME"/.nvm/versions/node/*/bin/claude 2>/dev/null | sort -V | tail -1 || true)"
 PATH="$(dirname "${CLAUDE_BIN:-/nonexistent/x}"):$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin"
 MODEL="opus"
 MIN_AGE_SECONDS=30       # only act on alerts firing for >= 30s (skips instant flap)
@@ -27,6 +27,8 @@ SETTINGS_JSON='{
       "Bash(git checkout:*)", "Bash(git restore:*)", "Bash(git clean:*)", "Bash(git rebase:*)",
       "Bash(crontab:*)", "Bash(rm -rf /:*)", "Bash(rm -rf ~:*)", "Bash(mkfs:*)",
       "Bash(qm destroy:*)", "Bash(qm start 100:*)",
+      "Bash(ssh:*)", "Bash(sudo:*)", "Bash(systemctl:*)", "Bash(docker:*)",
+      "Bash(kubectl:*)", "Bash(k3s:*)",
       "Edit(**/.argocd-source-*.yaml)", "Write(**/.argocd-source-*.yaml)",
       "Edit(**/terraform.tfstate*)", "Write(**/terraform.tfstate*)",
       "Edit(.claude/**)", "Write(.claude/**)"
@@ -34,7 +36,10 @@ SETTINGS_JSON='{
   }
 }'
 
-exec 9>"/tmp/alert-fixer.lock"
+STATE_DIR="$HOME/.local/state/alert-fixer"
+mkdir -p "$STATE_DIR"
+chmod 700 "$STATE_DIR"
+exec 9>"$STATE_DIR/alert-fixer.lock"
 if ! flock -n 9; then
   echo "$TAG another run in progress (queue holds new alerts), skipping"
   exit 0

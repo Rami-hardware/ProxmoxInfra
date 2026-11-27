@@ -15,6 +15,12 @@ on:
       - 'tools/alertops-mcp/**'
       - '.github/workflows/checks.yml'
   workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch or tag to check (trusted branches only)
+        required: false
+        default: main
+        type: string
 
 permissions:
   contents: read
@@ -24,13 +30,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  guard:
+    name: Validate dispatch ref
+    if: github.event_name != 'workflow_dispatch' || contains(fromJSON('["main","staging","development"]'), inputs.ref)
+    runs-on: ubuntu-latest
+    steps:
+      - run: true
+
   argocd-manifests:
     name: ArgoCD manifests (server dry run)
+    needs: guard
+    if: needs.guard.result == 'success'
     runs-on: self-hosted
     timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
 
       # Server-side dry run against the live cluster: catches bad kustomize,
       # unknown fields, CRD schema errors and immutable-field changes — what
@@ -48,11 +65,15 @@ jobs:
 
   alertops-mcp:
     name: alertops-mcp tests
+    needs: guard
+    if: needs.guard.result == 'success'
     runs-on: self-hosted
     timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
 
       # Venv cached in ~/.cache (checkout cleans the workspace), rebuilt when
       # pyproject.toml changes.

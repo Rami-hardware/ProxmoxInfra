@@ -56,7 +56,6 @@ metadata:
   # DB); restore with POST /api/v1/settings/jobs/{id}/schedule:
   #   availability-sync          -> "0 0 5 * * *"
   #   plex-recently-added-scan   -> "0 */5 * * * *"
-  # Durable fix is reconnecting seerr to Jellyfin (needs a Jellyfin API key).
 spec:
   replicas: 1
   strategy:
@@ -106,6 +105,16 @@ spec:
           env:
             - name: TZ
               value: "Asia/Riyadh"
+            - name: JELLYFIN_SERVER
+              valueFrom:
+                secretKeyRef:
+                  name: seerr-jellyfin-creds
+                  key: JELLYFIN_SERVER
+            - name: JELLYFIN_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: seerr-jellyfin-creds
+                  key: JELLYFIN_API_KEY
           volumeMounts:
             - name: config
               mountPath: /app/config

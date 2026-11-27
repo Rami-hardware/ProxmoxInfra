@@ -1,0 +1,19 @@
+[Unit]
+Description=Minimal AdGuard Home Prometheus exporter
+After=network-online.target AdGuardHome.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile={{ adguard_exporter_env_file }}
+ExecStart=/usr/bin/python3 {{ adguard_exporter_dir }}/exporter.py
+Restart=always
+RestartSec=5
+User=root
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
